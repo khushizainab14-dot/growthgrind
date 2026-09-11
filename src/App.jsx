@@ -204,6 +204,21 @@ function App() {
   }, [])
 
   useEffect(() => {
+    if (!courseResults) return
+
+    const frame = window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        courseResultsRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        })
+      })
+    })
+
+    return () => window.cancelAnimationFrame(frame)
+  }, [courseResults])
+
+  useEffect(() => {
     if (!user) {
       setSaved([])
       setTracked([])
@@ -414,9 +429,6 @@ function App() {
       const result = await response.json()
       if (!response.ok) throw new Error(result.error || 'Something went wrong.')
       setCourseResults(result)
-      window.setTimeout(() => {
-        courseResultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      }, 0)
     } catch (error) {
       setCourseError(error.message || 'We could not generate recommendations.')
     } finally {
