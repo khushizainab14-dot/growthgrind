@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
 
 import './App.css'
@@ -165,7 +165,6 @@ function App() {
   const [courseResults, setCourseResults] = useState(null)
   const [courseLoading, setCourseLoading] = useState(false)
   const [courseError, setCourseError] = useState('')
-  const courseResultsRef = useRef(null)
 
   const [showFilters, setShowFilters] = useState(false)
   const [sort, setSort] = useState('Most relevant')
@@ -202,21 +201,6 @@ function App() {
 
     return () => listener.subscription.unsubscribe()
   }, [])
-
-  useEffect(() => {
-    if (!courseResults) return
-
-    const frame = window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(() => {
-        courseResultsRef.current?.scrollIntoView({
-          behavior: 'smooth',
-          block: 'start',
-        })
-      })
-    })
-
-    return () => window.cancelAnimationFrame(frame)
-  }, [courseResults])
 
   useEffect(() => {
     if (!user) {
@@ -2349,7 +2333,7 @@ function App() {
           isPremium={isPremium}
           onUpgrade={() => goTo('Pricing')}
         >
-          <form className="closing-card" onSubmit={findCourses}>
+          {!courseResults && <form className="closing-card" onSubmit={findCourses}>
             <h3>Tell us about you</h3>
             <p>
               We’ll suggest course areas worth exploring and the questions to ask on official university pages. This is guidance, not an admissions decision.
@@ -2404,10 +2388,10 @@ function App() {
             <button className="primary-button" disabled={courseLoading} type="submit" style={{ opacity: courseLoading ? 0.65 : 1 }}>
               {courseLoading ? 'Finding your options…' : 'Find course areas →'}
             </button>
-          </form>
+          </form>}
 
           {courseResults && (
-            <div ref={courseResultsRef} style={{ marginTop: '28px', scrollMarginTop: '100px' }}>
+            <div>
               <div className="closing-card">
                 <div className="days-left">YOUR COURSE EXPLORATION</div>
                 <h3>A starting point, tailored to you</h3>
@@ -2459,6 +2443,16 @@ function App() {
                 <p style={{ marginTop: '22px', fontSize: '12px' }}>
                   Course and university availability changes regularly. UCAS Search is the source of truth for the full current list.
                 </p>
+                <button
+                  className="filter-button"
+                  onClick={() => {
+                    setCourseResults(null)
+                    setCourseError('')
+                  }}
+                  style={{ marginTop: '10px' }}
+                >
+                  Start a new search
+                </button>
               </div>
             </div>
           )}
