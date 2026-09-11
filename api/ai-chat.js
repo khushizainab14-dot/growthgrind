@@ -28,7 +28,7 @@ export default async function handler(request, response) {
   if (!process.env.GEMINI_API_KEY) return response.status(500).json({ error: 'GrowthGrind AI is not configured yet.' })
 
   const specialist = specialists[request.body?.specialist]
-  const history = Array.isArray(request.body?.messages) ? request.body.messages.slice(-14) : []
+  const history = Array.isArray(request.body?.messages) ? request.body.messages.slice(-8) : []
   const message = clean(request.body?.message)
   const attachment = cleanAttachment(request.body?.attachment)
   const shouldStream = request.body?.stream === true
@@ -37,7 +37,7 @@ export default async function handler(request, response) {
 
   const transcript = history
     .filter((item) => ['user', 'assistant'].includes(item?.role) && clean(item?.content))
-    .map((item) => `${item.role === 'user' ? 'Student' : 'GrowthGrind AI'}: ${clean(item.content)}`)
+    .map((item) => `${item.role === 'user' ? 'Student' : 'GrowthGrind AI'}: ${clean(item.content).slice(0, 800)}`)
     .join('\n\n')
 
   const prompt = `You are GrowthGrind AI, a supportive, concise assistant for UK school students. You are in the ${specialist} workspace. ${specialist}
@@ -61,7 +61,10 @@ GrowthGrind AI:`
         .filter((model) => model.supportedGenerationMethods?.includes('generateContent'))
         .map((model) => model.name?.replace(/^models\//, ''))
         .filter(Boolean)
-      cachedModels = [...available.filter((model) => /flash/i.test(model)), ...available.filter((model) => !/flash/i.test(model))]
+      cachedModels = [...available].sort((first, second) => {
+        const score = (model) => /flash-lite/i.test(model) ? 0 : /flash/i.test(model) ? 1 : 2
+        return score(first) - score(second)
+      })
     }
 
     let payload
@@ -73,7 +76,7 @@ GrowthGrind AI:`
       const result = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts }], generationConfig: { temperature: 0.35, maxOutputTokens: 450 } }),
+        body: JSON.stringify({ contents: [{ parts }], generationConfig: { temperature: 0.3, maxOutputTokens: 280 } }),
       })
       if (result.ok) {
         if (shouldStream) {

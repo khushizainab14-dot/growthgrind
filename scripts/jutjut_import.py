@@ -1,5 +1,6 @@
 import re
 import html
+import json
 import subprocess
 import sys
 from urllib.parse import urljoin
@@ -34,6 +35,8 @@ BASE_URL = "https://jutjut.co.uk"
 LISTING_URL = (
     "https://jutjut.co.uk/opportunities"
 )
+
+API_URL = "https://api.jutjut.co.uk/opportunities/"
 
 
 # ============================================================
@@ -143,6 +146,7 @@ def clean_text(value):
         return ""
 
     value = html.unescape(value)
+    value = value.replace("\x00", " ")
 
     value = value.replace(
         "\xa0",
@@ -1385,6 +1389,78 @@ def save_opportunity(
     return "inserted"
 
 
+def api_opportunity_to_record(item):
+    """Map JutJut's public catalogue API to GrowthGrind's opportunity shape."""
+
+    year_groups = [
+        f"Year {year}"
+        for year in (item.get("school_year_group") or [])
+        if isinstance(year, int) and 7 <= year <= 13
+    ]
+    age_min = item.get("age_range_min")
+    age_max = item.get("age_range_max")
+    if age_min and age_max:
+        age_range = f"{age_min}-{age_max}"
+    elif age_min:
+        age_range = f"{age_min}+"
+    else:
+        age_range = item.get("raw_age_range")
+
+    cities = item.get("work_location_city") or []
+    location = (
+        ", ".join(cities)
+        or item.get("work_location")
+        or item.get("work_location_country")
+        or "International / not listed"
+    )
+    description = clean_text(item.get("description") or item.get("teaser"))
+    is_online = bool(re.search(r"\b(online|virtual|remote)\b", description or "", re.I))
+    fee = item.get("participant_fee")
+    if fee in (None, ""):
+        cost = "Not listed"
+    elif float(fee) == 0:
+        cost = "Free"
+    else:
+        currency = item.get("participant_fee_currency") or "GBP"
+        symbol = "£" if currency == "GBP" else f"{currency} "
+        cost = f"{symbol}{fee}"
+
+    return {
+        "title": clean_text(item.get("title")),
+        "provider": clean_text(item.get("company")),
+        "category": clean_text(item.get("opportunity_type")) or "Other",
+        "activity_type": clean_text(item.get("opportunity_type")) or "Other",
+        "location": location,
+        "format": "Online" if is_online else ("In-person" if cities else "Not listed"),
+        "age_range": age_range,
+        "year_groups": ", ".join(year_groups) or None,
+        "deadline": item.get("application_deadline"),
+        "cost": cost,
+        "description": description,
+        "interests": None,
+        "subjects": item.get("subject_areas") or None,
+        "link": item.get("url"),
+    }
+
+
+def fetch_all_api_opportunities():
+    """Fetch every page exposed by JutJut's public catalogue API."""
+
+    cursor = None
+    results = []
+    while True:
+        url = f"{API_URL}?limit=100"
+        if cursor:
+            url += f"&cursor={cursor}"
+        payload = json.loads(fetch(url))
+        page = payload.get("results") or []
+        results.extend(page)
+        cursor = payload.get("next_cursor")
+        if not payload.get("has_more") or not cursor:
+            break
+    return results
+
+
 def repair_official_links():
     """Replace legacy JutJut links in existing records with provider URLs."""
 
@@ -1450,58 +1526,29 @@ def main():
         repair_official_links()
         return
 
-    print(
-        "Fetching JutJut opportunities..."
-    )
-
-    listing_source = fetch(
-        LISTING_URL
-    )
-
-    links = extract_links(
-        listing_source
-    )
-
-    links = unique(
-        links
-    )
-
-    print(
-        f"Found {len(links)} opportunities"
-    )
+    print("Fetching the full JutJut catalogue API...")
+    api_opportunities = fetch_all_api_opportunities()
+    print(f"Found {len(api_opportunities)} opportunities across all available pages")
 
     inserted = 0
     updated = 0
     failed = 0
 
-    for number, url in enumerate(
-        links,
+    for number, item in enumerate(
+        api_opportunities,
         start=1,
     ):
 
         try:
-
-            print(
-                f"[{number}/{len(links)}] "
-                f"{url}"
-            )
-
-            card = get_listing_card(
-                listing_source,
-                url,
-            )
-
-            opportunity = (
-                parse_opportunity(
-                    url,
-                    card,
-                )
-            )
+            opportunity = api_opportunity_to_record(item)
+            source_url = opportunity.get("link") or f"{BASE_URL}/opportunities/{item.get('id')}"
+            if not opportunity.get("title"):
+                raise RuntimeError("JutJut API record has no title")
 
             result = (
                 save_opportunity(
                     opportunity,
-                    url,
+                    source_url,
                 )
             )
 
@@ -1524,7 +1571,7 @@ def main():
             failed += 1
 
             print(
-                f"    ✗ FAILED: {url}"
+                f"    ✗ FAILED: {item.get('title') or item.get('id') or 'unknown record'}"
             )
 
             print(
