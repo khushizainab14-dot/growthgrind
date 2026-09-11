@@ -220,6 +220,61 @@ function App() {
   }, [aiChats])
 
   useEffect(() => {
+    if (!user) return
+
+    let cancelled = false
+    const migrationKey = `growthgrind_ai_chats_migrated_${user.id}`
+
+    const loadAiChats = async () => {
+      const localChats = aiChats
+      const { data: remoteMessages, error } = await supabase
+        .from('ai_chat_messages')
+        .select('specialist, role, content, created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: true })
+
+      if (error || cancelled) return
+
+      const hasRemoteMessages = (remoteMessages || []).length > 0
+      const hasLocalMessages = Object.values(localChats).some((messages) => messages.length > 0)
+
+      if (!hasRemoteMessages && hasLocalMessages && !localStorage.getItem(migrationKey)) {
+        const rows = Object.entries(localChats).flatMap(([specialist, messages]) =>
+          messages.map((message) => ({
+            user_id: user.id,
+            specialist,
+            role: message.role,
+            content: message.content,
+          }))
+        )
+        const { error: migrationError } = await supabase.from('ai_chat_messages').insert(rows)
+        if (!migrationError) localStorage.setItem(migrationKey, 'true')
+        if (cancelled) return
+      }
+
+      const { data: freshMessages, error: freshError } = await supabase
+        .from('ai_chat_messages')
+        .select('specialist, role, content, created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: true })
+
+      if (freshError || cancelled) return
+      const organised = Object.fromEntries(aiSpecialists.map((specialist) => [specialist.id, []]))
+      ;(freshMessages || []).forEach((message) => {
+        if (organised[message.specialist]) {
+          organised[message.specialist].push({ role: message.role, content: message.content })
+        }
+      })
+      setAiChats(organised)
+    }
+
+    loadAiChats()
+    return () => {
+      cancelled = true
+    }
+  }, [user])
+
+  useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
 
     const { data: listener } = supabase.auth.onAuthStateChange(
@@ -483,6 +538,17 @@ function App() {
     goTo('AI')
   }
 
+  const saveAiMessage = async (specialist, message) => {
+    if (!user) return
+    const { error } = await supabase.from('ai_chat_messages').insert({
+      user_id: user.id,
+      specialist,
+      role: message.role,
+      content: message.content,
+    })
+    if (error) console.error('Could not save AI chat message:', error.message)
+  }
+
   const sendAiChat = async (event) => {
     event.preventDefault()
     const message = aiChatInput.trim()
@@ -490,6 +556,7 @@ function App() {
     const currentMessages = aiChats[activeAiChat] || []
     const userMessage = { role: 'user', content: message }
     setAiChats((current) => ({ ...current, [activeAiChat]: [...currentMessages, userMessage] }))
+    saveAiMessage(activeAiChat, userMessage)
     setAiChatInput('')
     setAiChatError('')
     setAiChatLoading(true)
@@ -501,10 +568,12 @@ function App() {
       })
       const result = await response.json()
       if (!response.ok) throw new Error(result.error || 'Something went wrong.')
+      const assistantMessage = { role: 'assistant', content: result.reply }
       setAiChats((current) => ({
         ...current,
-        [activeAiChat]: [...(current[activeAiChat] || []), { role: 'assistant', content: result.reply }],
+        [activeAiChat]: [...(current[activeAiChat] || []), assistantMessage],
       }))
+      saveAiMessage(activeAiChat, assistantMessage)
     } catch (error) {
       setAiChatError(error.message || 'GrowthGrind AI could not reply.')
     } finally {
@@ -2940,6 +3009,16 @@ function App() {
             minWidth: '210px',
           }}
         >
+          <button
+            className="nav-link"
+            onClick={() => {
+              setActiveAiChat('general')
+              goTo('AI')
+            }}
+          >
+            GrowthGrind AI
+          </button>
+
           <button
             className="nav-link"
             onClick={() => goTo('Match')}
