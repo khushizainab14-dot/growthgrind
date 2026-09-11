@@ -165,6 +165,10 @@ function App() {
   const [courseResults, setCourseResults] = useState(null)
   const [courseLoading, setCourseLoading] = useState(false)
   const [courseError, setCourseError] = useState('')
+  const [aiDetails, setAiDetails] = useState({})
+  const [aiResults, setAiResults] = useState({})
+  const [aiLoading, setAiLoading] = useState('')
+  const [aiError, setAiError] = useState({})
 
   const [showFilters, setShowFilters] = useState(false)
   const [sort, setSort] = useState('Most relevant')
@@ -418,6 +422,33 @@ function App() {
     } finally {
       setCourseLoading(false)
     }
+  }
+
+  const runPremiumTool = async (event, tool) => {
+    event.preventDefault()
+    setAiLoading(tool)
+    setAiError((current) => ({ ...current, [tool]: '' }))
+    try {
+      const response = await fetch('/api/premium-ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tool, details: aiDetails[tool] || {} }),
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'Something went wrong.')
+      setAiResults((current) => ({ ...current, [tool]: result }))
+    } catch (error) {
+      setAiError((current) => ({ ...current, [tool]: error.message }))
+    } finally {
+      setAiLoading('')
+    }
+  }
+
+  const updateAiDetail = (tool, field, value) => {
+    setAiDetails((current) => ({
+      ...current,
+      [tool]: { ...current[tool], [field]: value },
+    }))
   }
 
   const activateDemoPremium = () => {
@@ -2300,22 +2331,22 @@ function App() {
           isPremium={isPremium}
           onUpgrade={() => goTo('Pricing')}
         >
-          <div className="closing-grid">
-            <ToolCard
-              title="University choices"
-              text="Explore how your interests, academic profile and goals could shape your university choices."
-            />
-
-            <ToolCard
-              title="Supercurriculars"
-              text="Get ideas for activities that genuinely develop your academic interests."
-            />
-
-            <ToolCard
-              title="Admissions strategy"
-              text="Build a stronger understanding of what different UK universities and courses look for."
-            />
-          </div>
+          <PremiumAiTool
+            tool="admissions"
+            title="Build your admissions strategy"
+            description="Get a structured starting point, then verify requirements directly with universities."
+            fields={[
+              ['Subjects and grades', 'For example: Maths, Economics, Physics — predicted A*AA'],
+              ['Courses or universities you are considering', 'Optional — add anything already on your mind'],
+              ['Your goals and current experiences', 'What you enjoy, what you have done, and what you want to develop'],
+            ]}
+            details={aiDetails.admissions || {}}
+            result={aiResults.admissions}
+            loading={aiLoading === 'admissions'}
+            error={aiError.admissions}
+            onChange={(field, value) => updateAiDetail('admissions', field, value)}
+            onSubmit={(event) => runPremiumTool(event, 'admissions')}
+          />
         </PremiumToolPage>
       )}
 
@@ -2473,22 +2504,22 @@ function App() {
           isPremium={isPremium}
           onUpgrade={() => goTo('Pricing')}
         >
-          <div className="closing-card">
-            <h3>Your strongest experiences</h3>
-
-            <p>
-              Your tracked activities can eventually be analysed to
-              identify themes, academic interests, reflections and
-              evidence you could discuss in your application.
-            </p>
-
-            <button
-              className="view-button"
-              onClick={() => goTo('Track')}
-            >
-              Open my experience portfolio →
-            </button>
-          </div>
+          <PremiumAiTool
+            tool="statement"
+            title="Reflect on your experiences"
+            description="GrowthGrind helps you find your own evidence and ideas; it will not write a statement for you."
+            fields={[
+              ['Course interests', 'What you may want to study and why'],
+              ['Experiences to reflect on', 'Activities, books, projects, work experience, volunteering or competitions'],
+              ['What you learned', 'Optional — rough notes are completely fine'],
+            ]}
+            details={aiDetails.statement || {}}
+            result={aiResults.statement}
+            loading={aiLoading === 'statement'}
+            error={aiError.statement}
+            onChange={(field, value) => updateAiDetail('statement', field, value)}
+            onSubmit={(event) => runPremiumTool(event, 'statement')}
+          />
         </PremiumToolPage>
       )}
 
@@ -2506,22 +2537,22 @@ function App() {
           isPremium={isPremium}
           onUpgrade={() => goTo('Pricing')}
         >
-          <div className="closing-grid">
-            <ToolCard
-              title="TMUA"
-              text="Personalised preparation guidance for students applying to courses where TMUA is relevant."
-            />
-
-            <ToolCard
-              title="TSA"
-              text="Understand how TSA preparation can fit into your wider admissions strategy."
-            />
-
-            <ToolCard
-              title="Other tests"
-              text="Future support can cover other relevant UK admissions tests."
-            />
-          </div>
+          <PremiumAiTool
+            tool="tests"
+            title="Explore admissions tests"
+            description="We’ll help you identify what to check; always confirm the current policy on each official course page."
+            fields={[
+              ['Courses you are considering', 'For example: Economics, Medicine, Law or Computer Science'],
+              ['Universities you are considering', 'Optional'],
+              ['Subjects, grades and preparation so far', 'Include any test you already know about'],
+            ]}
+            details={aiDetails.tests || {}}
+            result={aiResults.tests}
+            loading={aiLoading === 'tests'}
+            error={aiError.tests}
+            onChange={(field, value) => updateAiDetail('tests', field, value)}
+            onSubmit={(event) => runPremiumTool(event, 'tests')}
+          />
         </PremiumToolPage>
       )}
 
@@ -2539,26 +2570,22 @@ function App() {
           isPremium={isPremium}
           onUpgrade={() => goTo('Pricing')}
         >
-          <div className="closing-card">
-            <h3>Career quiz</h3>
-
-            <p>
-              The full interactive quiz will ask about your interests,
-              strengths, preferred working styles and subjects before
-              producing personalised career and degree suggestions.
-            </p>
-
-            <button
-              className="view-button"
-              onClick={() =>
-                alert(
-                  'The full Career Quiz will be connected here next.'
-                )
-              }
-            >
-              Start quiz →
-            </button>
-          </div>
+          <PremiumAiTool
+            tool="career"
+            title="Explore career pathways"
+            description="There is no single right career. Use this to find pathways worth exploring further."
+            fields={[
+              ['Subjects and topics you enjoy', 'What do you most enjoy learning about?'],
+              ['Strengths and working style', 'For example: creative, analytical, working with people, independent research'],
+              ['Career ideas or priorities', 'Optional — include anything you want to explore or avoid'],
+            ]}
+            details={aiDetails.career || {}}
+            result={aiResults.career}
+            loading={aiLoading === 'career'}
+            error={aiError.career}
+            onChange={(field, value) => updateAiDetail('career', field, value)}
+            onSubmit={(event) => runPremiumTool(event, 'career')}
+          />
         </PremiumToolPage>
       )}
 
@@ -2576,36 +2603,22 @@ function App() {
           isPremium={isPremium}
           onUpgrade={() => goTo('Pricing')}
         >
-          <div className="closing-card">
-            <h3>What are you interested in?</h3>
-
-            <textarea
-              placeholder="For example: I'm interested in the economics of football..."
-              style={{
-                width: '100%',
-                minHeight: '120px',
-                marginTop: '12px',
-                padding: '12px',
-                borderRadius: '9px',
-                border: '1px solid #d0c4b0',
-                background: '#f5efe5',
-                color: '#315b3d',
-                font: 'inherit',
-                resize: 'vertical',
-              }}
-            />
-
-            <button
-              className="view-button"
-              onClick={() =>
-                alert(
-                  'The AI Research Project Builder will be connected to the AI model next.'
-                )
-              }
-            >
-              Develop my idea →
-            </button>
-          </div>
+          <PremiumAiTool
+            tool="research"
+            title="Develop your project idea"
+            description="Turn a curiosity into a focused, manageable independent project—without inventing sources or writing it for you."
+            fields={[
+              ['Your topic or curiosity', 'For example: I am interested in the economics of football'],
+              ['Subjects or links to your interests', 'What makes this topic meaningful to you?'],
+              ['Time and format', 'For example: four weeks, a presentation, an essay or a podcast'],
+            ]}
+            details={aiDetails.research || {}}
+            result={aiResults.research}
+            loading={aiLoading === 'research'}
+            error={aiError.research}
+            onChange={(field, value) => updateAiDetail('research', field, value)}
+            onSubmit={(event) => runPremiumTool(event, 'research')}
+          />
         </PremiumToolPage>
       )}
 
@@ -3156,6 +3169,76 @@ function CourseField({ label, placeholder, value, onChange, required = false }) 
         style={{ width: '100%', minHeight: '52px', boxSizing: 'border-box', padding: '11px', borderRadius: '9px', border: '1px solid #d0c4b0', background: '#f5efe5', color: '#315b3d', font: 'inherit', resize: 'vertical' }}
       />
     </label>
+  )
+}
+
+function PremiumAiTool({
+  title,
+  description,
+  fields,
+  details,
+  result,
+  loading,
+  error,
+  onChange,
+  onSubmit,
+}) {
+  return (
+    <>
+      {!result && (
+        <form className="closing-card" onSubmit={onSubmit}>
+          <h3>{title}</h3>
+          <p>{description}</p>
+          {fields.map(([label, placeholder]) => (
+            <CourseField
+              key={label}
+              label={label}
+              placeholder={placeholder}
+              value={details[label] || ''}
+              onChange={(value) => onChange(label, value)}
+              required={label === fields[0][0]}
+            />
+          ))}
+          {error && <p style={{ color: '#9d3c2e', fontWeight: '700' }}>{error}</p>}
+          <button className="primary-button" type="submit" disabled={loading} style={{ opacity: loading ? 0.65 : 1 }}>
+            {loading ? 'Building your guidance…' : 'Get my guidance →'}
+          </button>
+        </form>
+      )}
+      {result && (
+        <div>
+          <div className="closing-card">
+            <div className="days-left">PERSONALISED STARTING POINT</div>
+            <h3>{title}</h3>
+            <p>{result.summary}</p>
+          </div>
+          <div className="closing-grid" style={{ marginTop: '18px' }}>
+            {(result.sections || []).map((section) => (
+              <div className="closing-card" key={section.title}>
+                <h3>{section.title}</h3>
+                <ul style={{ paddingLeft: '20px', lineHeight: '1.65' }}>
+                  {(section.points || []).map((point) => <li key={point}>{point}</li>)}
+                </ul>
+              </div>
+            ))}
+          </div>
+          <div className="closing-card" style={{ marginTop: '18px' }}>
+            <h3>Next steps</h3>
+            <ul style={{ paddingLeft: '20px', lineHeight: '1.65' }}>
+              {(result.nextSteps || []).map((step) => <li key={step}>{step}</li>)}
+            </ul>
+            {(result.questionsToConsider || []).length > 0 && (
+              <>
+                <h3 style={{ marginTop: '22px' }}>Questions to consider</h3>
+                <ul style={{ paddingLeft: '20px', lineHeight: '1.65' }}>
+                  {result.questionsToConsider.map((question) => <li key={question}>{question}</li>)}
+                </ul>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 
@@ -3850,34 +3933,6 @@ function PremiumToolPage({
         </div>
       </section>
     </main>
-  )
-}
-
-function ToolCard({
-  title,
-  text,
-}) {
-  return (
-    <div className="closing-card">
-      <div className="days-left">
-        PREMIUM
-      </div>
-
-      <h3>{title}</h3>
-
-      <p>{text}</p>
-
-      <button
-        className="filter-button"
-        onClick={() =>
-          alert(
-            'This tool will be connected to the AI system next.'
-          )
-        }
-      >
-        Open tool →
-      </button>
-    </div>
   )
 }
 
