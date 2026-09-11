@@ -153,6 +153,18 @@ function App() {
   const [authEmail, setAuthEmail] = useState('')
   const [authPassword, setAuthPassword] = useState('')
   const [authMessage, setAuthMessage] = useState('')
+  const [courseProfile, setCourseProfile] = useState({
+    subjects: '',
+    grades: '',
+    interests: '',
+    careers: '',
+    location: 'No preference yet',
+    universityPreferences: '',
+    priorities: '',
+  })
+  const [courseResults, setCourseResults] = useState(null)
+  const [courseLoading, setCourseLoading] = useState(false)
+  const [courseError, setCourseError] = useState('')
 
   const [showFilters, setShowFilters] = useState(false)
   const [sort, setSort] = useState('Most relevant')
@@ -380,6 +392,32 @@ function App() {
     setAuthModal(false)
     setAuthEmail('')
     setAuthPassword('')
+  }
+
+  const updateCourseProfile = (field, value) => {
+    setCourseProfile((current) => ({ ...current, [field]: value }))
+  }
+
+  const findCourses = async (event) => {
+    event.preventDefault()
+    setCourseError('')
+    setCourseResults(null)
+    setCourseLoading(true)
+
+    try {
+      const response = await fetch('/api/course-finder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(courseProfile),
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'Something went wrong.')
+      setCourseResults(result)
+    } catch (error) {
+      setCourseError(error.message || 'We could not generate recommendations.')
+    } finally {
+      setCourseLoading(false)
+    }
   }
 
   const activateDemoPremium = () => {
@@ -2295,23 +2333,95 @@ function App() {
           isPremium={isPremium}
           onUpgrade={() => goTo('Pricing')}
         >
-          <div className="closing-card">
-            <h3>What do you want to study?</h3>
-
+          <form className="closing-card" onSubmit={findCourses}>
+            <h3>Tell us about you</h3>
             <p>
-              This tool will eventually combine your academic profile,
-              interests, admissions tests and preferences to recommend
-              suitable UK courses.
+              We’ll suggest course areas worth exploring and the questions to ask on official university pages. This is guidance, not an admissions decision.
             </p>
 
-            <div className="details">
-              <span>Subject</span>
-              <span>University</span>
-              <span>Entry requirements</span>
-              <span>Admissions tests</span>
-              <span>Course content</span>
+            <CourseField
+              label="Current subjects"
+              placeholder="For example: Maths, Economics, Physics"
+              value={courseProfile.subjects}
+              onChange={(value) => updateCourseProfile('subjects', value)}
+            />
+            <CourseField
+              label="Predicted or current grades"
+              placeholder="For example: A*AA, or GCSE grades if you have not started A-levels"
+              value={courseProfile.grades}
+              onChange={(value) => updateCourseProfile('grades', value)}
+            />
+            <CourseField
+              label="Academic interests"
+              placeholder="What topics make you curious?"
+              value={courseProfile.interests}
+              onChange={(value) => updateCourseProfile('interests', value)}
+              required
+            />
+            <CourseField
+              label="Career ideas"
+              placeholder="Optional — it is fine if you are unsure"
+              value={courseProfile.careers}
+              onChange={(value) => updateCourseProfile('careers', value)}
+            />
+            <CourseField
+              label="Location preferences"
+              placeholder="For example: London, anywhere in the UK, or close to home"
+              value={courseProfile.location}
+              onChange={(value) => updateCourseProfile('location', value)}
+            />
+            <CourseField
+              label="University preferences"
+              placeholder="Optional — particular universities, campus/city preferences, or Russell Group"
+              value={courseProfile.universityPreferences}
+              onChange={(value) => updateCourseProfile('universityPreferences', value)}
+            />
+            <CourseField
+              label="What matters most to you?"
+              placeholder="For example: course content, placement year, location, graduate prospects"
+              value={courseProfile.priorities}
+              onChange={(value) => updateCourseProfile('priorities', value)}
+            />
+
+            {courseError && <p style={{ color: '#9d3c2e', fontWeight: '700' }}>{courseError}</p>}
+
+            <button className="primary-button" disabled={courseLoading} type="submit" style={{ opacity: courseLoading ? 0.65 : 1 }}>
+              {courseLoading ? 'Finding your options…' : 'Find course areas →'}
+            </button>
+          </form>
+
+          {courseResults && (
+            <div style={{ marginTop: '28px' }}>
+              <div className="closing-card">
+                <div className="days-left">YOUR COURSE EXPLORATION</div>
+                <h3>A starting point, tailored to you</h3>
+                <p>{courseResults.summary}</p>
+              </div>
+              <div className="closing-grid" style={{ marginTop: '18px' }}>
+                {(courseResults.courseAreas || []).map((course) => (
+                  <div className="closing-card" key={course.title}>
+                    <h3>{course.title}</h3>
+                    <p><strong>Why it could fit:</strong> {course.whyItFits}</p>
+                    <p><strong>Explore:</strong> {course.explore}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="closing-card" style={{ marginTop: '18px' }}>
+                <h3>What to do next</h3>
+                <ul style={{ paddingLeft: '20px', lineHeight: '1.7' }}>
+                  {(courseResults.nextSteps || []).map((step) => <li key={step}>{step}</li>)}
+                </ul>
+                {(courseResults.questionsToConsider || []).length > 0 && (
+                  <>
+                    <h3 style={{ marginTop: '22px' }}>Questions to consider</h3>
+                    <ul style={{ paddingLeft: '20px', lineHeight: '1.7' }}>
+                      {courseResults.questionsToConsider.map((question) => <li key={question}>{question}</li>)}
+                    </ul>
+                  </>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </PremiumToolPage>
       )}
 
@@ -2995,6 +3105,23 @@ function AuthModal({
         </button>
       </form>
     </div>
+  )
+}
+
+function CourseField({ label, placeholder, value, onChange, required = false }) {
+  return (
+    <label style={{ display: 'block', marginTop: '18px' }}>
+      <span style={{ display: 'block', marginBottom: '7px', color: '#315b3d', fontSize: '12px', fontWeight: '750' }}>
+        {label}{required ? ' *' : ''}
+      </span>
+      <textarea
+        required={required}
+        value={value}
+        placeholder={placeholder}
+        onChange={(event) => onChange(event.target.value)}
+        style={{ width: '100%', minHeight: '52px', boxSizing: 'border-box', padding: '11px', borderRadius: '9px', border: '1px solid #d0c4b0', background: '#f5efe5', color: '#315b3d', font: 'inherit', resize: 'vertical' }}
+      />
+    </label>
   )
 }
 
