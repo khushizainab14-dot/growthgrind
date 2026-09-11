@@ -597,11 +597,12 @@ function App() {
       openAuth()
       return
     }
-    const currentMessages = aiChats[activeAiChat] || []
+    const chatId = activeAiChat
+    const currentMessages = aiChats[chatId] || []
     const attachmentLabel = aiAttachment ? `\n\n[Attached: ${aiAttachment.name}]` : ''
     const userMessage = { role: 'user', content: `${message || 'Please analyse this attachment.'}${attachmentLabel}` }
-    setAiChats((current) => ({ ...current, [activeAiChat]: [...currentMessages, userMessage] }))
-    saveAiMessage(activeAiChat, userMessage)
+    setAiChats((current) => ({ ...current, [chatId]: [...currentMessages, userMessage] }))
+    saveAiMessage(chatId, userMessage)
     setAiChatInput('')
     setAiChatError('')
     setAiChatLoading(true)
@@ -611,16 +612,49 @@ function App() {
       const response = await fetch('/api/ai-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ specialist: activeAiChat, messages: currentMessages, message: message || 'Please analyse this attachment.', attachment }),
+        body: JSON.stringify({ specialist: chatId, messages: currentMessages, message: message || 'Please analyse this attachment.', attachment, stream: true }),
       })
-      const result = await response.json()
-      if (!response.ok) throw new Error(result.error || 'Something went wrong.')
-      const assistantMessage = { role: 'assistant', content: result.reply }
+      if (!response.ok) {
+        const result = await response.json()
+        throw new Error(result.error || 'Something went wrong.')
+      }
+      if (!response.body) throw new Error('Streaming is unavailable. Please try again.')
+      const assistantMessage = { role: 'assistant', content: '' }
       setAiChats((current) => ({
         ...current,
-        [activeAiChat]: [...(current[activeAiChat] || []), assistantMessage],
+        [chatId]: [...(current[chatId] || []), assistantMessage],
       }))
-      saveAiMessage(activeAiChat, assistantMessage)
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let reply = ''
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+        lines.forEach((line) => {
+          if (!line.startsWith('data: ')) return
+          const data = line.slice(6).trim()
+          if (!data || data === '[DONE]') return
+          try {
+            const payload = JSON.parse(data)
+            const text = payload.candidates?.[0]?.content?.parts?.map((part) => part.text || '').join('') || ''
+            if (text) reply += text
+          } catch {
+            // A partial server-sent event will be completed by the next chunk.
+          }
+        })
+        if (reply) {
+          setAiChats((current) => ({
+            ...current,
+            [chatId]: [...(current[chatId] || []).slice(0, -1), { role: 'assistant', content: reply }],
+          }))
+        }
+      }
+      if (!reply) throw new Error('GrowthGrind AI returned no response.')
+      saveAiMessage(chatId, { role: 'assistant', content: reply })
       setAiAttachment(null)
     } catch (error) {
       setAiChatError(error.message || 'GrowthGrind AI could not reply.')

@@ -31,6 +31,7 @@ export default async function handler(request, response) {
   const history = Array.isArray(request.body?.messages) ? request.body.messages.slice(-14) : []
   const message = clean(request.body?.message)
   const attachment = cleanAttachment(request.body?.attachment)
+  const shouldStream = request.body?.stream === true
   if (!specialist || !message) return response.status(400).json({ error: 'Please write a message first.' })
   if (request.body?.attachment && !attachment) return response.status(400).json({ error: 'That attachment is not supported or is too large.' })
 
@@ -66,12 +67,31 @@ GrowthGrind AI:`
     let payload
     let lastStatus
     for (const model of cachedModels) {
-      const result = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+      const endpoint = shouldStream
+        ? `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${process.env.GEMINI_API_KEY}`
+        : `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`
+      const result = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contents: [{ parts }], generationConfig: { temperature: 0.35, maxOutputTokens: 450 } }),
       })
       if (result.ok) {
+        if (shouldStream) {
+          response.status(200)
+          response.setHeader('Content-Type', 'text/event-stream; charset=utf-8')
+          response.setHeader('Cache-Control', 'no-cache, no-transform')
+          response.setHeader('Connection', 'keep-alive')
+          response.flushHeaders?.()
+          const reader = result.body?.getReader()
+          if (!reader) throw new Error('Gemini streaming is unavailable.')
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+            response.write(new TextDecoder().decode(value))
+          }
+          response.write('data: [DONE]\n\n')
+          return response.end()
+        }
         payload = await result.json()
         break
       }
