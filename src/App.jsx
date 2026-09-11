@@ -73,6 +73,15 @@ const yearGroups = [
   '18+',
 ]
 
+const aiSpecialists = [
+  { id: 'courses', name: 'Course Finder', description: 'Courses and universities' },
+  { id: 'admissions', name: 'Admissions Advisor', description: 'Your application strategy' },
+  { id: 'statement', name: 'Personal Statement', description: 'Reflect on your evidence' },
+  { id: 'tests', name: 'Admissions Tests', description: 'What to investigate' },
+  { id: 'career', name: 'Career Explorer', description: 'Pathways to explore' },
+  { id: 'research', name: 'Research Builder', description: 'Build a project idea' },
+]
+
 function App() {
     const [opportunities, setOpportunities] = useState([])
 
@@ -169,6 +178,15 @@ function App() {
   const [aiResults, setAiResults] = useState({})
   const [aiLoading, setAiLoading] = useState('')
   const [aiError, setAiError] = useState({})
+  const [activeAiChat, setActiveAiChat] = useState('courses')
+  const [aiChats, setAiChats] = useState(() => {
+    const savedChats = localStorage.getItem('growthgrind_ai_chats')
+    if (savedChats) return JSON.parse(savedChats)
+    return Object.fromEntries(aiSpecialists.map((specialist) => [specialist.id, []]))
+  })
+  const [aiChatInput, setAiChatInput] = useState('')
+  const [aiChatLoading, setAiChatLoading] = useState(false)
+  const [aiChatError, setAiChatError] = useState('')
 
   const [showFilters, setShowFilters] = useState(false)
   const [sort, setSort] = useState('Most relevant')
@@ -195,6 +213,10 @@ function App() {
   )
 
   const user = session?.user || null
+
+  useEffect(() => {
+    localStorage.setItem('growthgrind_ai_chats', JSON.stringify(aiChats))
+  }, [aiChats])
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
@@ -451,6 +473,44 @@ function App() {
     }))
   }
 
+  const openAiWorkspace = (specialist) => {
+    if (!isPremium) {
+      setPremiumModal(specialist === 'courses' ? 'CourseFinder' : 'recommendations')
+      return
+    }
+    setActiveAiChat(specialist)
+    goTo('AI')
+  }
+
+  const sendAiChat = async (event) => {
+    event.preventDefault()
+    const message = aiChatInput.trim()
+    if (!message || aiChatLoading) return
+    const currentMessages = aiChats[activeAiChat] || []
+    const userMessage = { role: 'user', content: message }
+    setAiChats((current) => ({ ...current, [activeAiChat]: [...currentMessages, userMessage] }))
+    setAiChatInput('')
+    setAiChatError('')
+    setAiChatLoading(true)
+    try {
+      const response = await fetch('/api/ai-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ specialist: activeAiChat, messages: currentMessages, message }),
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'Something went wrong.')
+      setAiChats((current) => ({
+        ...current,
+        [activeAiChat]: [...(current[activeAiChat] || []), { role: 'assistant', content: result.reply }],
+      }))
+    } catch (error) {
+      setAiChatError(error.message || 'GrowthGrind AI could not reply.')
+    } finally {
+      setAiChatLoading(false)
+    }
+  }
+
   const activateDemoPremium = () => {
     localStorage.setItem('growthgrind_demo_premium', 'true')
     setIsPremium(true)
@@ -693,15 +753,6 @@ function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const openPremium = (feature) => {
-    if (isPremium) {
-      goTo(feature)
-      return
-    }
-
-    setPremiumModal(feature)
-  }
-
   return (
     <div className="app">
       <Navbar
@@ -764,6 +815,7 @@ function App() {
               </label>
 
               <div
+                className="ai-workspace"
                 style={{
                   display: 'flex',
                   flexWrap: 'wrap',
@@ -2221,7 +2273,7 @@ function App() {
                     title="AI Admissions Advisor"
                     description="Personalised UK university and admissions guidance."
                     onClick={() =>
-                      openPremium('AdmissionsAdvisor')
+                      openAiWorkspace('admissions')
                     }
                   />
 
@@ -2230,7 +2282,7 @@ function App() {
                     title="University & Course Finder"
                     description="Find UK courses and universities that fit you."
                     onClick={() =>
-                      openPremium('CourseFinder')
+                      openAiWorkspace('courses')
                     }
                   />
 
@@ -2239,7 +2291,7 @@ function App() {
                     title="Personal Statement Guidance"
                     description="Develop stronger ideas and improve your own writing."
                     onClick={() =>
-                      openPremium('PersonalStatement')
+                      openAiWorkspace('statement')
                     }
                   />
 
@@ -2248,7 +2300,7 @@ function App() {
                     title="Admissions Test Support"
                     description="Personalised guidance for relevant UK admissions tests."
                     onClick={() =>
-                      openPremium('AdmissionsTests')
+                      openAiWorkspace('tests')
                     }
                   />
 
@@ -2257,7 +2309,7 @@ function App() {
                     title="Career Quiz"
                     description="Discover career and degree pathways suited to you."
                     onClick={() =>
-                      openPremium('CareerQuiz')
+                      openAiWorkspace('career')
                     }
                   />
 
@@ -2266,7 +2318,7 @@ function App() {
                     title="AI Research Project Builder"
                     description="Turn an idea into a structured independent research project."
                     onClick={() =>
-                      openPremium('ResearchBuilder')
+                      openAiWorkspace('research')
                     }
                   />
 
@@ -2317,6 +2369,92 @@ function App() {
       )}
 
       {/* PREMIUM FEATURE PAGES */}
+      {page === 'AI' && (
+        <main>
+          <section className="hero-section" style={{ paddingTop: '36px' }}>
+            <div className="hero-content" style={{ maxWidth: '1120px' }}>
+              <span className="eyebrow">GROWTHGRIND AI</span>
+              <h1 style={{ fontSize: 'clamp(34px, 5vw, 58px)' }}>Your student<br />thinking partner.</h1>
+              <p>Choose a specialist chat, ask follow-up questions, and build on the conversation as you go.</p>
+
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'minmax(210px, 0.72fr) minmax(0, 2fr)',
+                  minHeight: '620px',
+                  marginTop: '32px',
+                  border: '1px solid #d0c4b0',
+                  borderRadius: '18px',
+                  overflow: 'hidden',
+                  background: '#f5efe5',
+                }}
+              >
+                <aside style={{ padding: '18px 12px', background: '#e9dfcf', borderRight: '1px solid #d0c4b0' }}>
+                  <div className="eyebrow" style={{ padding: '0 8px 12px' }}>FEATURED CHATS</div>
+                  {aiSpecialists.map((specialist) => {
+                    const isActive = activeAiChat === specialist.id
+                    const messageCount = (aiChats[specialist.id] || []).filter((message) => message.role === 'user').length
+                    return (
+                      <button
+                        key={specialist.id}
+                        onClick={() => { setActiveAiChat(specialist.id); setAiChatError('') }}
+                        style={{
+                          display: 'block', width: '100%', textAlign: 'left', padding: '12px', marginBottom: '7px',
+                          border: isActive ? '1px solid #315b3d' : '1px solid transparent', borderRadius: '10px',
+                          background: isActive ? '#f5efe5' : 'transparent', color: '#294b35', cursor: 'pointer', font: 'inherit',
+                        }}
+                      >
+                        <strong style={{ display: 'block', fontSize: '13px' }}>{specialist.name}</strong>
+                        <span style={{ display: 'block', marginTop: '3px', fontSize: '10px', color: '#777065' }}>
+                          {messageCount ? `${messageCount} message${messageCount === 1 ? '' : 's'}` : specialist.description}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </aside>
+
+                <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                  <div style={{ padding: '20px 24px', borderBottom: '1px solid #d0c4b0' }}>
+                    <div className="days-left">SPECIALIST CHAT</div>
+                    <h3 style={{ margin: '8px 0 0' }}>{aiSpecialists.find((item) => item.id === activeAiChat)?.name}</h3>
+                  </div>
+                  <div style={{ flex: 1, padding: '24px', overflowY: 'auto', maxHeight: '440px' }}>
+                    {(aiChats[activeAiChat] || []).length === 0 ? (
+                      <div className="closing-card" style={{ boxShadow: 'none' }}>
+                        <h3>Start the conversation</h3>
+                        <p>Tell me what you are thinking about. You can keep asking questions here and I’ll use this conversation as context.</p>
+                      </div>
+                    ) : (
+                      (aiChats[activeAiChat] || []).map((message, index) => (
+                        <div key={`${message.role}-${index}`} style={{ display: 'flex', justifyContent: message.role === 'user' ? 'flex-end' : 'flex-start', marginBottom: '14px' }}>
+                          <div style={{ maxWidth: '82%', whiteSpace: 'pre-wrap', padding: '13px 15px', borderRadius: '13px', lineHeight: 1.55, background: message.role === 'user' ? '#315b3d' : '#e9dfcf', color: message.role === 'user' ? '#fff' : '#294b35' }}>
+                            {message.content}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                    {aiChatLoading && <p style={{ color: '#777065', fontSize: '13px' }}>GrowthGrind AI is thinking…</p>}
+                  </div>
+                  <form onSubmit={sendAiChat} style={{ padding: '16px 20px', borderTop: '1px solid #d0c4b0', background: '#fffaf2' }}>
+                    {aiChatError && <p style={{ margin: '0 0 8px', color: '#9d3c2e', fontWeight: '700', fontSize: '12px' }}>{aiChatError}</p>}
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <textarea
+                        value={aiChatInput}
+                        onChange={(event) => setAiChatInput(event.target.value)}
+                        placeholder="Ask anything about this topic…"
+                        rows="2"
+                        style={{ flex: 1, boxSizing: 'border-box', padding: '11px', borderRadius: '9px', border: '1px solid #d0c4b0', background: '#f5efe5', color: '#315b3d', font: 'inherit', resize: 'none' }}
+                      />
+                      <button className="primary-button" type="submit" disabled={aiChatLoading} style={{ alignSelf: 'stretch', opacity: aiChatLoading ? 0.65 : 1 }}>Send →</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </section>
+        </main>
+      )}
+
       {page === 'AdmissionsAdvisor' && (
         <PremiumToolPage
           eyebrow="AI ADMISSIONS ADVISOR"

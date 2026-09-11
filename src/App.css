@@ -685,4 +685,13 @@ footer p {
   .pricing-features {
     grid-template-columns: 1fr !important;
   }
+
+  .ai-workspace {
+    grid-template-columns: 1fr !important;
+  }
+
+  .ai-workspace aside {
+    border-right: 0 !important;
+    border-bottom: 1px solid #d0c4b0;
+  }
 }
