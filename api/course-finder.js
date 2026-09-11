@@ -46,7 +46,29 @@ Student profile:
 ${JSON.stringify(profile)}`
 
   try {
-    const models = ['gemini-3-flash-preview', 'gemini-2.5-flash']
+    const modelListResponse = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${process.env.GEMINI_API_KEY}`
+    )
+
+    if (!modelListResponse.ok) {
+      throw new Error(`Gemini model discovery returned ${modelListResponse.status}`)
+    }
+
+    const modelList = await modelListResponse.json()
+    const availableModels = (modelList.models || [])
+      .filter((model) => model.supportedGenerationMethods?.includes('generateContent'))
+      .map((model) => model.name?.replace(/^models\//, ''))
+      .filter(Boolean)
+
+    const models = [
+      ...availableModels.filter((model) => /flash/i.test(model)),
+      ...availableModels.filter((model) => !/flash/i.test(model)),
+    ]
+
+    if (models.length === 0) {
+      throw new Error('No Gemini text-generation model is available for this API key.')
+    }
+
     let payload
     let lastStatus
 
