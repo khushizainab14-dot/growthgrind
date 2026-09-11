@@ -14,6 +14,15 @@ function clean(message) {
   return typeof message === 'string' ? message.trim().slice(0, 2000) : ''
 }
 
+function cleanAttachment(attachment) {
+  if (!attachment || typeof attachment !== 'object') return null
+  const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp']
+  const mimeType = attachment.mimeType
+  const data = typeof attachment.data === 'string' ? attachment.data : ''
+  if (!allowedTypes.includes(mimeType) || !data || data.length > 4.2 * 1024 * 1024) return null
+  return { mimeType, data }
+}
+
 export default async function handler(request, response) {
   if (request.method !== 'POST') return response.status(405).json({ error: 'Method not allowed.' })
   if (!process.env.GEMINI_API_KEY) return response.status(500).json({ error: 'GrowthGrind AI is not configured yet.' })
@@ -21,7 +30,9 @@ export default async function handler(request, response) {
   const specialist = specialists[request.body?.specialist]
   const history = Array.isArray(request.body?.messages) ? request.body.messages.slice(-14) : []
   const message = clean(request.body?.message)
+  const attachment = cleanAttachment(request.body?.attachment)
   if (!specialist || !message) return response.status(400).json({ error: 'Please write a message first.' })
+  if (request.body?.attachment && !attachment) return response.status(400).json({ error: 'That attachment is not supported or is too large.' })
 
   const transcript = history
     .filter((item) => ['user', 'assistant'].includes(item?.role) && clean(item?.content))
@@ -37,6 +48,8 @@ ${transcript}
 Student: ${message}
 
 GrowthGrind AI:`
+    const parts = [{ text: attachment ? `${prompt}\n\nThe student attached a file. Analyse it only in relation to their question, point out uncertainty, and do not repeat unnecessary personal details.` : prompt }]
+    if (attachment) parts.push({ inlineData: attachment })
 
   try {
     if (!cachedModels) {
@@ -56,7 +69,7 @@ GrowthGrind AI:`
       const result = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.35, maxOutputTokens: 450 } }),
+        body: JSON.stringify({ contents: [{ parts }], generationConfig: { temperature: 0.35, maxOutputTokens: 450 } }),
       })
       if (result.ok) {
         payload = await result.json()

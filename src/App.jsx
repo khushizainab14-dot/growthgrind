@@ -188,6 +188,7 @@ function App() {
   const [aiChatInput, setAiChatInput] = useState('')
   const [aiChatLoading, setAiChatLoading] = useState(false)
   const [aiChatError, setAiChatError] = useState('')
+  const [aiAttachment, setAiAttachment] = useState(null)
 
   const [showFilters, setShowFilters] = useState(false)
   const [sort, setSort] = useState('Most relevant')
@@ -549,22 +550,68 @@ function App() {
     if (error) console.error('Could not save AI chat message:', error.message)
   }
 
+  const chooseAiAttachment = (event) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp']
+    if (!allowedTypes.includes(file.type)) {
+      setAiChatError('Please choose a PDF, JPG, PNG or WebP image.')
+      return
+    }
+    if (file.size > 3 * 1024 * 1024) {
+      setAiChatError('Attachments must be 3 MB or smaller for AI analysis.')
+      return
+    }
+    setAiChatError('')
+    setAiAttachment(file)
+  }
+
+  const uploadAiAttachment = async (file) => {
+    if (!user) throw new Error('Please sign in before attaching a file.')
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '-')
+    const path = `${user.id}/${Date.now()}-${safeName}`
+    const { error } = await supabase.storage.from('ai-uploads').upload(path, file, {
+      contentType: file.type,
+      upsert: false,
+    })
+    if (error) throw new Error('Your attachment could not be uploaded. Please try again.')
+  }
+
+  const encodeAiAttachment = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve({
+      name: file.name,
+      mimeType: file.type,
+      data: String(reader.result).split(',')[1],
+    })
+    reader.onerror = () => reject(new Error('Your attachment could not be read.'))
+    reader.readAsDataURL(file)
+  })
+
   const sendAiChat = async (event) => {
     event.preventDefault()
     const message = aiChatInput.trim()
-    if (!message || aiChatLoading) return
+    if ((!message && !aiAttachment) || aiChatLoading) return
+    if (aiAttachment && !user) {
+      openAuth()
+      return
+    }
     const currentMessages = aiChats[activeAiChat] || []
-    const userMessage = { role: 'user', content: message }
+    const attachmentLabel = aiAttachment ? `\n\n[Attached: ${aiAttachment.name}]` : ''
+    const userMessage = { role: 'user', content: `${message || 'Please analyse this attachment.'}${attachmentLabel}` }
     setAiChats((current) => ({ ...current, [activeAiChat]: [...currentMessages, userMessage] }))
     saveAiMessage(activeAiChat, userMessage)
     setAiChatInput('')
     setAiChatError('')
     setAiChatLoading(true)
     try {
+      const attachment = aiAttachment ? await encodeAiAttachment(aiAttachment) : null
+      if (aiAttachment) await uploadAiAttachment(aiAttachment)
       const response = await fetch('/api/ai-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ specialist: activeAiChat, messages: currentMessages, message }),
+        body: JSON.stringify({ specialist: activeAiChat, messages: currentMessages, message: message || 'Please analyse this attachment.', attachment }),
       })
       const result = await response.json()
       if (!response.ok) throw new Error(result.error || 'Something went wrong.')
@@ -574,6 +621,7 @@ function App() {
         [activeAiChat]: [...(current[activeAiChat] || []), assistantMessage],
       }))
       saveAiMessage(activeAiChat, assistantMessage)
+      setAiAttachment(null)
     } catch (error) {
       setAiChatError(error.message || 'GrowthGrind AI could not reply.')
     } finally {
@@ -2514,11 +2562,21 @@ function App() {
                   </div>
                   <form onSubmit={sendAiChat} style={{ padding: '16px 20px', borderTop: '1px solid #d0c4b0', background: '#fffaf2' }}>
                     {aiChatError && <p style={{ margin: '0 0 8px', color: '#9d3c2e', fontWeight: '700', fontSize: '12px' }}>{aiChatError}</p>}
+                    {aiAttachment && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginBottom: '9px', padding: '8px 10px', borderRadius: '8px', background: '#e9dfcf', color: '#294b35', fontSize: '12px' }}>
+                        <span>Attached: {aiAttachment.name}</span>
+                        <button type="button" onClick={() => setAiAttachment(null)} style={{ border: 0, background: 'transparent', color: '#294b35', cursor: 'pointer', fontWeight: '700' }}>Remove ×</button>
+                      </div>
+                    )}
                     <div style={{ display: 'flex', gap: '10px', alignItems: 'stretch' }}>
+                      <label title="Attach a PDF or image" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '44px', minWidth: '44px', border: '1px solid #d0c4b0', borderRadius: '9px', background: '#f5efe5', color: '#315b3d', cursor: 'pointer', fontSize: '20px' }}>
+                        +
+                        <input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" onChange={chooseAiAttachment} style={{ display: 'none' }} />
+                      </label>
                       <textarea
                         value={aiChatInput}
                         onChange={(event) => setAiChatInput(event.target.value)}
-                        placeholder="Ask anything about this topic…"
+                        placeholder="Ask about an attachment or anything about this topic…"
                         rows="3"
                         style={{ flex: 1, minHeight: '82px', boxSizing: 'border-box', padding: '13px', borderRadius: '9px', border: '1px solid #d0c4b0', background: '#f5efe5', color: '#315b3d', font: 'inherit', resize: 'vertical' }}
                       />
