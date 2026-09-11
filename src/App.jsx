@@ -2403,6 +2403,18 @@ function App() {
                     <h3>{course.title}</h3>
                     <p><strong>Why it could fit:</strong> {course.whyItFits}</p>
                     <p><strong>Explore:</strong> {course.explore}</p>
+                    {(course.universitiesToExplore || []).length > 0 && (
+                      <div style={{ marginTop: '16px' }}>
+                        <strong style={{ color: '#315b3d', fontSize: '12px' }}>Universities to investigate</strong>
+                        <ul style={{ paddingLeft: '20px', lineHeight: '1.55', marginBottom: '12px' }}>
+                          {course.universitiesToExplore.map((university) => (
+                            <li key={university.name}>
+                              <strong>{university.name}:</strong> {university.reason}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                     <a
                       className="view-button"
                       href={`https://www.ucas.com/explore/search/courses-beta?search=${encodeURIComponent(course.title)}`}

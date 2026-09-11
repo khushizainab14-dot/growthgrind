@@ -33,14 +33,14 @@ export default async function handler(request, response) {
     return response.status(400).json({ error: 'Please add your subjects and interests.' })
   }
 
-  const prompt = `You are GrowthGrind's UK university course exploration assistant. Help a school student explore possible degree subjects and university types. Do not claim entry guarantees, invent entry requirements, rank universities, or give admissions advice as fact. Be encouraging, precise, and transparent about uncertainty. Recommend course areas first, not named universities unless the student explicitly asks for them. Return valid JSON only with this exact shape:
+  const prompt = `You are GrowthGrind's UK university course exploration assistant. Help a school student explore possible degree subjects and a small shortlist of UK universities to investigate. Do not claim entry guarantees, invent entry requirements, rank universities, or give admissions advice as fact. Be encouraging, precise, and transparent about uncertainty. The university list must be a shortlist to research, not a definitive list or ranking. Return valid JSON only with this exact shape:
 {
   "summary": "two or three sentences",
-  "courseAreas": [{"title":"", "whyItFits":"", "explore":""}],
+  "courseAreas": [{"title":"", "whyItFits":"", "explore":"", "universitiesToExplore":[{"name":"", "reason":""}]}],
   "nextSteps": [""],
   "questionsToConsider": [""]
 }
-Include 3 courseAreas and 3 nextSteps. The 'explore' field should suggest what the student should check in official university course pages, such as module content, entry requirements, placement options, or admissions tests.
+Include 3 courseAreas, 3 nextSteps, and 3 to 5 universitiesToExplore for every course area. Only include a university when it genuinely relates to that specific course and the student's stated preferences. The 'explore' field should suggest what the student should check in official university course pages, such as module content, entry requirements, placement options, or admissions tests.
 
 Student profile:
 ${JSON.stringify(profile)}`
