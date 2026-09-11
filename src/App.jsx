@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from './supabaseClient'
 
 import './App.css'
@@ -165,6 +165,7 @@ function App() {
   const [courseResults, setCourseResults] = useState(null)
   const [courseLoading, setCourseLoading] = useState(false)
   const [courseError, setCourseError] = useState('')
+  const courseResultsRef = useRef(null)
 
   const [showFilters, setShowFilters] = useState(false)
   const [sort, setSort] = useState('Most relevant')
@@ -413,6 +414,9 @@ function App() {
       const result = await response.json()
       if (!response.ok) throw new Error(result.error || 'Something went wrong.')
       setCourseResults(result)
+      window.setTimeout(() => {
+        courseResultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 0)
     } catch (error) {
       setCourseError(error.message || 'We could not generate recommendations.')
     } finally {
@@ -2391,7 +2395,7 @@ function App() {
           </form>
 
           {courseResults && (
-            <div style={{ marginTop: '28px' }}>
+            <div ref={courseResultsRef} style={{ marginTop: '28px', scrollMarginTop: '100px' }}>
               <div className="closing-card">
                 <div className="days-left">YOUR COURSE EXPLORATION</div>
                 <h3>A starting point, tailored to you</h3>
@@ -2417,7 +2421,7 @@ function App() {
                     )}
                     <a
                       className="view-button"
-                      href={`https://www.ucas.com/explore/search/courses-beta?search=${encodeURIComponent(course.title)}`}
+                      href={`https://digital.ucas.com/coursedisplay/results/courses?search=${encodeURIComponent(course.title.replace(/\s*\([^)]*\)/g, ''))}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{ display: 'inline-block', marginTop: '8px', textDecoration: 'none' }}

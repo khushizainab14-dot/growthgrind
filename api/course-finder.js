@@ -1,4 +1,5 @@
 const MAX_FIELD_LENGTH = 800
+let cachedModels = null
 
 function clean(value) {
   return typeof value === 'string' ? value.trim().slice(0, MAX_FIELD_LENGTH) : ''
@@ -46,24 +47,30 @@ Student profile:
 ${JSON.stringify(profile)}`
 
   try {
-    const modelListResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models?key=${process.env.GEMINI_API_KEY}`
-    )
+    if (!cachedModels) {
+      const modelListResponse = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models?key=${process.env.GEMINI_API_KEY}`
+      )
 
-    if (!modelListResponse.ok) {
-      throw new Error(`Gemini model discovery returned ${modelListResponse.status}`)
+      if (!modelListResponse.ok) {
+        throw new Error(`Gemini model discovery returned ${modelListResponse.status}`)
+      }
+
+      const modelList = await modelListResponse.json()
+      const availableModels = (modelList.models || [])
+        .filter((model) => model.supportedGenerationMethods?.includes('generateContent'))
+        .map((model) => model.name?.replace(/^models\//, ''))
+        .filter(Boolean)
+
+      cachedModels = [
+        ...availableModels.filter((model) => /gemini-3.*flash/i.test(model)),
+        ...availableModels.filter((model) => /gemini-2\.5.*flash/i.test(model)),
+        ...availableModels.filter((model) => /flash/i.test(model) && !/gemini-[23]/i.test(model)),
+        ...availableModels.filter((model) => !/flash/i.test(model)),
+      ]
     }
 
-    const modelList = await modelListResponse.json()
-    const availableModels = (modelList.models || [])
-      .filter((model) => model.supportedGenerationMethods?.includes('generateContent'))
-      .map((model) => model.name?.replace(/^models\//, ''))
-      .filter(Boolean)
-
-    const models = [
-      ...availableModels.filter((model) => /flash/i.test(model)),
-      ...availableModels.filter((model) => !/flash/i.test(model)),
-    ]
+    const models = cachedModels
 
     if (models.length === 0) {
       throw new Error('No Gemini text-generation model is available for this API key.')
