@@ -46,26 +46,36 @@ Student profile:
 ${JSON.stringify(profile)}`
 
   try {
-    const geminiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.35,
-            responseMimeType: 'application/json',
-          },
-        }),
-      }
-    )
+    const models = ['gemini-3-flash-preview', 'gemini-2.5-flash']
+    let payload
+    let lastStatus
 
-    if (!geminiResponse.ok) {
-      throw new Error(`Gemini returned ${geminiResponse.status}`)
+    for (const model of models) {
+      const geminiResponse = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature: 0.35,
+              responseMimeType: 'application/json',
+            },
+          }),
+        }
+      )
+
+      if (geminiResponse.ok) {
+        payload = await geminiResponse.json()
+        break
+      }
+
+      lastStatus = geminiResponse.status
     }
 
-    const payload = await geminiResponse.json()
+    if (!payload) throw new Error(`Gemini returned ${lastStatus}`)
+
     const text = payload.candidates?.[0]?.content?.parts?.[0]?.text
     if (!text) throw new Error('Gemini returned no recommendation.')
 
