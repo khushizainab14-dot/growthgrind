@@ -2403,6 +2403,15 @@ function App() {
                     <h3>{course.title}</h3>
                     <p><strong>Why it could fit:</strong> {course.whyItFits}</p>
                     <p><strong>Explore:</strong> {course.explore}</p>
+                    <a
+                      className="view-button"
+                      href={`https://www.ucas.com/explore/search/courses-beta?search=${encodeURIComponent(course.title)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ display: 'inline-block', marginTop: '8px', textDecoration: 'none' }}
+                    >
+                      See all {course.title} courses on UCAS →
+                    </a>
                   </div>
                 ))}
               </div>
@@ -2419,6 +2428,9 @@ function App() {
                     </ul>
                   </>
                 )}
+                <p style={{ marginTop: '22px', fontSize: '12px' }}>
+                  Course and university availability changes regularly. UCAS Search is the source of truth for the full current list.
+                </p>
               </div>
             </div>
           )}
