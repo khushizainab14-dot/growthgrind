@@ -100,14 +100,29 @@ function App() {
         yearGroups: item.year_groups
           ? item.year_groups.split(',').map((year) => year.trim())
           : [],
+        deadlineRaw: item.deadline || null,
         deadline: item.deadline
-          ? new Date(item.deadline).toLocaleDateString('en-GB', {
-              day: 'numeric',
-              month: 'short',
-              year: 'numeric',
-            })
+          ? new Date(item.deadline).toLocaleDateString('en-GB')
           : '',
-        days: '',
+        days: item.deadline
+          ? (() => {
+              const today = new Date()
+              today.setHours(0, 0, 0, 0)
+
+              const deadline = new Date(item.deadline)
+              deadline.setHours(0, 0, 0, 0)
+
+              const difference = Math.ceil(
+                (deadline - today) / (1000 * 60 * 60 * 24)
+              )
+
+              if (difference < 0) return 'Closed'
+              if (difference === 0) return 'Today'
+              if (difference === 1) return '1 day left'
+
+              return `${difference} days left`
+            })()
+          : '',
         cost: item.cost,
         interests: item.interests
           ? item.interests.split(',').map((interest) => interest.trim())
@@ -131,6 +146,13 @@ function App() {
 
   const [saved, setSaved] = useState([])
   const [tracked, setTracked] = useState([])
+  const [trackedActivities, setTrackedActivities] = useState({})
+  const [session, setSession] = useState(null)
+  const [authModal, setAuthModal] = useState(false)
+  const [authMode, setAuthMode] = useState('signin')
+  const [authEmail, setAuthEmail] = useState('')
+  const [authPassword, setAuthPassword] = useState('')
+  const [authMessage, setAuthMessage] = useState('')
 
   const [showFilters, setShowFilters] = useState(false)
   const [sort, setSort] = useState('Most relevant')
@@ -156,7 +178,56 @@ function App() {
     localStorage.getItem('growthgrind_demo_premium') === 'true'
   )
 
-  const foundingMembersClaimed = 6
+  const user = session?.user || null
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setSession(data.session))
+
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, nextSession) => setSession(nextSession)
+    )
+
+    return () => listener.subscription.unsubscribe()
+  }, [])
+
+  useEffect(() => {
+    if (!user) {
+      setSaved([])
+      setTracked([])
+      setTrackedActivities({})
+      return
+    }
+
+    const loadUserData = async () => {
+      const [savedResult, trackedResult] = await Promise.all([
+        supabase
+          .from('saved_opportunities')
+          .select('opportunity_id')
+          .eq('user_id', user.id),
+        supabase
+          .from('tracked_activities')
+          .select('opportunity_id, reflection, status')
+          .eq('user_id', user.id),
+      ])
+
+      if (!savedResult.error) {
+        setSaved((savedResult.data || []).map((item) => item.opportunity_id))
+      }
+
+      if (!trackedResult.error) {
+        const activities = (trackedResult.data || []).reduce(
+          (result, item) => ({ ...result, [item.opportunity_id]: item }),
+          {}
+        )
+        setTracked(Object.keys(activities).map(Number))
+        setTrackedActivities(activities)
+      }
+    }
+
+    loadUserData()
+  }, [user])
+
+  const foundingMembersClaimed = 0
   const foundingMemberLimit = 30
   const foundingSpotsLeft = Math.max(
     0,
@@ -207,25 +278,108 @@ function App() {
     )
   }
 
-  const toggleSaved = (title) => {
-    setSaved((current) =>
-      current.includes(title)
-        ? current.filter((item) => item !== title)
-        : [...current, title]
-    )
+  const openAuth = (mode = 'signin') => {
+    setAuthMode(mode)
+    setAuthMessage('')
+    setAuthModal(true)
   }
 
-  const attemptTrack = (title) => {
+  const toggleSaved = async (opportunity) => {
+    if (!user) {
+      openAuth()
+      return
+    }
+
+    if (saved.includes(opportunity.id)) {
+      const { error } = await supabase
+        .from('saved_opportunities')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('opportunity_id', opportunity.id)
+      if (!error) setSaved((current) => current.filter((id) => id !== opportunity.id))
+      return
+    }
+
+    const { error } = await supabase.from('saved_opportunities').insert({
+      user_id: user.id,
+      opportunity_id: opportunity.id,
+    })
+    if (!error) setSaved((current) => [...current, opportunity.id])
+  }
+
+  const attemptTrack = async (opportunity) => {
+    if (!user) {
+      openAuth()
+      return
+    }
+
     if (!isPremium) {
       setPremiumModal('tracker')
       return
     }
 
-    setTracked((current) =>
-      current.includes(title)
-        ? current.filter((item) => item !== title)
-        : [...current, title]
-    )
+    if (tracked.includes(opportunity.id)) {
+      const { error } = await supabase
+        .from('tracked_activities')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('opportunity_id', opportunity.id)
+      if (!error) {
+        setTracked((current) => current.filter((id) => id !== opportunity.id))
+        setTrackedActivities((current) => {
+          const next = { ...current }
+          delete next[opportunity.id]
+          return next
+        })
+      }
+      return
+    }
+
+    const activity = {
+      user_id: user.id,
+      opportunity_id: opportunity.id,
+      title: opportunity.title,
+      provider: opportunity.organisation,
+      category: opportunity.category,
+    }
+    const { data, error } = await supabase
+      .from('tracked_activities')
+      .insert(activity)
+      .select('opportunity_id, reflection, status')
+      .single()
+    if (!error) {
+      setTracked((current) => [...current, opportunity.id])
+      setTrackedActivities((current) => ({ ...current, [opportunity.id]: data }))
+    }
+  }
+
+  const saveReflection = async (opportunityId) => {
+    if (!user || !trackedActivities[opportunityId]) return
+    await supabase
+      .from('tracked_activities')
+      .update({ reflection: trackedActivities[opportunityId].reflection })
+      .eq('user_id', user.id)
+      .eq('opportunity_id', opportunityId)
+  }
+
+  const submitAuth = async (event) => {
+    event.preventDefault()
+    setAuthMessage('')
+    const action = authMode === 'signin'
+      ? supabase.auth.signInWithPassword({ email: authEmail, password: authPassword })
+      : supabase.auth.signUp({ email: authEmail, password: authPassword })
+    const { error } = await action
+    if (error) {
+      setAuthMessage(error.message)
+      return
+    }
+    if (authMode === 'signup') {
+      setAuthMessage('Check your email to confirm your account, then sign in.')
+      return
+    }
+    setAuthModal(false)
+    setAuthEmail('')
+    setAuthPassword('')
   }
 
   const activateDemoPremium = () => {
@@ -240,9 +394,9 @@ function App() {
   }
 
   const getMatchScore = (opportunity) => {
-    if (selectedInterests.length === 0) return 0
+    if (selectedInterests.length === 0) return 100
 
-    const matches = opportunity.interests.filter((interest) =>
+    const matches = (opportunity.interests || []).filter((interest) =>
       selectedInterests.includes(interest)
     )
 
@@ -254,35 +408,61 @@ function App() {
     )
   }
 
+  const closingSoonOpportunities = [...opportunities]
+    .filter((opportunity) => opportunity.deadlineRaw)
+    .filter((opportunity) => {
+      const deadline = new Date(opportunity.deadlineRaw)
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+
+      return !Number.isNaN(deadline.getTime()) && deadline >= today
+    })
+    .sort((a, b) => new Date(a.deadlineRaw) - new Date(b.deadlineRaw))
+    .slice(0, 3)
+
   const getFilteredOpportunities = () => {
     let results = [...opportunities]
 
     if (activeCategory !== 'All') {
-      results = results.filter(
-        (opportunity) => opportunity.category === activeCategory
-      )
+      const categoryMatches = {
+        academic: ['academic', 'competition', 'olympiad', 'research', 'course', 'summer school', 'scholarship'],
+        careers: ['careers', 'work experience', 'internship', 'insight day', 'workshop'],
+        leadership: ['leadership', 'leadership programme'],
+        volunteering: ['volunteering', 'volunteer'],
+        sport: ['sport'],
+        creative: ['creative', 'film', 'photography', 'art', 'writing', 'design'],
+        international: ['international', 'abroad'],
+      }
+      const keywords = categoryMatches[activeCategory.toLowerCase()] || []
+
+      results = results.filter((opportunity) => {
+        const searchable = [opportunity.category, opportunity.activityType]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+
+        return keywords.some((keyword) => searchable.includes(keyword))
+      })
     }
 
     if (ageFilter !== 'Any') {
       results = results.filter((opportunity) => {
         if (ageFilter === '13–15') {
+          const age = opportunity.age || ''
           return (
-            opportunity.age.includes('13') ||
-            opportunity.age.includes('14') ||
-            opportunity.age.includes('15')
+            age.includes('13') || age.includes('14') || age.includes('15')
           )
         }
 
         if (ageFilter === '16–18') {
+          const age = opportunity.age || ''
           return (
-            opportunity.age.includes('16') ||
-            opportunity.age.includes('17') ||
-            opportunity.age.includes('18')
+            age.includes('16') || age.includes('17') || age.includes('18')
           )
         }
 
         if (ageFilter === '18+') {
-          return opportunity.age.includes('18')
+          return (opportunity.age || '').includes('18')
         }
 
         return true
@@ -291,25 +471,29 @@ function App() {
 
     if (yearGroupFilter !== 'Any') {
       results = results.filter((opportunity) =>
-        opportunity.yearGroups.includes(yearGroupFilter)
+        (opportunity.yearGroups || []).includes(yearGroupFilter)
       )
     }
 
     if (locationFilter !== 'Any') {
       results = results.filter((opportunity) => {
+        const location = (opportunity.location || '').toLowerCase()
         if (locationFilter === 'UK') {
           return (
-            opportunity.location.includes('UK') ||
-            opportunity.location.includes('London') ||
-            opportunity.location.includes('England')
+            location.includes('uk') ||
+            location.includes('united kingdom') ||
+            location.includes('england') ||
+            location.includes('london') ||
+            location.includes('oxford') ||
+            location.includes('cambridge')
           )
         }
 
-        if (locationFilter === 'Online') {
-          return opportunity.format === 'Online'
+        if (locationFilter === 'Online' || locationFilter === 'Remote') {
+          return opportunity.format === 'Online' || location.includes('remote')
         }
 
-        return opportunity.location.includes(locationFilter)
+        return location.includes(locationFilter.toLowerCase())
       })
     }
 
@@ -342,10 +526,9 @@ function App() {
 
     if (sort === 'Deadline soonest') {
       results.sort((a, b) => {
-        const getDay = (text) =>
-          parseInt(text.match(/\d+/)?.[0] || '99')
-
-        return getDay(a.deadline) - getDay(b.deadline)
+        const aDeadline = a.deadlineRaw ? new Date(a.deadlineRaw).getTime() : Infinity
+        const bDeadline = b.deadlineRaw ? new Date(b.deadlineRaw).getTime() : Infinity
+        return aDeadline - bDeadline
       })
     }
 
@@ -359,76 +542,69 @@ function App() {
   const filteredOpportunities = getFilteredOpportunities()
 
   const matchedOpportunities = [...opportunities]
+    .filter((opportunity) => {
+    if (
+      activityTypeFilter !== 'Any' &&
+      opportunity.activityType !== activityTypeFilter
+    ) {
+      return false
+    }
+
+    if (
+      subjectFilter !== 'Any' &&
+      !(opportunity.subjects || []).includes(subjectFilter)
+    ) {
+      return false
+    }
+
+    if (
+      yearGroupFilter !== 'Any' &&
+      !(opportunity.yearGroups || []).includes(yearGroupFilter)
+    ) {
+      return false
+    }
+
+      if (locationFilter !== 'Any') {
+        const location = (opportunity.location || '').toLowerCase()
+        const isUk = ['uk', 'united kingdom', 'england', 'london', 'oxford', 'cambridge']
+          .some((place) => location.includes(place))
+        const matchesLocation =
+          locationFilter === 'UK'
+            ? isUk
+            : locationFilter === 'Online' || locationFilter === 'Remote'
+              ? opportunity.format === 'Online' || location.includes('remote')
+              : location.includes(locationFilter.toLowerCase())
+
+        if (!matchesLocation) return false
+      }
+
+    if (
+      formatFilter !== 'Any' &&
+      opportunity.format !== formatFilter
+    ) {
+      return false
+    }
+
+    if (
+      costFilter === 'Free' &&
+      opportunity.cost !== 'Free'
+    ) {
+      return false
+    }
+
+    if (
+      costFilter === 'Financial support' &&
+      !opportunity.support
+    ) {
+      return false
+    }
+
+      return true
+    })
     .map((opportunity) => ({
       ...opportunity,
       matchScore: getMatchScore(opportunity),
     }))
-    .filter((opportunity) => opportunity.matchScore > 0)
-    .filter((opportunity) => {
-      if (
-        activityTypeFilter !== 'Any' &&
-        opportunity.activityType !== activityTypeFilter
-      ) {
-        return false
-      }
-
-      if (
-        subjectFilter !== 'Any' &&
-        !opportunity.subjects?.includes(subjectFilter)
-      ) {
-        return false
-      }
-
-      if (
-        yearGroupFilter !== 'Any' &&
-        !opportunity.yearGroups.includes(yearGroupFilter)
-      ) {
-        return false
-      }
-
-      if (locationFilter !== 'Any') {
-        if (locationFilter === 'UK') {
-          if (
-            !(
-              opportunity.location.includes('UK') ||
-              opportunity.location.includes('London') ||
-              opportunity.location.includes('England')
-            )
-          ) {
-            return false
-          }
-        }
-
-        if (locationFilter === 'England') {
-          if (!opportunity.location.includes('England')) {
-            return false
-          }
-        }
-
-        if (locationFilter === 'Online') {
-          if (opportunity.format !== 'Online') {
-            return false
-          }
-        }
-      }
-
-      if (formatFilter !== 'Any' && opportunity.format !== formatFilter) {
-        return false
-      }
-
-      if (costFilter === 'Free' && opportunity.cost !== 'Free') {
-        return false
-      }
-
-      if (
-        costFilter === 'Financial support' &&
-        !opportunity.support
-      ) {
-        return false
-      }
-
-      return true
-    })
     .sort((a, b) => b.matchScore - a.matchScore)
 
   const clearFilters = () => {
@@ -467,11 +643,13 @@ function App() {
         showMore={showMore}
         setShowMore={setShowMore}
         isPremium={isPremium}
+        user={user}
+        onAuth={() => openAuth()}
+        onSignOut={() => supabase.auth.signOut()}
       />
 
       {/* MATCH SETUP */}
-      ```jsx
-{page === 'Match' && (
+      {page === 'Match' && (
   <main>
     <section className="hero-section">
       <div className="hero-content">
@@ -993,24 +1171,6 @@ function App() {
               </div>
             </section>
 
-            <section className="category-section">
-              <div className="category-list">
-                {categories.map((category) => (
-                  <button
-                    key={category}
-                    className={
-                      activeCategory === category
-                        ? 'category active'
-                        : 'category'
-                    }
-                    onClick={() => setActiveCategory(category)}
-                  >
-                    {category}
-                  </button>
-                ))}
-              </div>
-            </section>
-
             <section className="closing-section">
               <div className="section-heading">
                 <div>
@@ -1022,24 +1182,19 @@ function App() {
               </div>
 
               <div className="closing-grid">
-                {opportunities.slice(3, 6).map((opportunity) => (
+                {closingSoonOpportunities.map((opportunity) => (
                   <button
                     className="closing-card"
-                    key={opportunity.title}
-                    onClick={() =>
-                      setSelectedOpportunity(opportunity)
-                    }
+                    key={opportunity.id}
+                    onClick={() => setSelectedOpportunity(opportunity)}
                   >
                     <div className="days-left">
-                      {opportunity.days}
+                      {opportunity.days || 'Deadline not listed'}
                     </div>
-
                     <h3>{opportunity.title}</h3>
-
                     <p>{opportunity.organisation}</p>
-
                     <div className="deadline">
-                      Deadline: {opportunity.deadline}
+                      Deadline: {opportunity.deadline || 'Not listed'}
                     </div>
                   </button>
                 ))}
@@ -1256,7 +1411,7 @@ function App() {
               <div className="opportunity-grid">
                 {opportunities
                   .filter((opportunity) =>
-                    saved.includes(opportunity.title)
+                    saved.includes(opportunity.id)
                   )
                   .map((opportunity) => (
                     <OpportunityCard
@@ -1544,7 +1699,7 @@ function App() {
                     >
                       {opportunities
                         .filter((opportunity) =>
-                          tracked.includes(opportunity.title)
+                          tracked.includes(opportunity.id)
                         )
                         .map((opportunity) => (
                           <div
@@ -1559,9 +1714,7 @@ function App() {
                               <button
                                 className="filter-button"
                                 onClick={() =>
-                                  attemptTrack(
-                                    opportunity.title
-                                  )
+                                  attemptTrack(opportunity)
                                 }
                               >
                                 ✓ Tracked
@@ -1612,6 +1765,20 @@ function App() {
                               </label>
 
                               <textarea
+                                value={
+                                  trackedActivities[opportunity.id]
+                                    ?.reflection || ''
+                                }
+                                onChange={(event) =>
+                                  setTrackedActivities((current) => ({
+                                    ...current,
+                                    [opportunity.id]: {
+                                      ...current[opportunity.id],
+                                      reflection: event.target.value,
+                                    },
+                                  }))
+                                }
+                                onBlur={() => saveReflection(opportunity.id)}
                                 placeholder="Add notes about what you learned, skills you developed or what you could mention in a personal statement..."
                                 style={{
                                   width: '100%',
@@ -2607,6 +2774,20 @@ function App() {
           isPremium={isPremium}
         />
       )}
+
+      {authModal && (
+        <AuthModal
+          mode={authMode}
+          email={authEmail}
+          password={authPassword}
+          message={authMessage}
+          onClose={() => setAuthModal(false)}
+          onModeChange={setAuthMode}
+          onEmailChange={setAuthEmail}
+          onPasswordChange={setAuthPassword}
+          onSubmit={submitAuth}
+        />
+      )}
     </div>
   )
 }
@@ -2619,6 +2800,9 @@ function Navbar({
   showMore,
   setShowMore,
   isPremium,
+  user,
+  onAuth,
+  onSignOut,
 }) {
   return (
     <header className="navbar">
@@ -2746,11 +2930,71 @@ function Navbar({
 
       <button
         className="sign-out"
-        onClick={() => setPage('Profile')}
+        onClick={user ? onSignOut : onAuth}
       >
-        {isPremium ? 'Premium ✓' : 'Free account'}
+        {user ? 'Sign out' : 'Sign in'}
       </button>
     </header>
+  )
+}
+
+function AuthModal({
+  mode,
+  email,
+  password,
+  message,
+  onClose,
+  onModeChange,
+  onEmailChange,
+  onPasswordChange,
+  onSubmit,
+}) {
+  const isSignUp = mode === 'signup'
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <form className="modal" onSubmit={onSubmit} onClick={(event) => event.stopPropagation()}>
+        <button type="button" className="close-modal" onClick={onClose}>×</button>
+        <span className="category-tag">GROWTHGRIND ACCOUNT</span>
+        <h2>{isSignUp ? 'Create your account' : 'Welcome back'}</h2>
+        <p>
+          {isSignUp
+            ? 'Save opportunities and keep your portfolio on any device.'
+            : 'Sign in to access your saved opportunities and portfolio.'}
+        </p>
+        <input
+          type="email"
+          required
+          autoComplete="email"
+          placeholder="Email address"
+          value={email}
+          onChange={(event) => onEmailChange(event.target.value)}
+          style={{ width: '100%', boxSizing: 'border-box', padding: '12px', borderRadius: '9px', border: '1px solid #d0c4b0', background: '#f5efe5', font: 'inherit', marginTop: '12px' }}
+        />
+        <input
+          type="password"
+          required
+          minLength="6"
+          autoComplete={isSignUp ? 'new-password' : 'current-password'}
+          placeholder="Password (at least 6 characters)"
+          value={password}
+          onChange={(event) => onPasswordChange(event.target.value)}
+          style={{ width: '100%', boxSizing: 'border-box', padding: '12px', borderRadius: '9px', border: '1px solid #d0c4b0', background: '#f5efe5', font: 'inherit', marginTop: '10px' }}
+        />
+        {message && <p style={{ color: '#315b3d', fontWeight: '650' }}>{message}</p>}
+        <button className="primary-button" type="submit">
+          {isSignUp ? 'Create account →' : 'Sign in →'}
+        </button>
+        <button
+          className="filter-button"
+          type="button"
+          onClick={() => onModeChange(isSignUp ? 'signin' : 'signup')}
+          style={{ width: '100%', marginTop: '10px' }}
+        >
+          {isSignUp ? 'Already have an account? Sign in' : 'New here? Create an account'}
+        </button>
+      </form>
+    </div>
   )
 }
 
@@ -2875,7 +3119,16 @@ function OpportunityCard({
   matchScore,
   isPremium,
 }) {
-  const isTracked = tracked.includes(opportunity.title)
+  const isTracked = tracked.includes(opportunity.id)
+  const [expanded, setExpanded] = useState(false)
+
+  const description = opportunity.description || 'No description available.'
+  const isLongDescription = description.length > 220
+
+  const displayedDescription =
+    !isLongDescription || expanded
+      ? description
+      : `${description.slice(0, 220).trim()}...`
 
   return (
     <article className="opportunity-card">
@@ -2887,10 +3140,10 @@ function OpportunityCard({
         <button
           className="save-button"
           onClick={() =>
-            toggleSaved(opportunity.title)
+            toggleSaved(opportunity)
           }
         >
-          {saved.includes(opportunity.title)
+          {saved.includes(opportunity.id)
             ? '♥'
             : '♡'}
         </button>
@@ -2915,18 +3168,41 @@ function OpportunityCard({
         {opportunity.organisation}
       </div>
 
-      <p>{opportunity.description}</p>
+      <div className="opportunity-description">
+        <p>{displayedDescription}</p>
+        {isLongDescription && (
+          <button
+            onClick={() => setExpanded((current) => !current)}
+            style={{
+              display: 'inline',
+              marginTop: '-10px',
+              padding: 0,
+              border: 0,
+              background: 'none',
+              color: '#315b3d',
+              fontWeight: '800',
+              fontSize: '12px',
+              cursor: 'pointer',
+            }}
+          >
+            {expanded ? 'See less' : 'See more…'}
+          </button>
+        )}
+      </div>
 
       <div className="details">
-        <span>⌖ {opportunity.location}</span>
-        <span>◉ {opportunity.format}</span>
-        <span>♙ Ages {opportunity.age}</span>
-        <span>{opportunity.activityType}</span>
+        <span>⌖ {opportunity.location || 'Location not listed'}</span>
+        <span>◉ {opportunity.format || 'Format not listed'}</span>
+        <span>♙ Ages {opportunity.age || 'Age not listed'}</span>
+        <span>{opportunity.activityType || 'Activity type not listed'}</span>
+        {opportunity.subjects?.length > 0 && (
+          <span>📚 {opportunity.subjects.join(', ')}</span>
+        )}
       </div>
 
       <div className="deadline-row">
-        <span>{opportunity.deadline}</span>
-        <span>{opportunity.days}</span>
+        <span>{opportunity.deadline || 'Deadline not listed'}</span>
+        {opportunity.days && <span>{opportunity.days}</span>}
       </div>
 
       <div className="card-bottom">
@@ -2950,7 +3226,7 @@ function OpportunityCard({
 
       <button
         onClick={() =>
-          attemptTrack(opportunity.title)
+          attemptTrack(opportunity)
         }
         style={{
           width: '100%',
@@ -2995,6 +3271,13 @@ function OpportunityModal({
   isPremium,
 }) {
   const isTracked = false
+  const [descriptionExpanded, setDescriptionExpanded] = useState(false)
+  const description = opportunity.description || 'No description available.'
+  const isLongDescription = description.length > 300
+  const displayedDescription =
+    isLongDescription && !descriptionExpanded
+      ? `${description.slice(0, 300).trim()}...`
+      : description
 
   return (
     <div
@@ -3022,7 +3305,20 @@ function OpportunityModal({
 
         <h4>{opportunity.organisation}</h4>
 
-        <p>{opportunity.description}</p>
+        <div className="modal-description">
+          <p>{displayedDescription}</p>
+          {isLongDescription && (
+            <button
+              className="filter-button"
+              onClick={() =>
+                setDescriptionExpanded((current) => !current)
+              }
+              style={{ marginBottom: '18px' }}
+            >
+              {descriptionExpanded ? 'View less' : 'View more'}
+            </button>
+          )}
+        </div>
 
         <div className="modal-details">
           <span>📍 {opportunity.location}</span>
@@ -3039,10 +3335,10 @@ function OpportunityModal({
         <button
           className="primary-button"
           onClick={() =>
-            toggleSaved(opportunity.title)
+            toggleSaved(opportunity)
           }
         >
-          {saved.includes(opportunity.title)
+          {saved.includes(opportunity.id)
             ? '♥ Saved'
             : '♡ Save opportunity'}
         </button>
@@ -3063,7 +3359,7 @@ function OpportunityModal({
             fontWeight: '650',
           }}
           onClick={() =>
-            attemptTrack(opportunity.title)
+            attemptTrack(opportunity)
           }
         >
           {isTracked
@@ -3444,4 +3740,3 @@ function HelpQuestion({
 }
 
 export default App
-

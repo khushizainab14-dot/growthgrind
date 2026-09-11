@@ -1,6 +1,7 @@
 import re
 import html
 import subprocess
+import sys
 from urllib.parse import urljoin
 from datetime import datetime
 
@@ -364,6 +365,32 @@ def extract_links(source):
             result.append(link)
 
     return result
+
+
+def extract_official_link(source, source_url):
+    """Return the external provider link shown on a JutJut opportunity page."""
+
+    anchors = re.findall(
+        r'<a[^>]+href=["\']([^"\']+)["\'][^>]*>',
+        source,
+        flags=re.I,
+    )
+
+    for link in anchors:
+        link = html.unescape(link).strip()
+
+        if not link.startswith(("http://", "https://")):
+            continue
+
+        if link.rstrip("/") == source_url.rstrip("/"):
+            continue
+
+        if "jutjut.co.uk" in link.lower():
+            continue
+
+        return link
+
+    return source_url
 
 
 # ============================================================
@@ -1032,6 +1059,11 @@ def parse_opportunity(
         url
     )
 
+    official_link = extract_official_link(
+        source,
+        url,
+    )
+
     nodes = get_text_nodes(
         source
     )
@@ -1281,7 +1313,7 @@ def parse_opportunity(
         "description": description,
         "interests": None,
         "subjects": subjects,
-        "link": url,
+        "link": official_link,
     }
 
 
@@ -1290,7 +1322,8 @@ def parse_opportunity(
 # ============================================================
 
 def save_opportunity(
-    opportunity
+    opportunity,
+    source_url,
 ):
 
     existing = (
@@ -1299,11 +1332,25 @@ def save_opportunity(
         .select("id")
         .eq(
             "link",
-            opportunity["link"],
+            source_url,
         )
         .limit(1)
         .execute()
     )
+
+    if not existing.data:
+
+        existing = (
+            supabase
+            .table("opportunities")
+            .select("id")
+            .eq(
+                "title",
+                opportunity["title"],
+            )
+            .limit(1)
+            .execute()
+        )
 
     if existing.data:
 
@@ -1338,11 +1385,70 @@ def save_opportunity(
     return "inserted"
 
 
+def repair_official_links():
+    """Replace legacy JutJut links in existing records with provider URLs."""
+
+    records = (
+        supabase
+        .table("opportunities")
+        .select("id,link")
+        .execute()
+        .data
+    )
+
+    legacy_records = [
+        record
+        for record in records
+        if "jutjut.co.uk/opportunities/" in (record.get("link") or "")
+    ]
+
+    print(f"Repairing {len(legacy_records)} legacy links...")
+
+    repaired = 0
+    unchanged = 0
+    failed = 0
+
+    for number, record in enumerate(legacy_records, start=1):
+        source_url = record["link"]
+
+        try:
+            official_link = extract_official_link(
+                fetch(source_url),
+                source_url,
+            )
+
+            if official_link == source_url:
+                unchanged += 1
+                continue
+
+            (
+                supabase
+                .table("opportunities")
+                .update({"link": official_link})
+                .eq("id", record["id"])
+                .execute()
+            )
+            repaired += 1
+            print(f"[{number}/{len(legacy_records)}] ✓ {official_link}")
+        except Exception as error:
+            failed += 1
+            print(f"[{number}/{len(legacy_records)}] ✗ {error}")
+
+    print(
+        f"Link repair complete: {repaired} repaired, "
+        f"{unchanged} without an external link, {failed} failed."
+    )
+
+
 # ============================================================
 # MAIN
 # ============================================================
 
 def main():
+
+    if "--repair-links" in sys.argv:
+        repair_official_links()
+        return
 
     print(
         "Fetching JutJut opportunities..."
@@ -1394,7 +1500,8 @@ def main():
 
             result = (
                 save_opportunity(
-                    opportunity
+                    opportunity,
+                    url,
                 )
             )
 
