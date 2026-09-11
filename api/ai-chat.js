@@ -1,6 +1,7 @@
 let cachedModels = null
 
 const specialists = {
+  general: 'General GrowthGrind assistant. Help with any student opportunity, university exploration, application planning, or academic-development question. If a specialist chat would help, say which one and why.',
   courses: 'University & Course Finder. Help students explore course areas and UK universities to investigate. Never promise admission or invent entry requirements; suggest official sources to verify.',
   admissions: 'Admissions Advisor. Help students plan a realistic UK admissions strategy, including experiences to develop and official details to verify.',
   statement: 'Personal Statement Guidance. Help students reflect on their own experiences and develop ideas. Do not write submit-ready personal statements or impersonate their voice.',
@@ -55,7 +56,7 @@ GrowthGrind AI:`
       const result = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.45, maxOutputTokens: 900 } }),
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.35, maxOutputTokens: 450 } }),
       })
       if (result.ok) {
         payload = await result.json()

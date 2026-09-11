@@ -74,12 +74,13 @@ const yearGroups = [
 ]
 
 const aiSpecialists = [
-  { id: 'courses', name: 'Course Finder', description: 'Courses and universities' },
-  { id: 'admissions', name: 'Admissions Advisor', description: 'Your application strategy' },
-  { id: 'statement', name: 'Personal Statement', description: 'Reflect on your evidence' },
-  { id: 'tests', name: 'Admissions Tests', description: 'What to investigate' },
-  { id: 'career', name: 'Career Explorer', description: 'Pathways to explore' },
-  { id: 'research', name: 'Research Builder', description: 'Build a project idea' },
+  { id: 'general', name: 'GrowthGrind AI', description: 'Ask anything', starter: 'I’m not sure where to begin — can you help me work out my next step?' },
+  { id: 'courses', name: 'Course Finder', description: 'Courses and universities', starter: 'I enjoy [subjects/interests]. What university course areas should I explore?' },
+  { id: 'admissions', name: 'Admissions Advisor', description: 'Your application strategy', starter: 'I’m considering [course/universities]. What should I focus on next?' },
+  { id: 'statement', name: 'Personal Statement', description: 'Reflect on your evidence', starter: 'I want to study [course]. How can I reflect on my experiences without just listing them?' },
+  { id: 'tests', name: 'Admissions Tests', description: 'What to investigate', starter: 'I am considering [course/universities]. Which admissions tests should I check?' },
+  { id: 'career', name: 'Career Explorer', description: 'Pathways to explore', starter: 'I enjoy [subjects/activities]. What career paths could I explore?' },
+  { id: 'research', name: 'Research Builder', description: 'Build a project idea', starter: 'I’m interested in [topic]. Can you help me turn it into a research project?' },
 ]
 
 function App() {
@@ -178,7 +179,7 @@ function App() {
   const [aiResults, setAiResults] = useState({})
   const [aiLoading, setAiLoading] = useState('')
   const [aiError, setAiError] = useState({})
-  const [activeAiChat, setActiveAiChat] = useState('courses')
+  const [activeAiChat, setActiveAiChat] = useState('general')
   const [aiChats, setAiChats] = useState(() => {
     const savedChats = localStorage.getItem('growthgrind_ai_chats')
     if (savedChats) return JSON.parse(savedChats)
@@ -2423,6 +2424,13 @@ function App() {
                       <div className="closing-card" style={{ boxShadow: 'none' }}>
                         <h3>Start the conversation</h3>
                         <p>Tell me what you are thinking about. You can keep asking questions here and I’ll use this conversation as context.</p>
+                        <button
+                          className="filter-button"
+                          onClick={() => setAiChatInput(aiSpecialists.find((item) => item.id === activeAiChat)?.starter || '')}
+                          style={{ marginTop: '8px' }}
+                        >
+                          Use a conversation starter →
+                        </button>
                       </div>
                     ) : (
                       (aiChats[activeAiChat] || []).map((message, index) => (
@@ -2437,15 +2445,15 @@ function App() {
                   </div>
                   <form onSubmit={sendAiChat} style={{ padding: '16px 20px', borderTop: '1px solid #d0c4b0', background: '#fffaf2' }}>
                     {aiChatError && <p style={{ margin: '0 0 8px', color: '#9d3c2e', fontWeight: '700', fontSize: '12px' }}>{aiChatError}</p>}
-                    <div style={{ display: 'flex', gap: '10px' }}>
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'stretch' }}>
                       <textarea
                         value={aiChatInput}
                         onChange={(event) => setAiChatInput(event.target.value)}
                         placeholder="Ask anything about this topic…"
-                        rows="2"
-                        style={{ flex: 1, boxSizing: 'border-box', padding: '11px', borderRadius: '9px', border: '1px solid #d0c4b0', background: '#f5efe5', color: '#315b3d', font: 'inherit', resize: 'none' }}
+                        rows="3"
+                        style={{ flex: 1, minHeight: '82px', boxSizing: 'border-box', padding: '13px', borderRadius: '9px', border: '1px solid #d0c4b0', background: '#f5efe5', color: '#315b3d', font: 'inherit', resize: 'vertical' }}
                       />
-                      <button className="primary-button" type="submit" disabled={aiChatLoading} style={{ alignSelf: 'stretch', opacity: aiChatLoading ? 0.65 : 1 }}>Send →</button>
+                      <button className="primary-button" type="submit" disabled={aiChatLoading} style={{ width: '96px', padding: '10px', alignSelf: 'stretch', opacity: aiChatLoading ? 0.65 : 1 }}>Send →</button>
                     </div>
                   </form>
                 </div>
