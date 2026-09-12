@@ -84,21 +84,21 @@ const aiSpecialists = [
 ]
 
 const premiumRoadmap = [
-  { stage: 'EXPLORE', title: 'Tariff & grade calculator', description: 'Convert qualifications and understand how grades compare with course requirements.' },
-  { stage: 'EXPLORE', title: 'Contextual support finder', description: 'Explore bursaries, contextual offers and eligibility checks with official sources.' },
-  { stage: 'APPLY', title: 'Interactive personal statement builder', description: 'Plan responses, track characters and receive feedback that preserves your own voice.' },
-  { stage: 'APPLY', title: 'Admissions test planner', description: 'Identify tests to investigate, build practice habits and track registration dates.' },
-  { stage: 'APPLY', title: 'Interview practice hub', description: 'Prepare for interviews with structured question practice and reflection.' },
-  { stage: 'APPLY', title: 'Creative portfolio hub', description: 'Organise portfolio work, requirements and feedback for creative applications.' },
-  { stage: 'APPLY', title: 'Multi-course statement analyser', description: 'Check whether one statement gives the right weight to every course you are applying for.' },
-  { stage: 'APPLY', title: 'Extenuating-circumstances guide', description: 'Turn a difficult situation into a factual timeline to discuss with a trusted referee.' },
-  { stage: 'DECIDE', title: 'Choice balance dashboard', description: 'Review whether your university choices are balanced around your own goals and grades.' },
-  { stage: 'DECIDE', title: 'Firm & insurance planner', description: 'Compare offer conditions and map realistic results-day scenarios.' },
-  { stage: 'DECIDE', title: 'Campus & accommodation comparison', description: 'Compare course, living and travel priorities in one structured view.' },
-  { stage: 'DECIDE', title: 'Clearing & Extra planner', description: 'Save a prepared plan for late applications and results-day options.' },
-  { stage: 'STAY ON TRACK', title: 'Smart deadline timeline', description: 'Bring course, test, finance, open-day and portfolio deadlines into one plan.' },
-  { stage: 'STAY ON TRACK', title: 'Application progress tracker', description: 'Track decisions, next steps and your personal application timeline.' },
-  { stage: 'STAY ON TRACK', title: 'International qualification guide', description: 'Understand qualification terminology and conditions to verify with each university.' },
+  { id: 'tariff', stage: 'EXPLORE', title: 'Tariff & grade calculator', description: 'Convert qualifications and understand how grades compare with course requirements.' },
+  { id: 'contextual', stage: 'EXPLORE', title: 'Contextual support finder', description: 'Explore bursaries, contextual offers and eligibility checks with official sources.' },
+  { id: 'statement-builder', stage: 'APPLY', title: 'Interactive personal statement builder', description: 'Plan responses, track characters and receive feedback that preserves your own voice.' },
+  { id: 'test-planner', stage: 'APPLY', title: 'Admissions test planner', description: 'Identify tests to investigate, build practice habits and track registration dates.' },
+  { id: 'interview', stage: 'APPLY', title: 'Interview practice hub', description: 'Prepare for interviews with structured question practice and reflection.' },
+  { id: 'portfolio', stage: 'APPLY', title: 'Creative portfolio hub', description: 'Organise portfolio work, requirements and feedback for creative applications.' },
+  { id: 'multi-course', stage: 'APPLY', title: 'Multi-course statement analyser', description: 'Check whether one statement gives the right weight to every course you are applying for.' },
+  { id: 'circumstances', stage: 'APPLY', title: 'Extenuating-circumstances guide', description: 'Turn a difficult situation into a factual timeline to discuss with a trusted referee.' },
+  { id: 'balance', stage: 'DECIDE', title: 'Choice balance dashboard', description: 'Review whether your university choices are balanced around your own goals and grades.' },
+  { id: 'firm-insurance', stage: 'DECIDE', title: 'Firm & insurance planner', description: 'Compare offer conditions and map realistic results-day scenarios.' },
+  { id: 'accommodation', stage: 'DECIDE', title: 'Campus & accommodation comparison', description: 'Compare course, living and travel priorities in one structured view.' },
+  { id: 'clearing', stage: 'DECIDE', title: 'Clearing & Extra planner', description: 'Save a prepared plan for late applications and results-day options.' },
+  { id: 'timeline', stage: 'STAY ON TRACK', title: 'Smart deadline timeline', description: 'Bring course, test, finance, open-day and portfolio deadlines into one plan.' },
+  { id: 'progress', stage: 'STAY ON TRACK', title: 'Application progress tracker', description: 'Track decisions, next steps and your personal application timeline.' },
+  { id: 'international-quals', stage: 'STAY ON TRACK', title: 'International qualification guide', description: 'Understand qualification terminology and conditions to verify with each university.' },
 ]
 
 function App() {
@@ -234,6 +234,8 @@ function App() {
 
   const [premiumModal, setPremiumModal] = useState(null)
   const [showPremiumWelcome, setShowPremiumWelcome] = useState(false)
+  const [activePremiumWorkspace, setActivePremiumWorkspace] = useState(null)
+  const [statementAnswers, setStatementAnswers] = useState(['', '', ''])
 
   const [isPremium, setIsPremium] = useState(
     localStorage.getItem('growthgrind_demo_premium') === 'true'
@@ -562,6 +564,15 @@ function App() {
     }
     setActiveAiChat(specialist)
     goTo('AI')
+  }
+
+  const openPremiumWorkspace = (feature) => {
+    if (!isPremium) {
+      setPremiumModal('subscription')
+      return
+    }
+    setActivePremiumWorkspace(feature)
+    goTo('PremiumWorkspace')
   }
 
   const saveAiMessage = async (specialist, message) => {
@@ -2157,6 +2168,22 @@ function App() {
         </main>
       )}
 
+      {page === 'PremiumWorkspace' && activePremiumWorkspace && (
+        <PremiumWorkspacePage
+          feature={activePremiumWorkspace}
+          statementAnswers={statementAnswers}
+          setStatementAnswers={setStatementAnswers}
+          onBack={() => goTo('Pricing')}
+          onOpenAi={() => {
+            const specialist = activePremiumWorkspace.id.includes('statement') ? 'statement'
+              : activePremiumWorkspace.id.includes('test') ? 'tests'
+                : activePremiumWorkspace.id.includes('tariff') || activePremiumWorkspace.id.includes('international') ? 'courses'
+                  : 'admissions'
+            openAiWorkspace(specialist)
+          }}
+        />
+      )}
+
       {/* PRICING */}
       {page === 'Pricing' && (
         <main>
@@ -2579,8 +2606,11 @@ function App() {
                         <h3 style={{ marginTop: '12px' }}>{feature.title}</h3>
                         <p style={{ marginBottom: 0 }}>{feature.description}</p>
                         <span style={{ display: 'inline-block', marginTop: '13px', color: '#777065', fontWeight: '750', fontSize: '10px' }}>
-                          PLANNED PREMIUM WORKSPACE
+                          PREMIUM WORKSPACE
                         </span>
+                        <button className="filter-button" style={{ marginTop: '12px', width: '100%' }} onClick={() => openPremiumWorkspace(feature)}>
+                          Open workspace →
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -3698,6 +3728,76 @@ function FilterSelect({
         ))}
       </select>
     </div>
+  )
+}
+
+function PremiumWorkspacePage({
+  feature,
+  statementAnswers,
+  setStatementAnswers,
+  onBack,
+  onOpenAi,
+}) {
+  const characterTotal = statementAnswers.reduce((total, answer) => total + answer.length, 0)
+  const officialSources = {
+    tariff: { label: 'UCAS Tariff calculator', url: 'https://www.ucas.com/undergraduate/applying-university/entry-requirements/calculate-your-ucas-tariff-points' },
+    'statement-builder': { label: 'UCAS personal statement guidance', url: 'https://www.ucas.com/applying/applying-to-university/writing-your-personal-statement/the-new-personal-statement-for-2026-entry' },
+    timeline: { label: 'UCAS dates and deadlines', url: 'https://www.ucas.com/applying/applying-to-university/dates-and-deadlines-for-uni-applications' },
+    clearing: { label: 'UCAS course search', url: 'https://www.ucas.com/explore/search/courses-beta' },
+    contextual: { label: 'UCAS entry requirements guidance', url: 'https://www.ucas.com/applying/you-apply/what-and-where-study/entry-requirements' },
+  }
+  const source = officialSources[feature.id] || { label: 'UCAS application guidance', url: 'https://www.ucas.com/applying/applying-to-university' }
+
+  return (
+    <main>
+      <section className="hero-section">
+        <div className="hero-content">
+          <button className="filter-button" onClick={onBack}>← All Premium tools</button>
+          <span className="eyebrow" style={{ display: 'block', marginTop: '24px' }}>{feature.stage}</span>
+          <h1>{feature.title}</h1>
+          <p>{feature.description}</p>
+
+          <div className="closing-card" style={{ marginTop: '28px', border: '1px solid #b9c9b9' }}>
+            <div className="days-left">VERIFIED STARTING POINT</div>
+            <h3>Use the official source alongside GrowthGrind</h3>
+            <p>Requirements and dates can change. GrowthGrind helps you plan and reflect, while the official provider remains the source to confirm the final detail.</p>
+            <a className="view-button" href={source.url} target="_blank" rel="noreferrer">Open {source.label} ↗</a>
+          </div>
+
+          {feature.id === 'statement-builder' ? (
+            <div className="closing-card" style={{ marginTop: '24px' }}>
+              <div className="days-left">2026 ENTRY FORMAT</div>
+              <h2 style={{ marginTop: '12px' }}>Build your three answers</h2>
+              <p>{characterTotal.toLocaleString()} / 4,000 characters used across all answers, including spaces.</p>
+              {[
+                'Why do you want to study this course or subject?',
+                'How have your qualifications and studies helped you prepare for this course or subject?',
+                'What else have you done to prepare outside education, and why are these experiences useful?',
+              ].map((prompt, index) => (
+                <div key={prompt} style={{ marginTop: '22px' }}>
+                  <label style={{ display: 'block', fontWeight: '750', color: '#294b35', marginBottom: '8px' }}>Question {index + 1}: {prompt}</label>
+                  <textarea
+                    value={statementAnswers[index]}
+                    onChange={(event) => setStatementAnswers((answers) => answers.map((answer, answerIndex) => answerIndex === index ? event.target.value.slice(0, 4000) : answer))}
+                    placeholder="Write in your own words. Start with specific evidence, then explain what it taught you."
+                    style={{ width: '100%', minHeight: '150px', boxSizing: 'border-box', padding: '13px', borderRadius: '9px', border: '1px solid #d0c4b0', background: '#f5efe5', color: '#315b3d', font: 'inherit', resize: 'vertical' }}
+                  />
+                  <span style={{ color: statementAnswers[index].length >= 350 ? '#315b3d' : '#9d3c2e', fontSize: '12px', fontWeight: '700' }}>
+                    {statementAnswers[index].length} characters {statementAnswers[index].length >= 350 ? '✓' : '— minimum 350'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="closing-card" style={{ marginTop: '24px' }}>
+              <h3>Plan this with a specialist</h3>
+              <p>Use GrowthGrind AI to turn your goals and tracked experiences into practical next steps. It will signpost you back to official sources where verification matters.</p>
+              <button className="view-button" onClick={onOpenAi}>Open specialist chat →</button>
+            </div>
+          )}
+        </div>
+      </section>
+    </main>
   )
 }
 
