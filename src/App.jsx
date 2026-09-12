@@ -201,6 +201,12 @@ function App() {
   const [costFilter, setCostFilter] = useState('All opportunities')
   const [activityTypeFilter, setActivityTypeFilter] = useState('Any')
   const [subjectFilter, setSubjectFilter] = useState('Any')
+  const [matchYearGroups, setMatchYearGroups] = useState([])
+  const [matchActivityTypes, setMatchActivityTypes] = useState([])
+  const [matchSubjects, setMatchSubjects] = useState([])
+  const [matchLocations, setMatchLocations] = useState([])
+  const [matchFormats, setMatchFormats] = useState([])
+  const [matchCosts, setMatchCosts] = useState([])
 
   const [applicationStatus, setApplicationStatus] = useState({})
 
@@ -689,6 +695,16 @@ function App() {
     )
   }
 
+  const toggleMatchChoice = (setChoices, choice, resetChoice = 'Any') => {
+    if (choice === resetChoice || choice === 'All opportunities') {
+      setChoices([])
+      return
+    }
+    setChoices((current) => current.includes(choice)
+      ? current.filter((item) => item !== choice)
+      : [...current, choice])
+  }
+
   const closingSoonOpportunities = [...opportunities]
     .filter((opportunity) => opportunity.deadlineRaw)
     .filter((opportunity) => {
@@ -824,59 +840,40 @@ function App() {
 
   const matchedOpportunities = [...opportunities]
     .filter((opportunity) => {
-    if (
-      activityTypeFilter !== 'Any' &&
-      opportunity.activityType !== activityTypeFilter
-    ) {
+    if (matchActivityTypes.length && !matchActivityTypes.includes(opportunity.activityType)) {
       return false
     }
 
-    if (
-      subjectFilter !== 'Any' &&
-      !(opportunity.subjects || []).includes(subjectFilter)
-    ) {
+    if (matchSubjects.length && !matchSubjects.some((subject) => (opportunity.subjects || []).includes(subject))) {
       return false
     }
 
-    if (
-      yearGroupFilter !== 'Any' &&
-      !(opportunity.yearGroups || []).includes(yearGroupFilter)
-    ) {
+    if (matchYearGroups.length && !matchYearGroups.some((year) => (opportunity.yearGroups || []).includes(year))) {
       return false
     }
 
-      if (locationFilter !== 'Any') {
+      if (matchLocations.length) {
         const location = (opportunity.location || '').toLowerCase()
         const isUk = ['uk', 'united kingdom', 'england', 'london', 'oxford', 'cambridge']
           .some((place) => location.includes(place))
-        const matchesLocation =
-          locationFilter === 'UK'
+        const matchesLocation = matchLocations.some((locationChoice) =>
+          locationChoice === 'UK'
             ? isUk
-            : locationFilter === 'Online' || locationFilter === 'Remote'
+            : locationChoice === 'Online' || locationChoice === 'Remote'
               ? opportunity.format === 'Online' || location.includes('remote')
-              : location.includes(locationFilter.toLowerCase())
+              : location.includes(locationChoice.toLowerCase())
+        )
 
         if (!matchesLocation) return false
       }
 
-    if (
-      formatFilter !== 'Any' &&
-      opportunity.format !== formatFilter
-    ) {
+    if (matchFormats.length && !matchFormats.includes(opportunity.format)) {
       return false
     }
 
-    if (
-      costFilter === 'Free' &&
-      opportunity.cost !== 'Free'
-    ) {
-      return false
-    }
-
-    if (
-      costFilter === 'Financial support' &&
-      !opportunity.support
-    ) {
+    if (matchCosts.length && !matchCosts.some((cost) =>
+      cost === 'Free' ? opportunity.cost === 'Free' : cost === 'Financial support' ? opportunity.support : true
+    )) {
       return false
     }
 
@@ -887,6 +884,40 @@ function App() {
       matchScore: getMatchScore(opportunity),
     }))
     .sort((a, b) => b.matchScore - a.matchScore)
+
+  const journeySuggestions = opportunities
+    .filter((opportunity) => !tracked.includes(opportunity.id))
+    .map((opportunity) => {
+      const opportunityTerms = [
+        opportunity.category,
+        opportunity.activityType,
+        ...(opportunity.subjects || []),
+        opportunity.title,
+        opportunity.description,
+      ].filter(Boolean).join(' ').toLowerCase()
+
+      const linkedActivities = opportunities.filter((activity) => {
+        if (!tracked.includes(activity.id)) return false
+        const activityTerms = [
+          activity.category,
+          activity.activityType,
+          ...(activity.subjects || []),
+          activity.title,
+          activity.description,
+        ].filter(Boolean).join(' ').toLowerCase()
+        const sharedSubjects = (activity.subjects || []).filter((subject) =>
+          (opportunity.subjects || []).includes(subject)
+        ).length
+        return sharedSubjects > 0 || (
+          activity.category && opportunity.category && activity.category === opportunity.category
+        ) || activityTerms.split(/\W+/).some((term) => term.length > 5 && opportunityTerms.includes(term))
+      })
+
+      return { opportunity, linkedActivities, score: linkedActivities.length }
+    })
+    .filter((item) => item.score > 0)
+    .sort((first, second) => second.score - first.score)
+    .slice(0, 6)
 
   const clearFilters = () => {
     setActiveCategory('All')
@@ -975,15 +1006,12 @@ function App() {
                 }}
               >
                 {yearGroups.map((option) => {
-                  const selected =
-                    yearGroupFilter === option
+                  const selected = matchYearGroups.includes(option)
 
                   return (
                     <button
                       key={option}
-                      onClick={() =>
-                        setYearGroupFilter(option)
-                      }
+                      onClick={() => toggleMatchChoice(setMatchYearGroups, option)}
                       style={{
                         padding: '9px 14px',
                         borderRadius: '999px',
@@ -1034,15 +1062,12 @@ function App() {
                 }}
               >
                 {activityTypes.map((option) => {
-                  const selected =
-                    activityTypeFilter === option
+                  const selected = matchActivityTypes.includes(option)
 
                   return (
                     <button
                       key={option}
-                      onClick={() =>
-                        setActivityTypeFilter(option)
-                      }
+                      onClick={() => toggleMatchChoice(setMatchActivityTypes, option)}
                       style={{
                         padding: '9px 14px',
                         borderRadius: '999px',
@@ -1093,15 +1118,12 @@ function App() {
                 }}
               >
                 {subjects.map((option) => {
-                  const selected =
-                    subjectFilter === option
+                  const selected = matchSubjects.includes(option)
 
                   return (
                     <button
                       key={option}
-                      onClick={() =>
-                        setSubjectFilter(option)
-                      }
+                      onClick={() => toggleMatchChoice(setMatchSubjects, option)}
                       style={{
                         padding: '9px 14px',
                         borderRadius: '999px',
@@ -1153,15 +1175,12 @@ function App() {
               >
                 {['Any', 'UK', 'England', 'Online'].map(
                   (option) => {
-                    const selected =
-                      locationFilter === option
+                    const selected = matchLocations.includes(option)
 
                     return (
                       <button
                         key={option}
-                        onClick={() =>
-                          setLocationFilter(option)
-                        }
+                        onClick={() => toggleMatchChoice(setMatchLocations, option)}
                         style={{
                           padding: '9px 14px',
                           borderRadius: '999px',
@@ -1214,15 +1233,12 @@ function App() {
               >
                 {['Any', 'Online', 'In-person', 'Hybrid'].map(
                   (option) => {
-                    const selected =
-                      formatFilter === option
+                    const selected = matchFormats.includes(option)
 
                     return (
                       <button
                         key={option}
-                        onClick={() =>
-                          setFormatFilter(option)
-                        }
+                        onClick={() => toggleMatchChoice(setMatchFormats, option)}
                         style={{
                           padding: '9px 14px',
                           borderRadius: '999px',
@@ -1278,15 +1294,12 @@ function App() {
                   'Free',
                   'Financial support',
                 ].map((option) => {
-                  const selected =
-                    costFilter === option
+                  const selected = matchCosts.includes(option)
 
                   return (
                     <button
                       key={option}
-                      onClick={() =>
-                        setCostFilter(option)
-                      }
+                      onClick={() => toggleMatchChoice(setMatchCosts, option, 'All opportunities')}
                       style={{
                         padding: '9px 14px',
                         borderRadius: '999px',
@@ -1440,6 +1453,10 @@ function App() {
                   volunteering, leadership, sport, creative and
                   international opportunities — matched to where you
                   are and where you want to go.
+                </p>
+
+                <p style={{ marginTop: '14px', color: '#315b3d', fontWeight: '700' }}>
+                  Build the experiences, curiosity and evidence that can strengthen your higher-education journey.
                 </p>
               </div>
             </section>
@@ -2072,6 +2089,48 @@ function App() {
                     </div>
                   )}
                 </div>
+
+                {tracked.length > 0 && (
+                  <div style={{ marginTop: '50px' }}>
+                    <div className="section-heading">
+                      <div>
+                        <span className="eyebrow">BUILD THE STORY</span>
+                        <h2>What could this lead to?</h2>
+                        <p style={{ maxWidth: '650px' }}>
+                          Strong applications show a journey: an interest, the action you took, and how it led to your next step. These opportunities connect with what you have already tracked.
+                        </p>
+                      </div>
+                    </div>
+
+                    {journeySuggestions.length === 0 ? (
+                      <div className="closing-card">
+                        <h3>Keep exploring your next step.</h3>
+                        <p>As you track more activities, GrowthGrind will surface related opportunities that help you build a more connected story.</p>
+                      </div>
+                    ) : (
+                      <div className="opportunity-grid">
+                        {journeySuggestions.map(({ opportunity, linkedActivities }) => (
+                          <article className="opportunity-card" key={`journey-${opportunity.id}`}>
+                            <span className="category-tag">POSSIBLE NEXT STEP</span>
+                            <h3>{opportunity.title}</h3>
+                            <div className="organisation">{opportunity.organisation}</div>
+                            <p>
+                              This could build on {linkedActivities.slice(0, 2).map((activity) => activity.title).join(' and ')}.
+                            </p>
+                            <div className="details">
+                              <span>{opportunity.category}</span>
+                              <span>{opportunity.format || 'Format not listed'}</span>
+                              <span>{opportunity.deadline || 'Deadline not listed'}</span>
+                            </div>
+                            <button className="view-button" onClick={() => setSelectedOpportunity(opportunity)}>
+                              See why it connects →
+                            </button>
+                          </article>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </section>
           )}
