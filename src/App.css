@@ -659,6 +659,53 @@ footer p {
   }
 }
 
+.premium-welcome {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: rgba(33, 56, 40, 0.55);
+}
+
+.premium-welcome-card {
+  position: relative;
+  z-index: 1;
+  width: min(460px, calc(100% - 40px));
+  padding: 34px;
+  border: 1px solid #b9c9b9;
+  border-radius: 18px;
+  background: #fffaf2;
+  box-shadow: 0 24px 70px rgba(17, 39, 25, 0.35);
+  text-align: center;
+}
+
+.premium-welcome-card h2 {
+  margin: 16px 0 10px;
+  color: #294b35;
+  font-size: 32px;
+}
+
+.premium-confetti i {
+  position: absolute;
+  top: -24px;
+  width: 9px;
+  height: 15px;
+  border-radius: 2px;
+  background: #e2a93b;
+  animation: premium-confetti-fall 3.5s linear infinite;
+}
+
+.premium-confetti i:nth-child(3n) { background: #315b3d; }
+.premium-confetti i:nth-child(3n + 1) { background: #d86d5b; }
+.premium-confetti i:nth-child(4n) { width: 13px; height: 8px; border-radius: 50%; }
+
+@keyframes premium-confetti-fall {
+  from { transform: translateY(-10vh) rotate(0deg); }
+  to { transform: translateY(115vh) rotate(720deg); }
+}
+
 @media (max-width: 500px) {
   .sign-out {
     display: none;

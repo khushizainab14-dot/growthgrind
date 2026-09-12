@@ -83,6 +83,24 @@ const aiSpecialists = [
   { id: 'research', name: 'Research Builder', description: 'Build a project idea', starter: 'I’m interested in [topic]. Can you help me turn it into a research project?' },
 ]
 
+const premiumRoadmap = [
+  { stage: 'EXPLORE', title: 'Tariff & grade calculator', description: 'Convert qualifications and understand how grades compare with course requirements.' },
+  { stage: 'EXPLORE', title: 'Contextual support finder', description: 'Explore bursaries, contextual offers and eligibility checks with official sources.' },
+  { stage: 'APPLY', title: 'Interactive personal statement builder', description: 'Plan responses, track characters and receive feedback that preserves your own voice.' },
+  { stage: 'APPLY', title: 'Admissions test planner', description: 'Identify tests to investigate, build practice habits and track registration dates.' },
+  { stage: 'APPLY', title: 'Interview practice hub', description: 'Prepare for interviews with structured question practice and reflection.' },
+  { stage: 'APPLY', title: 'Creative portfolio hub', description: 'Organise portfolio work, requirements and feedback for creative applications.' },
+  { stage: 'APPLY', title: 'Multi-course statement analyser', description: 'Check whether one statement gives the right weight to every course you are applying for.' },
+  { stage: 'APPLY', title: 'Extenuating-circumstances guide', description: 'Turn a difficult situation into a factual timeline to discuss with a trusted referee.' },
+  { stage: 'DECIDE', title: 'Choice balance dashboard', description: 'Review whether your university choices are balanced around your own goals and grades.' },
+  { stage: 'DECIDE', title: 'Firm & insurance planner', description: 'Compare offer conditions and map realistic results-day scenarios.' },
+  { stage: 'DECIDE', title: 'Campus & accommodation comparison', description: 'Compare course, living and travel priorities in one structured view.' },
+  { stage: 'DECIDE', title: 'Clearing & Extra planner', description: 'Save a prepared plan for late applications and results-day options.' },
+  { stage: 'STAY ON TRACK', title: 'Smart deadline timeline', description: 'Bring course, test, finance, open-day and portfolio deadlines into one plan.' },
+  { stage: 'STAY ON TRACK', title: 'Application progress tracker', description: 'Track decisions, next steps and your personal application timeline.' },
+  { stage: 'STAY ON TRACK', title: 'International qualification guide', description: 'Understand qualification terminology and conditions to verify with each university.' },
+]
+
 function App() {
     const [opportunities, setOpportunities] = useState([])
 
@@ -215,6 +233,7 @@ function App() {
   const [weeklySubscribed, setWeeklySubscribed] = useState(false)
 
   const [premiumModal, setPremiumModal] = useState(null)
+  const [showPremiumWelcome, setShowPremiumWelcome] = useState(false)
 
   const [isPremium, setIsPremium] = useState(
     localStorage.getItem('growthgrind_demo_premium') === 'true'
@@ -673,6 +692,7 @@ function App() {
     localStorage.setItem('growthgrind_demo_premium', 'true')
     setIsPremium(true)
     setPremiumModal(null)
+    setShowPremiumWelcome(true)
   }
 
   const deactivateDemoPremium = () => {
@@ -2541,6 +2561,31 @@ function App() {
                   />
                 </div>
 
+                <div style={{ marginTop: '48px' }}>
+                  <div className="section-heading">
+                    <div>
+                      <span className="eyebrow">THE ADMISSIONS JOURNEY</span>
+                      <h2>More ways Premium supports you</h2>
+                      <p>These specialist workspaces are being added in stages, with official-source checking where a detail can affect an application.</p>
+                    </div>
+                  </div>
+                  <div
+                    className="pricing-features"
+                    style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}
+                  >
+                    {premiumRoadmap.map((feature, index) => (
+                      <div className="closing-card" key={feature.title} style={{ boxShadow: 'none', border: '1px solid #d8cdbb' }}>
+                        <div className="days-left">{feature.stage}</div>
+                        <h3 style={{ marginTop: '12px' }}>{feature.title}</h3>
+                        <p style={{ marginBottom: 0 }}>{feature.description}</p>
+                        <span style={{ display: 'inline-block', marginTop: '13px', color: '#777065', fontWeight: '750', fontSize: '10px' }}>
+                          PLANNED PREMIUM WORKSPACE
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
                 <div
                   className="closing-card"
                   style={{
@@ -3197,6 +3242,22 @@ function App() {
           >
             Help & support
           </button>
+        </div>
+      )}
+
+      {showPremiumWelcome && (
+        <div className="premium-welcome" role="dialog" aria-modal="true">
+          <div className="premium-confetti" aria-hidden="true">
+            {Array.from({ length: 42 }, (_, index) => (
+              <i key={index} style={{ left: `${(index * 19) % 100}%`, animationDelay: `${(index % 11) * 0.16}s` }} />
+            ))}
+          </div>
+          <div className="premium-welcome-card">
+            <span className="category-tag">GROWTHGRIND PREMIUM</span>
+            <h2>Welcome to Premium! 🎉</h2>
+            <p>Your personal admissions workspace is ready. Start with a specialist chat, build your experience story, and keep your next steps together.</p>
+            <button className="primary-button" onClick={() => setShowPremiumWelcome(false)}>Let’s get started →</button>
+          </div>
         </div>
       )}
 
