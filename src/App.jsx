@@ -188,6 +188,11 @@ function App() {
   const [courseQuery, setCourseQuery] = useState('')
   const [courseRegion, setCourseRegion] = useState('All UK')
   const [courseMode, setCourseMode] = useState('All study modes')
+  const [courseProvider, setCourseProvider] = useState('')
+  const [courseAbroad, setCourseAbroad] = useState('UK only')
+  const [courseGradeProfile, setCourseGradeProfile] = useState('')
+  const [coursePlanning, setCoursePlanning] = useState(false)
+  const [courseShortlist, setCourseShortlist] = useState({})
   const [courseResults, setCourseResults] = useState([])
   const [courseLoading, setCourseLoading] = useState(false)
   const [courseError, setCourseError] = useState('')
@@ -563,7 +568,7 @@ function App() {
   }
 
   const findCourses = async (event) => {
-    event.preventDefault()
+    event?.preventDefault()
     setCourseError('')
     setCourseLoading(true)
     setCourseSearched(true)
@@ -576,8 +581,10 @@ function App() {
         .order('course_title', { ascending: true })
         .limit(60)
       if (safeQuery) request = request.or(`course_title.ilike.%${safeQuery}%,provider_name.ilike.%${safeQuery}%,subjects_text.ilike.%${safeQuery}%`)
+      if (courseProvider.trim()) request = request.ilike('provider_name', `%${courseProvider.trim().replace(/[(),]/g, ' ')}%`)
       if (courseRegion !== 'All UK') request = request.eq('country', courseRegion)
       if (courseMode !== 'All study modes') request = request.eq('study_mode', courseMode)
+      if (courseAbroad === 'Study abroad option') request = request.ilike('course_title', '%study abroad%')
       const { data, error } = await request
       if (error) throw error
       setCourseResults(data || [])
@@ -586,6 +593,13 @@ function App() {
     } finally {
       setCourseLoading(false)
     }
+  }
+
+  const openGradeCourseFinder = (entries) => {
+    const aLevels = entries.filter((entry) => entry.qualification === 'A level' && entry.grade).slice(0, 3)
+    setCourseGradeProfile(aLevels.length ? `Predicted A-level profile: ${aLevels.map((entry) => entry.grade).join(' ')}` : 'Add your predicted grades to personalise this search.')
+    setCoursePlanning(false)
+    goTo('CourseFinder')
   }
 
   const runPremiumTool = async (event, tool) => {
@@ -2297,6 +2311,7 @@ function App() {
           onReviewStatement={reviewStatementAnswers}
           studyMistakeBank={studyMistakeBank}
           onOpenInternational={() => { setActivePremiumWorkspace(premiumRoadmap.find((feature) => feature.id === 'international-quals')); goTo('PremiumWorkspace') }}
+          onOpenCourseFinder={openGradeCourseFinder}
           workspaceData={premiumWorkspaceData[activePremiumWorkspace.id] || {}}
           setWorkspaceData={(value) => setPremiumWorkspaceData((current) => ({ ...current, [activePremiumWorkspace.id]: value }))}
           onBack={() => goTo('Pricing')}
@@ -2980,7 +2995,7 @@ function App() {
         >
           <section className="course-search-shell">
             <div className="course-search-topline">
-              <span>PUBLIC COURSE CATALOGUE</span>
+              <span>PUBLIC UK COURSE CATALOGUE</span>
               <a href="https://www.ucas.com/explore/search/courses" target="_blank" rel="noreferrer">Compare on UCAS ↗</a>
             </div>
             <form onSubmit={findCourses} className="course-search-form">
@@ -2989,15 +3004,24 @@ function App() {
               <select value={courseMode} onChange={(event) => setCourseMode(event.target.value)}><option>All study modes</option><option value="Full time">Full time</option><option value="Part time">Part time</option></select>
               <button className="primary-button" disabled={courseLoading} type="submit">{courseLoading ? 'Searching…' : 'Search courses'}</button>
             </form>
-            <p className="course-search-note">Search the GrowthGrind catalogue, then open the university’s own course page for current modules, fees and requirements.</p>
+            <div className="course-extra-filters">
+              <label>University <input value={courseProvider} onChange={(event) => setCourseProvider(event.target.value)} placeholder="e.g. Bristol" /></label>
+              <label>Location <select value={courseAbroad} onChange={(event) => setCourseAbroad(event.target.value)}><option>UK only</option><option>Study abroad option</option></select></label>
+              <button className="filter-button" type="button" onClick={findCourses}>Apply filters</button>
+            </div>
+            {courseGradeProfile && <p className="course-grade-profile">{courseGradeProfile} <span>Use published requirements before deciding whether a course is safety, target or dream.</span></p>}
+            <p className="course-search-note">Search the GrowthGrind catalogue, then open the university’s own course page for current modules, fees and entry requirements.</p>
           </section>
 
           {courseError && <p style={{ color: '#9d3c2e', fontWeight: '700' }}>{courseError}</p>}
           {courseSearched && !courseLoading && <section className="course-results-section">
-            <div className="course-results-header"><strong>{courseResults.length ? `${courseResults.length}${courseResults.length === 60 ? '+' : ''} courses found` : 'No matching courses found'}</strong><span>Source: HESA Discover Uni · updated weekly</span></div>
+            <div className="course-results-header"><strong>{courseResults.length ? `${courseResults.length}${courseResults.length === 60 ? '+' : ''} courses found` : 'No matching courses found'}</strong><span>Source: public HESA Discover Uni catalogue</span></div>
+            <div className="course-data-notice"><strong>Requirements and historic grade data</strong><span>are shown on the current university and UCAS course pages. UCAS does not provide its course-level acceptance and matching-grade dataset for reuse in this public catalogue, so GrowthGrind will never invent those figures.</span><a href="https://www.ucas.com/applying/before-you-apply/what-and-where-to-study/entry-requirements/understanding-historical-entry" target="_blank" rel="noreferrer">How UCAS historical grades work ↗</a></div>
+            <div className="course-planner-bar"><div><strong>Build a five-choice shortlist</strong><span>Mark courses after checking their current published requirements.</span></div><button className="view-button" onClick={() => setCoursePlanning((current) => !current)}>{coursePlanning ? 'Hide shortlist' : 'Organise safety / target / dream →'}</button></div>
+            {coursePlanning && <div className="course-shortlist-grid">{['Safety', 'Target', 'Dream'].map((level) => <section key={level}><span>{level.toUpperCase()}</span>{Object.values(courseShortlist).filter((item) => item.level === level).length ? Object.values(courseShortlist).filter((item) => item.level === level).map((item) => <div key={item.id}>{item.title}<small>{item.provider}</small></div>) : <p>No courses marked yet.</p>}</section>)}</div>}
             {courseResults.map((course) => <article className="course-result-card" key={course.id}>
-              <div><span className="course-result-kicker">{course.qualification || 'UNDERGRADUATE'} · {course.study_mode || 'Study mode not listed'}</span><h3>{course.course_title}</h3><strong>{course.provider_name}</strong><p>{[course.campus_name, course.country, course.duration].filter(Boolean).join(' · ') || 'Details on official course page'}</p>{course.subjects_text && <div className="course-subject-tags">{course.subjects_text.split('|').slice(0, 4).map((subject) => <span key={subject}>{subject}</span>)}</div>}</div>
-              <a className="view-button" href={course.course_url} target="_blank" rel="noreferrer">Official course page ↗</a>
+              <div><span className="course-result-kicker">{course.qualification || 'UNDERGRADUATE'} · {course.study_mode || 'Study mode not listed'}</span><h3>{course.course_title}</h3><strong>{course.provider_name}</strong><p>{[course.campus_name, course.country, course.duration].filter(Boolean).join(' · ') || 'Details on official course page'}</p>{course.subjects_text && <div className="course-subject-tags">{course.subjects_text.split('|').slice(0, 4).map((subject) => <span key={subject}>{subject}</span>)}</div>}<div className="course-admissions-row"><span><b>Entry requirements</b> Check official page</span><span><b>Historic acceptance / grade match</b> Check UCAS</span></div>{coursePlanning && <div className="course-choice-actions">{['Safety', 'Target', 'Dream'].map((level) => <button className={courseShortlist[course.id]?.level === level ? 'selected' : ''} key={level} onClick={() => setCourseShortlist((current) => ({ ...current, [course.id]: { id: course.id, title: course.course_title, provider: course.provider_name, level } }))}>{level}</button>)}</div>}</div>
+              <div className="course-card-links"><a className="view-button" href={course.course_url} target="_blank" rel="noreferrer">Official requirements ↗</a><a className="filter-button" href={`https://www.ucas.com/explore/search/courses?query=${encodeURIComponent(`${course.course_title} ${course.provider_name}`)}`} target="_blank" rel="noreferrer">UCAS historic data ↗</a></div>
             </article>)}
             {!courseResults.length && <p>Try a broader course title, a subject such as “Economics”, or remove a filter.</p>}
           </section>}
@@ -3816,6 +3840,7 @@ function PremiumWorkspacePage({
   onReviewStatement,
   studyMistakeBank,
   onOpenInternational,
+  onOpenCourseFinder,
   workspaceData,
   setWorkspaceData,
   onBack,
@@ -3913,7 +3938,7 @@ function PremiumWorkspacePage({
             </aside>
             </div>
           ) : feature.id === 'tariff' ? (
-            <TariffWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} onOpenAi={onOpenAi} onOpenInternational={onOpenInternational} />
+            <TariffWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} onOpenCourseFinder={onOpenCourseFinder} onOpenInternational={onOpenInternational} />
           ) : feature.id === 'international-quals' ? (
             <InternationalQualificationsWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} />
           ) : feature.id === 'study' ? (
@@ -3929,7 +3954,7 @@ function PremiumWorkspacePage({
   )
 }
 
-function TariffWorkspace({ workspaceData, setWorkspaceData, onOpenAi, onOpenInternational }) {
+function TariffWorkspace({ workspaceData, setWorkspaceData, onOpenCourseFinder, onOpenInternational }) {
   const grades = ['A*', 'A', 'B', 'C', 'D', 'E']
   const points = { 'A level': { 'A*': 56, A: 48, B: 40, C: 32, D: 24, E: 16 }, EPQ: { 'A*': 28, A: 24, B: 20, C: 16, D: 12, E: 8 } }
   const rawEntries = workspaceData.grades || ['', '', '']
@@ -3956,7 +3981,7 @@ function TariffWorkspace({ workspaceData, setWorkspaceData, onOpenAi, onOpenInte
         <div className="tariff-divider" />
         <h3>Before you shortlist a course</h3>
         <ul><li>Check whether the university uses Tariff points.</li><li>Check required subjects and individual grades.</li><li>Record contextual and admissions-test requirements.</li></ul>
-        <button className="view-button" onClick={onOpenAi}>Compare requirements →</button>
+        <button className="view-button" onClick={() => onOpenCourseFinder(entries)}>Find matching courses →</button>
         <button className="tariff-international-button" onClick={onOpenInternational}>Applying with international qualifications? →</button>
       </aside>
     </div>
