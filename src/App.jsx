@@ -2690,6 +2690,13 @@ function App() {
                     description="Keep your competitions, projects, volunteering, sport, work experience and more in one place."
                     onClick={() => goTo('Track')}
                   />
+
+                  <PremiumFeature
+                    number="08"
+                    title="GrowthGrind Study"
+                    description="Scan questions, get step-by-step tutoring and build a mistake bank."
+                    onClick={() => openPremiumWorkspace(premiumRoadmap.find((feature) => feature.id === 'study'))}
+                  />
                 </div>
 
                 <div style={{ marginTop: '48px' }}>
