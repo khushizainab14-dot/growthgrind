@@ -816,6 +816,7 @@ footer p {
 .statement-ai-welcome p { max-width: 650px; }
 .statement-ai-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 22px; }
 .statement-ai-note { margin: 18px 0 0; color: #58715b; font-size: 12px; }
+.test-ai-welcome { background: linear-gradient(120deg, #edf3ed, #eef4f7); }
 
 @media (max-width: 500px) {
   .sign-out {

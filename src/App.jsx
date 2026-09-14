@@ -2816,6 +2816,16 @@ function App() {
                           <button className="filter-button" onClick={() => { setActivePremiumWorkspace(premiumRoadmap.find((feature) => feature.id === 'statement-builder')); goTo('PremiumWorkspace') }}>Start side-by-side builder →</button>
                         </div>
                         <p className="statement-ai-note">Plan first, then build: use the side-by-side builder to draft your three UCAS answers and receive feedback.</p>
+                      </div> : activeAiChat === 'tests' ? <div className="statement-ai-welcome test-ai-welcome">
+                        <span className="days-left">ADMISSIONS TEST PLANNING</span>
+                        <h3>Let’s work out which admissions tests you may need before you start preparing.</h3>
+                        <p>Tell me the courses and universities you are considering. I can help you identify what to check, map registration and preparation deadlines, and separate official requirements from things to research.</p>
+                        <div className="statement-ai-actions">
+                          <button className="view-button" onClick={() => setAiChatInput('I am considering [courses] at [universities]. Help me work out which admissions tests I should check, the official pages to verify, and a realistic preparation plan.')}>Plan my admissions tests →</button>
+                          <button className="filter-button" onClick={() => { setActivePremiumWorkspace(premiumRoadmap.find((feature) => feature.id === 'test-planner')); goTo('PremiumWorkspace') }}>Build my test timeline →</button>
+                          <button className="filter-button" onClick={() => { setActiveAiChat('study'); goTo('Specialist') }}>Open GrowthGrind Study →</button>
+                        </div>
+                        <p className="statement-ai-note">Plan first, practise second: once you know what matters, GrowthGrind Study can guide you through individual questions, working and mistakes.</p>
                       </div> : <div className="closing-card" style={{ boxShadow: 'none' }}>
                         <h3>Start the conversation</h3>
                         <p>Tell me what you are thinking about. You can keep asking questions here and I’ll use this conversation as context.</p>
