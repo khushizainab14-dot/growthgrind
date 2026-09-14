@@ -41,9 +41,9 @@ def provider_names(rows):
     names = {}
     for row in rows:
         key = pick(row, 'PUBUKPRN', 'UKPRN', 'Institution.PUBUKPRN', 'Institution.UKPRN')
-        name = pick(row, 'INSTNAME', 'INSTITUTIONNAME', 'PROVIDERNAME', 'Institution.INSTNAME', 'Institution.PROVIDERNAME')
+        name = pick(row, 'LEGAL_NAME', 'FIRST_TRADING_NAME', 'INSTNAME', 'INSTITUTIONNAME', 'PROVIDERNAME')
         if key and name:
-            names[key] = name
+            names[key] = (name, pick(row, 'COUNTRY', 'PUBUKPRNCOUNTRY'))
     return names
 
 
@@ -53,6 +53,14 @@ def mode(value):
 
 def build_courses(archive):
     providers = provider_names(read_csv(archive, 'Institution'))
+    aims = {pick(row, 'KISAIMCODE'): pick(row, 'KISAIMLABEL') for row in read_csv(archive, 'KISAIM')}
+    subject_rows = read_csv(archive, 'SBJ')
+    subjects = {}
+    for row in subject_rows:
+        key = (pick(row, 'PUBUKPRN'), pick(row, 'KISCOURSEID'), pick(row, 'KISMODE'))
+        subjects.setdefault(key, []).append(pick(row, 'SBJ'))
+    locations = {(pick(row, 'PUBUKPRN'), pick(row, 'KISCOURSEID'), pick(row, 'KISMODE')): pick(row, 'LOCID') for row in read_csv(archive, 'COURSELOCATION')}
+    location_names = {(pick(row, 'UKPRN'), pick(row, 'LOCID')): pick(row, 'LOCNAME') for row in read_csv(archive, 'LOCATION')}
     courses = read_csv(archive, 'KISCourse')
     now = datetime.now(timezone.utc).isoformat()
     output = []
@@ -64,18 +72,20 @@ def build_courses(archive):
         if not (title and course_id and url):
             continue
         course_mode = mode(pick(row, 'KISMODE', 'KISCourse.KISMODE'))
-        provider = providers.get(provider_id) or pick(row, 'INSTNAME', 'PROVIDERNAME') or f'UK provider {provider_id}'
-        subjects = [item for item in [pick(row, 'SBJ', 'KISCourse.SBJ'), pick(row, 'HECOS', 'KISCourse.HECOS')] if item]
+        provider, provider_country = providers.get(provider_id, (pick(row, 'INSTNAME', 'PROVIDERNAME') or f'UK provider {provider_id}', ''))
+        join_key = (provider_id, course_id, pick(row, 'KISMODE'))
+        course_subjects = [item for item in subjects.get(join_key, []) if item] or [item for item in [pick(row, 'HECOS')] if item]
+        location_id = locations.get(join_key, '')
         output.append({
             'source_course_id': f'{provider_id}-{course_id}-{course_mode or "all"}',
             'course_title': title,
             'provider_name': provider,
-            'campus_name': pick(row, 'LOCNAME', 'LOCATIONNAME', 'CourseLocation.LOCNAME') or None,
-            'country': {'E': 'England', 'S': 'Scotland', 'W': 'Wales', 'N': 'Northern Ireland'}.get(pick(row, 'COUNTRY', 'Institution.COUNTRY'), pick(row, 'COUNTRY', 'Institution.COUNTRY') or None),
-            'qualification': pick(row, 'KISAIMLABEL', 'KISCourse.KISAIMLABEL', 'KISAIM') or None,
+            'campus_name': location_names.get((provider_id, location_id)) or None,
+            'country': {'XF': 'England', 'XG': 'Wales', 'XH': 'Scotland', 'XI': 'Northern Ireland'}.get(provider_country, None),
+            'qualification': aims.get(pick(row, 'KISAIMCODE')) or None,
             'study_mode': course_mode or None,
             'duration': pick(row, 'NUMSTAGE', 'KISCourse.NUMSTAGE') or None,
-            'subjects_text': '|'.join(subjects) or None,
+            'subjects_text': '|'.join(course_subjects) or None,
             'course_url': url,
             'source_updated_at': now,
         })
@@ -97,15 +107,23 @@ def upload(url, key, courses):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--file', required=True, help='Path to the HESA Discover Uni ZIP download')
+    parser.add_argument('--output', help='Write the prepared catalogue as CSV instead of uploading')
     args = parser.parse_args()
-    url = os.environ.get('SUPABASE_URL')
-    key = os.environ.get('SUPABASE_SERVICE_ROLE_KEY')
-    if not url or not key:
-        sys.exit('Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY before importing.')
     with zipfile.ZipFile(args.file) as archive:
         courses = build_courses(archive)
     if not courses:
         sys.exit('No courses found. Check that this is a current HESA Discover Uni ZIP.')
+    if args.output:
+        with open(args.output, 'w', newline='', encoding='utf-8') as destination:
+            writer = csv.DictWriter(destination, fieldnames=courses[0].keys())
+            writer.writeheader()
+            writer.writerows(courses)
+        print(f'Prepared {len(courses)} courses in {args.output}')
+        return
+    url = os.environ.get('SUPABASE_URL')
+    key = os.environ.get('SUPABASE_SERVICE_ROLE_KEY')
+    if not url or not key:
+        sys.exit('Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY before importing, or use --output.')
     upload(url, key, courses)
 
 

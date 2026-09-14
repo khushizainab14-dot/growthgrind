@@ -22,9 +22,18 @@ create index if not exists university_courses_country_idx on public.university_c
 
 alter table public.university_courses enable row level security;
 
-drop policy if exists "Anyone can search published university courses" on public.university_courses;
-create policy "Anyone can search published university courses"
-  on public.university_courses for select using (true);
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'public'
+      and tablename = 'university_courses'
+      and policyname = 'Anyone can search published university courses'
+  ) then
+    create policy "Anyone can search published university courses"
+      on public.university_courses for select using (true);
+  end if;
+end $$;
 
 comment on table public.university_courses is
   'Public GrowthGrind search index built from the HESA Discover Uni dataset. Attribute HESA and link https://www.hesa.ac.uk.';

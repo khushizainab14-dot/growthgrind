@@ -2637,9 +2637,7 @@ function App() {
                     number="02"
                     title="University & Course Finder"
                     description="Find UK courses and universities that fit you."
-                    onClick={() =>
-                      openAiWorkspace('courses')
-                    }
+                    onClick={() => goTo('CourseFinder')}
                   />
 
                   <PremiumFeature
