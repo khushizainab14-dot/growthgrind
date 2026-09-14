@@ -3922,7 +3922,7 @@ function PremiumWorkspacePage({
   return (
     <main>
       <section className="hero-section">
-        <div className={`hero-content${['career-quiz', 'tariff', 'international-quals', 'contextual', 'statement-builder', 'interview'].includes(feature.id) ? ' premium-tool-wide' : ''}`}>
+        <div className={`hero-content${['career-quiz', 'tariff', 'international-quals', 'contextual', 'statement-builder', 'interview', 'test-planner', 'portfolio'].includes(feature.id) ? ' premium-tool-wide' : ''}`}>
           <button className="filter-button" onClick={onBack}>← All Premium tools</button>
           <span className="eyebrow" style={{ display: 'block', marginTop: '24px' }}>{feature.stage}</span>
           <h1>{feature.title}</h1>
@@ -4012,6 +4012,8 @@ function PremiumWorkspacePage({
             <ContextualSupportWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} />
           ) : feature.id === 'interview' ? (
             <InterviewPracticeWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} />
+          ) : feature.id === 'portfolio' ? (
+            <PortfolioHubWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} />
           ) : (
             <InSitePlanner feature={feature} workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} onOpenAi={onOpenAi} />
           )}
@@ -4170,6 +4172,28 @@ function InterviewPracticeWorkspace({ workspaceData, setWorkspaceData }) {
     recognition.start()
   }
   return <div className="interview-studio"><section className="interview-setup"><span className="days-left">LIVE MOCK INTERVIEW</span><h2>Set your interview context.</h2><div className="interview-fields"><input value={course} onChange={(event) => setWorkspaceData({ ...workspaceData, course: event.target.value })} placeholder="Course, e.g. Medicine" /><input value={university} onChange={(event) => setWorkspaceData({ ...workspaceData, university: event.target.value })} placeholder="University, e.g. Bristol" /><label>Tone<select value={tone} onChange={(event) => setWorkspaceData({ ...workspaceData, tone: event.target.value })}><option>Friendly</option><option>Serious</option><option>Stern</option></select></label><label>AI voice<select value={voice} onChange={(event) => setWorkspaceData({ ...workspaceData, voice: event.target.value })}><option value="">Default device voice</option>{typeof window !== 'undefined' && window.speechSynthesis?.getVoices().filter((item) => item.lang.startsWith('en')).slice(0, 12).map((item) => <option value={item.name} key={item.name}>{item.name}</option>)}</select></label></div><button className="view-button" onClick={start} disabled={loading}>{loading ? 'Preparing interview…' : question ? 'Start a new interview' : 'Start mock interview →'}</button><p className="interview-disclaimer">Voice input uses your browser’s microphone permission. You can always type instead.</p></section><section className="interview-stage"><span className="days-left">INTERVIEW ROOM</span>{question ? <><div className="interviewer-question"><b>Interviewer</b><p>{question}</p></div><textarea value={answer} onChange={(event) => setAnswer(event.target.value)} placeholder="Answer by voice or type here…" /><div className="interview-actions"><button className="filter-button" onClick={startListening} disabled={listening}>{listening ? 'Listening…' : '🎙 Answer by voice'}</button><button className="view-button" onClick={submitAnswer} disabled={loading || !answer.trim()}>{loading ? 'Reviewing…' : 'Submit answer →'}</button></div>{feedback && <div className="interview-feedback"><b>Instant feedback</b><p>{feedback}</p></div>}</> : <p className="interview-empty">Choose your course, university, tone and voice, then begin. The interviewer will ask one question at a time.</p>}{error && <p className="contextual-error">{error}</p>}</section><aside className="interview-saves"><span className="days-left">SAVED FEEDBACK</span><h3>Review your practice</h3>{(workspaceData.savedFeedback || []).length ? workspaceData.savedFeedback.slice(-5).reverse().map((item) => <div key={item.id}><strong>{item.question}</strong><p>{item.feedback}</p></div>) : <p>Your completed answers and feedback will be saved here on this device.</p>}</aside></div>
+}
+
+function PortfolioHubWorkspace({ workspaceData, setWorkspaceData }) {
+  const [messages, setMessages] = useState(() => [{ role: 'assistant', content: 'Welcome to your Creative Portfolio Hub. I can help you choose work, research requirements, plan your presentation and build a realistic submission timeline. What course, university and creative medium are you preparing for?' }])
+  const [input, setInput] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const send = async (event) => {
+    event.preventDefault()
+    const text = input.trim()
+    if (!text || loading) return
+    const userMessage = { role: 'user', content: text }
+    setInput(''); setLoading(true); setError('')
+    try {
+      const context = [workspaceData.course, workspaceData.university, workspaceData.medium].filter(Boolean).join(' · ')
+      const response = await fetch('/api/ai-chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ specialist: 'portfolio', message: `${context ? `Portfolio context: ${context}. ` : ''}${text}`, messages }) })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'Could not continue the portfolio plan.')
+      setMessages((current) => [...current, userMessage, { role: 'assistant', content: result.reply }])
+    } catch (requestError) { setError(requestError.message || 'Could not continue the portfolio plan.'); setInput(text) } finally { setLoading(false) }
+  }
+  return <div className="portfolio-studio"><section className="portfolio-brief"><span className="days-left">CREATIVE PORTFOLIO HUB</span><h2>Plan the work you want to show.</h2><p>Set a context so the guide can help you organise work, captions, presentation and practical next steps.</p><div className="portfolio-fields"><input value={workspaceData.course || ''} onChange={(event) => setWorkspaceData({ ...workspaceData, course: event.target.value })} placeholder="Course, e.g. Architecture" /><input value={workspaceData.university || ''} onChange={(event) => setWorkspaceData({ ...workspaceData, university: event.target.value })} placeholder="University, optional" /><select value={workspaceData.medium || ''} onChange={(event) => setWorkspaceData({ ...workspaceData, medium: event.target.value })}><option value="">Choose creative medium</option><option>Fine art / drawing</option><option>Design</option><option>Architecture</option><option>Photography</option><option>Film / animation</option><option>Fashion / textiles</option><option>Music / performance</option><option>Other</option></select></div><div className="portfolio-checklist"><span>Select and sequence work</span><span>Document your process</span><span>Write concise captions</span><span>Check submission format</span></div></section><section className="portfolio-chat"><span className="days-left">YOUR PORTFOLIO GUIDE</span><div className="portfolio-messages">{messages.map((message, index) => <div className={`portfolio-message ${message.role}`} key={`${message.role}-${index}`}><b>{message.role === 'assistant' ? 'GrowthGrind portfolio guide' : 'You'}</b><p>{message.content}</p></div>)}{loading && <div className="portfolio-message assistant"><b>GrowthGrind portfolio guide</b><p>Thinking through your next step…</p></div>}</div><form onSubmit={send}><textarea value={input} onChange={(event) => setInput(event.target.value)} placeholder="Tell the guide what you have so far, or what you are unsure about…" /><button className="view-button" disabled={loading}>{loading ? 'Thinking…' : 'Send →'}</button></form>{error && <p className="contextual-error">{error}</p>}</section></div>
 }
 
 function StudyWorkspace({ workspaceData, setWorkspaceData, onOpenAi, mistakeBank = [] }) {
