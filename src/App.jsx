@@ -2296,6 +2296,7 @@ function App() {
           statementFeedbackError={statementFeedbackError}
           onReviewStatement={reviewStatementAnswers}
           studyMistakeBank={studyMistakeBank}
+          onOpenInternational={() => { setActivePremiumWorkspace(premiumRoadmap.find((feature) => feature.id === 'international-quals')); goTo('PremiumWorkspace') }}
           workspaceData={premiumWorkspaceData[activePremiumWorkspace.id] || {}}
           setWorkspaceData={(value) => setPremiumWorkspaceData((current) => ({ ...current, [activePremiumWorkspace.id]: value }))}
           onBack={() => goTo('Pricing')}
@@ -3814,6 +3815,7 @@ function PremiumWorkspacePage({
   statementFeedbackError,
   onReviewStatement,
   studyMistakeBank,
+  onOpenInternational,
   workspaceData,
   setWorkspaceData,
   onBack,
@@ -3832,7 +3834,7 @@ function PremiumWorkspacePage({
   return (
     <main>
       <section className="hero-section">
-        <div className={`hero-content${feature.id === 'career-quiz' ? ' premium-tool-wide' : ''}`}>
+        <div className={`hero-content${['career-quiz', 'tariff', 'international-quals'].includes(feature.id) ? ' premium-tool-wide' : ''}`}>
           <button className="filter-button" onClick={onBack}>← All Premium tools</button>
           <span className="eyebrow" style={{ display: 'block', marginTop: '24px' }}>{feature.stage}</span>
           <h1>{feature.title}</h1>
@@ -3911,7 +3913,9 @@ function PremiumWorkspacePage({
             </aside>
             </div>
           ) : feature.id === 'tariff' ? (
-            <TariffWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} onOpenAi={onOpenAi} />
+            <TariffWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} onOpenAi={onOpenAi} onOpenInternational={onOpenInternational} />
+          ) : feature.id === 'international-quals' ? (
+            <InternationalQualificationsWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} />
           ) : feature.id === 'study' ? (
             <StudyWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} onOpenAi={onOpenAi} mistakeBank={studyMistakeBank} />
           ) : feature.id === 'career-quiz' ? (
@@ -3925,30 +3929,57 @@ function PremiumWorkspacePage({
   )
 }
 
-function TariffWorkspace({ workspaceData, setWorkspaceData, onOpenAi }) {
+function TariffWorkspace({ workspaceData, setWorkspaceData, onOpenAi, onOpenInternational }) {
   const grades = ['A*', 'A', 'B', 'C', 'D', 'E']
-  const points = { 'A*': 56, A: 48, B: 40, C: 32, D: 24, E: 16 }
-  const selectedGrades = workspaceData.grades || ['', '', '']
-  const total = selectedGrades.reduce((sum, grade) => sum + (points[grade] || 0), 0)
-  const updateGrade = (index, grade) => setWorkspaceData({ ...workspaceData, grades: selectedGrades.map((item, itemIndex) => itemIndex === index ? grade : item) })
+  const points = { 'A level': { 'A*': 56, A: 48, B: 40, C: 32, D: 24, E: 16 }, EPQ: { 'A*': 28, A: 24, B: 20, C: 16, D: 12, E: 8 } }
+  const rawEntries = workspaceData.grades || ['', '', '']
+  const entries = rawEntries.map((entry) => typeof entry === 'string' ? { qualification: 'A level', grade: entry } : entry)
+  const aLevelEntries = entries.filter((entry) => entry.qualification === 'A level')
+  const standardAlevelPoints = aLevelEntries.slice(0, 3).reduce((sum, entry) => sum + (points['A level'][entry.grade] || 0), 0)
+  const enteredTariff = entries.reduce((sum, entry) => sum + (points[entry.qualification]?.[entry.grade] || 0), 0)
+  const updateEntry = (index, field, value) => setWorkspaceData({ ...workspaceData, grades: entries.map((entry, entryIndex) => entryIndex === index ? { ...entry, [field]: value } : entry) })
+  const addEntry = (qualification) => setWorkspaceData({ ...workspaceData, grades: [...entries, { qualification, grade: '' }] })
   return (
     <div className="premium-studio tariff-studio">
       <section className="tariff-form-panel">
         <div className="days-left">A-LEVEL SCENARIO</div>
         <h2>Model your predicted grades</h2>
-        <p>Change a grade to see an indicative UCAS Tariff total. Universities can set subject-specific requirements and do not have to use Tariff points.</p>
-        <div className="grade-picker">{selectedGrades.map((grade, index) => <label key={index}><span>A-level {index + 1}</span><select value={grade} onChange={(event) => updateGrade(index, event.target.value)}><option value="">Choose grade</option>{grades.map((item) => <option key={item}>{item}</option>)}</select></label>)}</div>
+        <p>Add the qualifications you are taking to see an indicative UCAS Tariff total. Universities can set subject-specific requirements and do not have to use Tariff points.</p>
+        <div className="tariff-entry-list">{entries.map((entry, index) => <div className="tariff-entry" key={index}><label><span>Qualification</span><select value={entry.qualification} onChange={(event) => updateEntry(index, 'qualification', event.target.value)}><option>A level</option><option>EPQ</option></select></label><label><span>{entry.qualification} grade</span><select value={entry.grade} onChange={(event) => updateEntry(index, 'grade', event.target.value)}><option value="">Choose grade</option>{grades.map((item) => <option key={item}>{item}</option>)}</select></label>{entries.length > 3 && <button className="tariff-remove" onClick={() => setWorkspaceData({ ...workspaceData, grades: entries.filter((_, entryIndex) => entryIndex !== index) })}>Remove</button>}</div>)}</div>
+        <div className="tariff-add-actions"><button className="filter-button" onClick={() => addEntry('A level')}>＋ Add A-level</button><button className="filter-button" onClick={() => addEntry('EPQ')}>＋ Add EPQ</button></div>
+        {aLevelEntries.length > 3 && <p className="tariff-warning">You have added more than three A-levels. Many standard offers are based on three A-levels and may not count extra A-levels, so check each course’s published requirements.</p>}
       </section>
       <aside className="tariff-result-panel">
         <span>YOUR INDICATIVE TOTAL</span>
-        <strong>{total}</strong><em>UCAS Tariff points</em>
+        <strong>{enteredTariff}</strong><em>UCAS Tariff points from all entered qualifications</em>
+        <p className="tariff-standard-total">First three A-levels: <strong>{standardAlevelPoints} points</strong></p>
         <div className="tariff-divider" />
         <h3>Before you shortlist a course</h3>
         <ul><li>Check whether the university uses Tariff points.</li><li>Check required subjects and individual grades.</li><li>Record contextual and admissions-test requirements.</li></ul>
         <button className="view-button" onClick={onOpenAi}>Compare requirements →</button>
+        <button className="tariff-international-button" onClick={onOpenInternational}>Applying with international qualifications? →</button>
       </aside>
     </div>
   )
+}
+
+function InternationalQualificationsWorkspace({ workspaceData, setWorkspaceData }) {
+  const countries = {
+    'International Baccalaureate': 'Use the International Baccalaureate Diploma name and your actual Higher Level subjects/grades. Universities often state an overall Diploma score and may set individual Higher Level requirements.',
+    'India — CBSE': 'Search each university’s international entry-requirements page for CBSE guidance. Requirements are usually stated as an overall percentage and may specify a higher mark in a relevant subject.',
+    'India — CISCE/ISC': 'Search each university’s international entry-requirements page for ISC guidance. Check whether the course expects specific subjects as well as an overall percentage.',
+    'United States': 'Check the university’s US qualifications guidance for the exact combination it accepts, which may include a high-school diploma alongside AP, SAT/ACT, dual-enrolment or other study.',
+    'China': 'Search the course provider’s China/international qualifications page. Confirm the accepted school-leaving qualification, any subject requirements and English-language evidence.',
+    'Pakistan': 'Check the university’s Pakistan guidance for your exact qualification, such as HSSC or A-levels. Competitive courses may require higher results in relevant subjects.',
+    'Nigeria': 'Check the provider’s Nigeria guidance for your exact qualification. Confirm subject requirements and whether separate English-language evidence is required.',
+    'France': 'Look for Baccalauréat requirements on the university’s international page, including any expected subject specialisms or overall result.',
+    'Germany': 'Check for Abitur guidance and the subject combination required for the course. Individual universities set their own comparison and English-language requirements.',
+    'Canada': 'Check the province-specific qualification guidance on the university page and confirm required Grade 12 subjects, not only the overall average.',
+    'Other country': 'Use the exact qualification name shown on your certificate or predicted-grade document. Search the university’s country/qualification page and ask its admissions team if the qualification is not listed.',
+  }
+  const country = workspaceData.country || 'International Baccalaureate'
+  const searched = workspaceData.searchedInternational
+  return <div className="international-quals-studio"><section><span className="days-left">INTERNATIONAL QUALIFICATIONS</span><h2>Understand your qualification in a UK application.</h2><p>Which country are your current or completed qualifications from?</p><div className="international-search"><select value={country} onChange={(event) => setWorkspaceData({ ...workspaceData, country: event.target.value, searchedInternational: false })}>{Object.keys(countries).map((item) => <option key={item}>{item}</option>)}</select><button className="view-button" onClick={() => setWorkspaceData({ ...workspaceData, searchedInternational: true })}>Search guidance →</button></div></section>{searched && <section className="international-result"><span>GUIDANCE FOR {country.toUpperCase()}</span><h3>How to compare your grades</h3><p>{countries[country]}</p><ul><li>There is no single UK-wide “competitive grade” conversion: each university and course decides its own entry requirements.</li><li>Use the original qualification and grades on your application, not a self-created A-level conversion.</li><li>Check the exact course page, required subjects and English-language requirement before applying.</li></ul><div className="international-links"><a href="https://www.ucas.com/international/international-students/applying-university-international-student/entry-requirements-uk-courses" target="_blank" rel="noreferrer">UCAS international entry requirements ↗</a><a href="https://www.ucas.com/sites/default/files/international_qips_18-11-2024_0.pdf" target="_blank" rel="noreferrer">UCAS qualification profiles ↗</a></div></section>}</div>
 }
 
 function StudyWorkspace({ workspaceData, setWorkspaceData, onOpenAi, mistakeBank = [] }) {
