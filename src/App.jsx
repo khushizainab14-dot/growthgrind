@@ -3922,7 +3922,7 @@ function PremiumWorkspacePage({
   return (
     <main>
       <section className="hero-section">
-        <div className={`hero-content${['career-quiz', 'tariff', 'international-quals'].includes(feature.id) ? ' premium-tool-wide' : ''}`}>
+        <div className={`hero-content${['career-quiz', 'tariff', 'international-quals', 'contextual', 'statement-builder', 'interview'].includes(feature.id) ? ' premium-tool-wide' : ''}`}>
           <button className="filter-button" onClick={onBack}>← All Premium tools</button>
           <span className="eyebrow" style={{ display: 'block', marginTop: '24px' }}>{feature.stage}</span>
           <h1>{feature.title}</h1>
@@ -4010,6 +4010,8 @@ function PremiumWorkspacePage({
             <CareerQuizWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} />
           ) : feature.id === 'contextual' ? (
             <ContextualSupportWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} />
+          ) : feature.id === 'interview' ? (
+            <InterviewPracticeWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} />
           ) : (
             <InSitePlanner feature={feature} workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} onOpenAi={onOpenAi} />
           )}
@@ -4112,6 +4114,62 @@ function ContextualSupportWorkspace({ workspaceData, setWorkspaceData }) {
     } catch (requestError) { setError(requestError.message || 'Could not review this right now.') } finally { setLoading(false) }
   }
   return <div className="contextual-studio"><section className="contextual-editor"><span className="days-left">FACTS, NOT EXCUSES</span><h2>Describe your context in your own words.</h2><p>Include what happened, when it affected your education, and what evidence a school or professional could confirm. Avoid uploading medical evidence or unnecessary sensitive details here.</p><textarea value={details} onChange={(event) => setWorkspaceData({ ...workspaceData, details: event.target.value })} placeholder="For example: In Year 12, I had caring responsibilities for a family member for several months. This affected my attendance and meant I missed…" /><button className="view-button" disabled={loading} onClick={review}>{loading ? 'Reviewing your wording…' : 'Get side-by-side guidance →'}</button>{error && <p className="contextual-error">{error}</p>}</section><aside className="contextual-feedback"><span className="days-left">FORMALITY & IMPACT CHECK</span>{feedback ? <><h3>How to make this clearer</h3><p>{feedback}</p></> : <><h3>What GrowthGrind will check</h3><ul><li>Factual timeline and specific educational impact.</li><li>Clear, professional language without overstating a claim.</li><li>Evidence to discuss with a referee or support team.</li><li>Whether to check the university’s own contextual-offer policy.</li></ul><p className="contextual-note">This does not decide eligibility or replace a school reference, medical professional, or university admissions team.</p></>}</aside></div>
+}
+
+function InterviewPracticeWorkspace({ workspaceData, setWorkspaceData }) {
+  const [question, setQuestion] = useState(workspaceData.currentQuestion || '')
+  const [answer, setAnswer] = useState('')
+  const [feedback, setFeedback] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [listening, setListening] = useState(false)
+  const [error, setError] = useState('')
+  const course = workspaceData.course || ''
+  const university = workspaceData.university || ''
+  const tone = workspaceData.tone || 'Friendly'
+  const voice = workspaceData.voice || ''
+  const speak = (text) => {
+    if (!window.speechSynthesis) return
+    window.speechSynthesis.cancel()
+    const utterance = new SpeechSynthesisUtterance(text.replace(/https?:\/\/\S+/g, ''))
+    const voices = window.speechSynthesis.getVoices()
+    const selected = voices.find((item) => item.name === voice)
+    if (selected) utterance.voice = selected
+    utterance.rate = tone === 'Stern' ? 0.96 : tone === 'Friendly' ? 1.03 : 1
+    window.speechSynthesis.speak(utterance)
+  }
+  const askAi = async (message, savingAnswer = '') => {
+    setLoading(true); setError('')
+    try {
+      const response = await fetch('/api/ai-chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ specialist: 'interview', message }) })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'Could not continue the interview.')
+      setFeedback(savingAnswer ? result.reply : '')
+      setQuestion(result.reply)
+      setWorkspaceData({ ...workspaceData, currentQuestion: result.reply, savedFeedback: savingAnswer ? [...(workspaceData.savedFeedback || []), { id: Date.now(), question, answer: savingAnswer, feedback: result.reply }] : (workspaceData.savedFeedback || []) })
+      speak(result.reply)
+    } catch (requestError) { setError(requestError.message || 'Could not continue the interview.') } finally { setLoading(false) }
+  }
+  const start = () => {
+    if (!course.trim() || !university.trim()) { setError('Add both a course and university before starting.'); return }
+    askAi(`Start a ${tone.toLowerCase()} mock interview for ${course} at ${university}. Ask the first realistic open question only, then wait for the student’s answer.`)
+  }
+  const submitAnswer = () => {
+    if (!answer.trim() || !question) return
+    const spokenAnswer = answer
+    setAnswer('')
+    askAi(`Continue this ${tone.toLowerCase()} mock interview for ${course} at ${university}. Previous question: ${question}\nStudent answer: ${spokenAnswer}\nGive brief, specific feedback first, then ask exactly one next question.`, spokenAnswer)
+  }
+  const startListening = () => {
+    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition
+    if (!Recognition) { setError('Voice input is not supported in this browser. You can type your answer instead.'); return }
+    const recognition = new Recognition(); recognition.lang = 'en-GB'; recognition.interimResults = true; recognition.continuous = false
+    recognition.onstart = () => setListening(true)
+    recognition.onresult = (event) => setAnswer(Array.from(event.results).map((item) => item[0].transcript).join(' '))
+    recognition.onerror = () => { setListening(false); setError('Microphone input was unavailable. You can type your answer instead.') }
+    recognition.onend = () => setListening(false)
+    recognition.start()
+  }
+  return <div className="interview-studio"><section className="interview-setup"><span className="days-left">LIVE MOCK INTERVIEW</span><h2>Set your interview context.</h2><div className="interview-fields"><input value={course} onChange={(event) => setWorkspaceData({ ...workspaceData, course: event.target.value })} placeholder="Course, e.g. Medicine" /><input value={university} onChange={(event) => setWorkspaceData({ ...workspaceData, university: event.target.value })} placeholder="University, e.g. Bristol" /><label>Tone<select value={tone} onChange={(event) => setWorkspaceData({ ...workspaceData, tone: event.target.value })}><option>Friendly</option><option>Serious</option><option>Stern</option></select></label><label>AI voice<select value={voice} onChange={(event) => setWorkspaceData({ ...workspaceData, voice: event.target.value })}><option value="">Default device voice</option>{typeof window !== 'undefined' && window.speechSynthesis?.getVoices().filter((item) => item.lang.startsWith('en')).slice(0, 12).map((item) => <option value={item.name} key={item.name}>{item.name}</option>)}</select></label></div><button className="view-button" onClick={start} disabled={loading}>{loading ? 'Preparing interview…' : question ? 'Start a new interview' : 'Start mock interview →'}</button><p className="interview-disclaimer">Voice input uses your browser’s microphone permission. You can always type instead.</p></section><section className="interview-stage"><span className="days-left">INTERVIEW ROOM</span>{question ? <><div className="interviewer-question"><b>Interviewer</b><p>{question}</p></div><textarea value={answer} onChange={(event) => setAnswer(event.target.value)} placeholder="Answer by voice or type here…" /><div className="interview-actions"><button className="filter-button" onClick={startListening} disabled={listening}>{listening ? 'Listening…' : '🎙 Answer by voice'}</button><button className="view-button" onClick={submitAnswer} disabled={loading || !answer.trim()}>{loading ? 'Reviewing…' : 'Submit answer →'}</button></div>{feedback && <div className="interview-feedback"><b>Instant feedback</b><p>{feedback}</p></div>}</> : <p className="interview-empty">Choose your course, university, tone and voice, then begin. The interviewer will ask one question at a time.</p>}{error && <p className="contextual-error">{error}</p>}</section><aside className="interview-saves"><span className="days-left">SAVED FEEDBACK</span><h3>Review your practice</h3>{(workspaceData.savedFeedback || []).length ? workspaceData.savedFeedback.slice(-5).reverse().map((item) => <div key={item.id}><strong>{item.question}</strong><p>{item.feedback}</p></div>) : <p>Your completed answers and feedback will be saved here on this device.</p>}</aside></div>
 }
 
 function StudyWorkspace({ workspaceData, setWorkspaceData, onOpenAi, mistakeBank = [] }) {
