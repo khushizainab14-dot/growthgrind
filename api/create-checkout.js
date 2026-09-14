@@ -1,8 +1,8 @@
 const plans = {
-  founding: { name: 'GrowthGrind Premium — Founding Member', amount: 299, mode: 'subscription', interval: 'month' },
-  monthly: { name: 'GrowthGrind Premium — Monthly', amount: 899, mode: 'subscription', interval: 'month' },
-  annual: { name: 'GrowthGrind Premium — One Year', amount: 8999, mode: 'payment' },
-  twoYear: { name: 'GrowthGrind Premium — Two Years', amount: 16999, mode: 'payment' },
+  founding: { priceEnv: 'STRIPE_PRICE_FOUNDING', mode: 'subscription' },
+  monthly: { priceEnv: 'STRIPE_PRICE_MONTHLY', mode: 'subscription' },
+  annual: { priceEnv: 'STRIPE_PRICE_ANNUAL', mode: 'payment' },
+  twoYear: { priceEnv: 'STRIPE_PRICE_TWO_YEAR', mode: 'payment' },
 }
 
 export default async function handler(request, response) {
@@ -11,18 +11,17 @@ export default async function handler(request, response) {
 
   const plan = plans[request.body?.plan]
   if (!plan) return response.status(400).json({ error: 'Please choose a valid plan.' })
+  const priceId = process.env[plan.priceEnv]
+  if (!priceId) return response.status(500).json({ error: 'This payment plan is not configured yet.' })
   const origin = request.headers.origin || 'https://growthgrind.vercel.app'
   const params = new URLSearchParams({
     mode: plan.mode,
     success_url: `${origin}/?premium=success`,
     cancel_url: `${origin}/?premium=cancelled`,
-    'line_items[0][price_data][currency]': 'gbp',
-    'line_items[0][price_data][product_data][name]': plan.name,
-    'line_items[0][price_data][unit_amount]': String(plan.amount),
+    'line_items[0][price]': priceId,
     'line_items[0][quantity]': '1',
     'metadata[plan]': request.body?.plan,
   })
-  if (plan.mode === 'subscription') params.set('line_items[0][price_data][recurring][interval]', plan.interval)
   if (request.body?.userId) params.set('client_reference_id', String(request.body.userId).slice(0, 128))
 
   try {
