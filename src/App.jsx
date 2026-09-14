@@ -1462,7 +1462,6 @@ function App() {
     </section>
   </main>
 )}
-```
 
       {/* MATCH RESULTS */}
       {page === 'Results' && (
@@ -3874,16 +3873,18 @@ function PremiumWorkspacePage({
           <h1>{feature.title}</h1>
           <p>{feature.description}</p>
 
-          <div className="closing-card" style={{ marginTop: '28px', border: '1px solid #b9c9b9' }}>
-            <div className="days-left">VERIFIED STARTING POINT</div>
-            <h3>Use the official source alongside GrowthGrind</h3>
-            <p>Requirements and dates can change. GrowthGrind helps you plan and reflect, while the official provider remains the source to confirm the final detail.</p>
-            <a className="view-button" href={source.url} target="_blank" rel="noreferrer">Open {source.label} ↗</a>
+          <div className="premium-source-banner">
+            <div>
+              <span>VERIFIED STARTING POINT</span>
+              <strong>Built-in planning, backed by the official source.</strong>
+              <p>Use GrowthGrind to organise and reflect. Always confirm final requirements and dates with the provider.</p>
+            </div>
+            <a className="source-link" href={source.url} target="_blank" rel="noreferrer">Open {source.label} ↗</a>
           </div>
 
           {feature.id === 'statement-builder' ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.25fr) minmax(280px, 0.75fr)', gap: '20px', marginTop: '24px' }} className="statement-workspace">
-            <div className="closing-card">
+            <div className="statement-workspace premium-studio">
+            <div className="statement-editor-panel">
               <div className="days-left">2026 ENTRY FORMAT</div>
               <h2 style={{ marginTop: '12px' }}>Build your three answers</h2>
               <p>{characterTotal.toLocaleString()} / 4,000 characters used across all answers, including spaces.</p>
@@ -3916,7 +3917,7 @@ function PremiumWorkspacePage({
                 {statementFeedbackLoading ? 'Reviewing your draft…' : 'Review draft side by side →'}
               </button>
             </div>
-            <aside className="closing-card" style={{ alignSelf: 'start', position: 'sticky', top: '90px', maxHeight: '75vh', overflowY: 'auto' }}>
+            <aside className="statement-feedback-panel">
               <div className="days-left">DRAFT FEEDBACK</div>
               {!statementFeedback ? (
                 <>
@@ -3966,20 +3967,21 @@ function TariffWorkspace({ workspaceData, setWorkspaceData, onOpenAi }) {
   const total = selectedGrades.reduce((sum, grade) => sum + (points[grade] || 0), 0)
   const updateGrade = (index, grade) => setWorkspaceData({ ...workspaceData, grades: selectedGrades.map((item, itemIndex) => itemIndex === index ? grade : item) })
   return (
-    <div className="closing-grid" style={{ marginTop: '24px' }}>
-      <div className="closing-card">
+    <div className="premium-studio tariff-studio">
+      <section className="tariff-form-panel">
         <div className="days-left">A-LEVEL SCENARIO</div>
-        <h2 style={{ marginTop: '12px' }}>Model your predicted grades</h2>
+        <h2>Model your predicted grades</h2>
         <p>Change a grade to see an indicative UCAS Tariff total. Universities can set subject-specific requirements and do not have to use Tariff points.</p>
-        {selectedGrades.map((grade, index) => <select key={index} value={grade} onChange={(event) => updateGrade(index, event.target.value)} style={{ width: '100%', marginTop: '10px', padding: '12px', borderRadius: '9px', border: '1px solid #d0c4b0', background: '#f5efe5', color: '#315b3d', font: 'inherit' }}><option value="">A-level {index + 1} grade</option>{grades.map((item) => <option key={item}>{item}</option>)}</select>)}
-        <div style={{ marginTop: '18px', padding: '15px', borderRadius: '10px', background: '#dce8dc', color: '#294b35' }}><strong>{total} UCAS Tariff points</strong><br /><span style={{ fontSize: '12px' }}>Indicative A-level total</span></div>
-      </div>
-      <div className="closing-card">
-        <div className="days-left">COURSE CHECKLIST</div>
-        <h3>Check every saved course</h3>
-        <p>Record its published overall grades, required subjects, GCSE requirements, contextual offer and admissions test. GrowthGrind can then help you compare scenarios without pretending to predict an offer.</p>
-        <button className="view-button" onClick={onOpenAi}>Compare requirements with AI →</button>
-      </div>
+        <div className="grade-picker">{selectedGrades.map((grade, index) => <label key={index}><span>A-level {index + 1}</span><select value={grade} onChange={(event) => updateGrade(index, event.target.value)}><option value="">Choose grade</option>{grades.map((item) => <option key={item}>{item}</option>)}</select></label>)}</div>
+      </section>
+      <aside className="tariff-result-panel">
+        <span>YOUR INDICATIVE TOTAL</span>
+        <strong>{total}</strong><em>UCAS Tariff points</em>
+        <div className="tariff-divider" />
+        <h3>Before you shortlist a course</h3>
+        <ul><li>Check whether the university uses Tariff points.</li><li>Check required subjects and individual grades.</li><li>Record contextual and admissions-test requirements.</li></ul>
+        <button className="view-button" onClick={onOpenAi}>Compare requirements →</button>
+      </aside>
     </div>
   )
 }
@@ -3987,19 +3989,20 @@ function TariffWorkspace({ workspaceData, setWorkspaceData, onOpenAi }) {
 function StudyWorkspace({ workspaceData, setWorkspaceData, onOpenAi }) {
   const mistake = workspaceData.mistake || ''
   return (
-    <div className="closing-grid" style={{ marginTop: '24px' }}>
-      <div className="closing-card">
+    <div className="premium-studio study-studio">
+      <section className="study-action-panel">
         <div className="days-left">AI EXAM TUTOR</div>
-        <h2 style={{ marginTop: '12px' }}>Question scan, tutor and mistake bank</h2>
-        <p>Use the GrowthGrind Study chat to upload a question, working, screenshot or PDF. Choose Hint, Guide Me, Full Solution, Exam Solution, or “Where did I go wrong?”</p>
-        <button className="view-button" onClick={onOpenAi}>Open GrowthGrind Study →</button>
-      </div>
-      <div className="closing-card">
+        <h2>Practise with a method, not another blank chat.</h2>
+        <p>Upload a question, your working, a screenshot or a PDF. Choose how much help you want and get clear mathematical notation, fractions and roots.</p>
+        <div className="study-modes"><span>Hint only</span><span>Guide me</span><span>Exam solution</span><span>Find my error</span></div>
+        <button className="view-button" onClick={onOpenAi}>Start a guided question →</button>
+      </section>
+      <section className="mistake-bank-panel">
         <div className="days-left">MISTAKE BANK</div>
         <h3>Save an error to revisit</h3>
         <textarea value={mistake} onChange={(event) => setWorkspaceData({ ...workspaceData, mistake: event.target.value })} placeholder="Example: A-level Maths — integration — I forgot to adjust the limits after substitution. What will I do differently?" style={{ width: '100%', minHeight: '140px', boxSizing: 'border-box', padding: '12px', borderRadius: '9px', border: '1px solid #d0c4b0', background: '#f5efe5', color: '#315b3d', font: 'inherit' }} />
         <p style={{ fontSize: '12px' }}>This is saved on this device. The next build will turn each saved item into a searchable question library and weakness profile.</p>
-      </div>
+      </section>
     </div>
   )
 }
@@ -4040,19 +4043,18 @@ function CareerQuizWorkspace({ workspaceData, setWorkspaceData }) {
   }
   const topThree = Object.entries(scores).sort((first, second) => second[1] - first[1]).slice(0, 3)
   return (
-    <div className="closing-card" style={{ marginTop: '24px', maxWidth: '900px' }}>
-      <div className="days-left">YES / NO CAREER QUIZ</div>
-      <h2 style={{ marginTop: '12px' }}>Find career sectors worth exploring</h2>
-      <p>There are no right answers. This is a starting point for exploration, not a judgement about what you can do.</p>
+    <div className="career-quiz-studio">
+      <header><span className="days-left">YES / NO CAREER QUIZ</span><h2>Find career sectors worth exploring</h2><p>There are no right answers. This is a starting point for exploration, not a judgement about what you can do.</p><div className="quiz-progress"><i style={{ width: `${Math.round((answers.filter(Boolean).length / questions.length) * 100)}%` }} /></div></header>
+      <section className="career-questions">
       {questions.map(([question], index) => (
-        <div key={question} style={{ display: 'flex', justifyContent: 'space-between', gap: '14px', alignItems: 'center', padding: '15px 0', borderTop: index ? '1px solid #ded3c1' : 0 }}>
+        <div className="career-question" key={question}>
           <span style={{ color: '#294b35', fontWeight: '650' }}>{index + 1}. {question}</span>
           <div style={{ display: 'flex', gap: '7px', flexShrink: 0 }}>
             {['Yes', 'No'].map((option) => <button key={option} className="filter-button" onClick={() => { const nextAnswers = [...answers]; nextAnswers[index] = option === 'Yes'; setWorkspaceData({ ...workspaceData, answers: nextAnswers }) }} style={{ background: answers[index] === (option === 'Yes') ? '#315b3d' : undefined, color: answers[index] === (option === 'Yes') ? '#fff' : undefined }}>{option}</button>)}
           </div>
         </div>
-      ))}
-      {topThree.length > 0 && <div style={{ marginTop: '25px', paddingTop: '20px', borderTop: '1px solid #b9c9b9' }}><div className="days-left">YOUR TOP THREE</div><div className="closing-grid" style={{ marginTop: '14px' }}>{topThree.map(([sector]) => <div className="closing-card" key={sector} style={{ boxShadow: 'none' }}><h3>{sector}</h3><ul style={{ paddingLeft: '18px', lineHeight: 1.6 }}>{jobs[sector].map((job) => <li key={job}>{job}</li>)}</ul></div>)}</div></div>}
+      ))}</section>
+      {topThree.length > 0 && <section className="career-results"><div className="days-left">YOUR TOP THREE</div><div className="career-result-grid">{topThree.map(([sector], index) => <div className="career-result-card" key={sector}><span>0{index + 1}</span><h3>{sector}</h3><ul>{jobs[sector].map((job) => <li key={job}>{job}</li>)}</ul></div>)}</div></section>}
     </div>
   )
 }
@@ -4075,19 +4077,21 @@ function InSitePlanner({ feature, workspaceData, setWorkspaceData, onOpenAi }) {
   }
   const [title, placeholder, followUp] = prompts[feature.id] || ['Your plan', 'Add your notes here.', 'Next action']
   return (
-    <div className="closing-grid" style={{ marginTop: '24px' }}>
-      <div className="closing-card">
+    <div className="planner-studio">
+      <section className="planner-main-panel">
         <div className="days-left">YOUR IN-SITE WORKSPACE</div>
-        <h2 style={{ marginTop: '12px' }}>{title}</h2>
+        <h2>{title}</h2>
+        <p>Capture the facts first. GrowthGrind turns those facts into useful, practical next steps — without hiding the work behind a generic link.</p>
         <textarea value={workspaceData.notes || ''} onChange={(event) => setWorkspaceData({ ...workspaceData, notes: event.target.value })} placeholder={placeholder} style={{ width: '100%', minHeight: '185px', boxSizing: 'border-box', padding: '13px', borderRadius: '9px', border: '1px solid #d0c4b0', background: '#f5efe5', color: '#315b3d', font: 'inherit', resize: 'vertical' }} />
         <input value={workspaceData.nextAction || ''} onChange={(event) => setWorkspaceData({ ...workspaceData, nextAction: event.target.value })} placeholder={followUp} style={{ width: '100%', boxSizing: 'border-box', marginTop: '10px', padding: '12px', borderRadius: '9px', border: '1px solid #d0c4b0', background: '#f5efe5', color: '#315b3d', font: 'inherit' }} />
-      </div>
-      <div className="closing-card">
+      </section>
+      <aside className="planner-guide-panel">
         <div className="days-left">GUIDED ANALYSIS</div>
         <h3>Turn notes into a plan</h3>
-        <p>Use the specialist chat to examine this workspace in context, create practical next steps and flag details that must be verified with the university, UCAS or test provider.</p>
-        <button className="view-button" onClick={onOpenAi}>Analyse with GrowthGrind AI →</button>
-      </div>
+        <p>Get a focused analysis of the notes in this workspace, including what to verify and your most useful next move.</p>
+        <div className="planner-steps"><span>01 Facts</span><span>02 Check</span><span>03 Act</span></div>
+        <button className="view-button" onClick={onOpenAi}>Analyse this plan →</button>
+      </aside>
     </div>
   )
 }
