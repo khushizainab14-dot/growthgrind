@@ -768,6 +768,16 @@ footer p {
 .career-quiz-studio h2 { margin: 10px 0 7px; color: #294b35; font-size: clamp(26px, 3vw, 38px); }
 .quiz-progress { height: 8px; margin-top: 22px; border-radius: 99px; background: #d9e3d5; overflow: hidden; }
 .quiz-progress i { display: block; height: 100%; background: #315b3d; border-radius: inherit; transition: width .25s ease; }
+.quiz-progress-copy { display: flex; justify-content: space-between; gap: 14px; margin-top: 8px; color: #58715b; font-size: 12px; font-weight: 700; }
+.career-question-stage { padding: 42px 34px; text-align: center; background: #fffaf2; }
+.career-question-number { display: inline-grid; width: 36px; height: 36px; place-items: center; border-radius: 50%; background: #315b3d; color: #fff; font-size: 12px; font-weight: 800; }
+.career-question-stage h3 { max-width: 720px; margin: 19px auto 9px; color: #294b35; font-size: clamp(25px, 3.5vw, 38px); line-height: 1.14; }
+.career-question-stage p { margin: 0; color: #667264; }
+.career-answer-buttons { display: flex; justify-content: center; gap: 12px; margin-top: 28px; }
+.career-answer { min-width: 148px; padding: 16px 20px; border: 1px solid #bdcdbb; border-radius: 12px; background: #edf3ea; color: #315b3d; font: inherit; font-weight: 800; }
+.career-answer:hover, .career-answer.selected { border-color: #315b3d; background: #315b3d; color: #fff; }
+.career-navigation { display: flex; justify-content: space-between; gap: 12px; max-width: 720px; margin: 38px auto 0; padding-top: 18px; border-top: 1px solid #ded3c1; }
+.career-navigation button:disabled { cursor: not-allowed; opacity: .45; }
 .career-questions { padding: 5px 34px 26px; }
 .career-question { display: flex; justify-content: space-between; gap: 18px; align-items: center; padding: 19px 0; border-top: 1px solid #e0d6c6; }
 .career-question:first-child { border-top: 0; }
@@ -869,6 +879,8 @@ footer p {
   .statement-editor-panel, .statement-feedback-panel, .tariff-form-panel, .tariff-result-panel, .study-action-panel, .mistake-bank-panel, .planner-main-panel, .planner-guide-panel { padding: 24px; }
   .statement-feedback-panel { border-left: 0; border-top: 1px solid #c6d4c3; }
   .career-result-grid { grid-template-columns: 1fr; }
+  .career-question-stage { padding: 28px 20px; }
+  .quiz-progress-copy { align-items: flex-start; flex-direction: column; gap: 3px; }
   .course-search-form { grid-template-columns: 1fr 1fr; }
 }
 

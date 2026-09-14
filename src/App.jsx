@@ -3922,23 +3922,28 @@ function StudyWorkspace({ workspaceData, setWorkspaceData, onOpenAi }) {
 
 function CareerQuizWorkspace({ workspaceData, setWorkspaceData }) {
   const questions = [
-    ['I enjoy using numbers, data or patterns to solve problems.', ['Finance', 'Technology']],
-    ['I am interested in how organisations make money and take decisions.', ['Finance', 'Business']],
-    ['I would enjoy building, testing or improving a product or system.', ['Technology', 'Engineering']],
-    ['I am curious about health, biology or helping people directly.', ['Healthcare', 'Science']],
-    ['I enjoy arguing a case, analysing rules or persuading others.', ['Law', 'Business']],
-    ['I like writing, visual ideas, storytelling or creating content.', ['Creative & Media', 'Marketing']],
-    ['I would rather work through a difficult problem than avoid it.', ['Engineering', 'Technology']],
-    ['I care about public issues, policy, fairness or global events.', ['Public Policy', 'Law']],
-    ['I enjoy explaining ideas and working closely with other people.', ['Healthcare', 'Education']],
-    ['I am interested in markets, companies and investment.', ['Finance', 'Business']],
-    ['I enjoy science experiments, research or finding out why something works.', ['Science', 'Healthcare']],
-    ['I want work that combines creativity with commercial thinking.', ['Marketing', 'Creative & Media']],
+    { id: 'patterns', text: 'I enjoy using numbers, data or patterns to solve problems.', sectors: ['Finance', 'Technology'] },
+    { id: 'people', text: 'I enjoy explaining ideas and working closely with other people.', sectors: ['Healthcare', 'Education'] },
+    { id: 'build', text: 'I would enjoy building, testing or improving a product or system.', sectors: ['Technology', 'Engineering'] },
+    { id: 'ideas', text: 'I like writing, visual ideas, storytelling or creating content.', sectors: ['Creative & Media', 'Marketing'] },
+    { id: 'research', text: 'I enjoy science experiments, research or finding out why something works.', sectors: ['Science', 'Healthcare'] },
+    { id: 'rules', text: 'I enjoy arguing a case, analysing rules or persuading others.', sectors: ['Law', 'Business'] },
+    { id: 'markets', text: 'I am interested in markets, companies and investment.', sectors: ['Finance', 'Business'] },
+    { id: 'systems', text: 'I would rather work through a difficult problem than avoid it.', sectors: ['Engineering', 'Technology'] },
+    { id: 'health', text: 'I am curious about health, biology or helping people directly.', sectors: ['Healthcare', 'Science'] },
+    { id: 'policy', text: 'I care about public issues, policy, fairness or global events.', sectors: ['Public Policy', 'Law'] },
+    { id: 'commercial-creative', text: 'I want work that combines creativity with commercial thinking.', sectors: ['Marketing', 'Creative & Media'] },
+    { id: 'leadership', text: 'I enjoy taking responsibility for decisions that affect a group.', sectors: ['Business', 'Public Policy'] },
+    { id: 'detail', text: 'I notice small details and like making something accurate or dependable.', sectors: ['Engineering', 'Finance'] },
+    { id: 'care', text: 'I would find it meaningful to make a direct difference to someone’s wellbeing.', sectors: ['Healthcare', 'Education'] },
   ]
-  const answers = workspaceData.answers || []
-  const scores = answers.reduce((result, answer, index) => {
-    if (!answer) return result
-    questions[index][1].forEach((sector) => { result[sector] = (result[sector] || 0) + 1 })
+  const rawAnswers = workspaceData.answers || {}
+  const answers = Array.isArray(rawAnswers)
+    ? rawAnswers.reduce((result, answer, index) => (answer === undefined ? result : { ...result, [questions[index]?.id]: answer }), {})
+    : rawAnswers
+  const scores = questions.reduce((result, question) => {
+    if (!answers[question.id]) return result
+    question.sectors.forEach((sector) => { result[sector] = (result[sector] || 0) + 1 })
     return result
   }, {})
   const jobs = {
@@ -3954,20 +3959,46 @@ function CareerQuizWorkspace({ workspaceData, setWorkspaceData }) {
     'Public Policy': ['Civil service', 'International development', 'Think-tank research', 'Public affairs'],
     Education: ['Teaching', 'Educational psychology', 'Learning design', 'Youth work'],
   }
-  const topThree = Object.entries(scores).sort((first, second) => second[1] - first[1]).slice(0, 3)
+  const rankedSectors = Object.entries(scores).sort((first, second) => second[1] - first[1])
+  const coreIds = questions.slice(0, 6).map((question) => question.id)
+  const answerCount = Object.keys(answers).length
+  const lead = (rankedSectors[0]?.[1] || 0) - (rankedSectors[1]?.[1] || 0)
+  const adaptiveCount = answerCount >= coreIds.length ? (lead >= 3 ? 2 : lead >= 2 ? 4 : 6) : 6
+  const relevantFollowUps = questions.slice(6)
+    .map((question) => ({ question, relevance: question.sectors.reduce((total, sector) => total + (scores[sector] || 0), 0) }))
+    .sort((first, second) => second.relevance - first.relevance || first.question.id.localeCompare(second.question.id))
+    .slice(0, adaptiveCount)
+    .map(({ question }) => question.id)
+  const questionOrder = answerCount >= coreIds.length ? [...coreIds, ...relevantFollowUps] : coreIds
+  const currentStep = Math.min(workspaceData.currentStep || 0, questionOrder.length - 1)
+  const currentQuestion = questions.find((question) => question.id === questionOrder[currentStep])
+  const currentHasAnswer = Object.prototype.hasOwnProperty.call(answers, currentQuestion?.id)
+  const estimatedTotal = answerCount >= coreIds.length ? questionOrder.length : 8 + (lead < 2 ? 4 : lead < 3 ? 2 : 0)
+  const progress = Math.min(100, Math.round((answerCount / estimatedTotal) * 100))
+  const topThree = rankedSectors.slice(0, 3)
+  const setAnswer = (value) => setWorkspaceData({ ...workspaceData, answers: { ...answers, [currentQuestion.id]: value }, careerQuizComplete: false })
+  const moveNext = () => {
+    if (!currentHasAnswer) return
+    if (currentStep >= questionOrder.length - 1) {
+      setWorkspaceData({ ...workspaceData, answers, currentStep, careerQuizComplete: true })
+      return
+    }
+    setWorkspaceData({ ...workspaceData, answers, currentStep: currentStep + 1, careerQuizComplete: false })
+  }
   return (
     <div className="career-quiz-studio">
-      <header><span className="days-left">YES / NO CAREER QUIZ</span><h2>Find career sectors worth exploring</h2><p>There are no right answers. This is a starting point for exploration, not a judgement about what you can do.</p><div className="quiz-progress"><i style={{ width: `${Math.round((answers.filter(Boolean).length / questions.length) * 100)}%` }} /></div></header>
-      <section className="career-questions">
-      {questions.map(([question], index) => (
-        <div className="career-question" key={question}>
-          <span style={{ color: '#294b35', fontWeight: '650' }}>{index + 1}. {question}</span>
-          <div style={{ display: 'flex', gap: '7px', flexShrink: 0 }}>
-            {['Yes', 'No'].map((option) => <button key={option} className="filter-button" onClick={() => { const nextAnswers = [...answers]; nextAnswers[index] = option === 'Yes'; setWorkspaceData({ ...workspaceData, answers: nextAnswers }) }} style={{ background: answers[index] === (option === 'Yes') ? '#315b3d' : undefined, color: answers[index] === (option === 'Yes') ? '#fff' : undefined }}>{option}</button>)}
-          </div>
+      <header><span className="days-left">ADAPTIVE YES / NO CAREER QUIZ</span><h2>Find career sectors worth exploring</h2><p>Questions adapt to your answers. Most students answer around {estimatedTotal} questions; a clearer match can finish sooner.</p><div className="quiz-progress"><i style={{ width: `${progress}%` }} /></div><div className="quiz-progress-copy"><span>{progress}% complete</span><span>Question {currentStep + 1} of about {estimatedTotal}</span></div></header>
+      <section className="career-question-stage">
+        <span className="career-question-number">{String(currentStep + 1).padStart(2, '0')}</span>
+        <h3>{currentQuestion?.text}</h3>
+        <p>Choose the answer that feels most true right now.</p>
+        <div className="career-answer-buttons">
+          <button className={`career-answer${answers[currentQuestion?.id] === true ? ' selected' : ''}`} onClick={() => setAnswer(true)}>Yes</button>
+          <button className={`career-answer${answers[currentQuestion?.id] === false ? ' selected' : ''}`} onClick={() => setAnswer(false)}>No</button>
         </div>
-      ))}</section>
-      {topThree.length > 0 && <section className="career-results"><div className="days-left">YOUR TOP THREE</div><div className="career-result-grid">{topThree.map(([sector], index) => <div className="career-result-card" key={sector}><span>0{index + 1}</span><h3>{sector}</h3><ul>{jobs[sector].map((job) => <li key={job}>{job}</li>)}</ul></div>)}</div></section>}
+        <div className="career-navigation"><button className="filter-button" disabled={currentStep === 0} onClick={() => setWorkspaceData({ ...workspaceData, answers, currentStep: currentStep - 1, careerQuizComplete: false })}>← Back</button><button className="view-button" disabled={!currentHasAnswer} onClick={moveNext}>{currentStep >= questionOrder.length - 1 ? 'See my direction →' : 'Next question →'}</button></div>
+      </section>
+      {workspaceData.careerQuizComplete && topThree.length > 0 && <section className="career-results"><div className="days-left">YOUR TOP THREE DIRECTIONS</div><div className="career-result-grid">{topThree.map(([sector], index) => <div className="career-result-card" key={sector}><span>0{index + 1}</span><h3>{sector}</h3><ul>{jobs[sector].map((job) => <li key={job}>{job}</li>)}</ul></div>)}</div><button className="filter-button" onClick={() => setWorkspaceData({})} style={{ marginTop: '20px' }}>Start again</button></section>}
     </div>
   )
 }
@@ -4011,16 +4042,22 @@ function InSitePlanner({ feature, workspaceData, setWorkspaceData, onOpenAi }) {
 
 function MathText({ text }) {
   const formatLine = (line, lineIndex) => {
+    const plainLine = String(line)
+      .replace(/^\s{0,3}#{1,6}\s+/, '')
+      .replace(/^\s*[-*+]\s+/, '• ')
+      .replace(/\*\*([^*]+)\*\*/g, '$1')
+      .replace(/__([^_]+)__/g, '$1')
+      .replace(/`([^`]+)`/g, '$1')
     const fractionPattern = /\\frac\{([^{}]+)\}\{([^{}]+)\}|\(([^()]+)\)\/\(([^()]+)\)/g
     const parts = []
     let cursor = 0
     let match
-    while ((match = fractionPattern.exec(line))) {
-      if (match.index > cursor) parts.push(line.slice(cursor, match.index))
+    while ((match = fractionPattern.exec(plainLine))) {
+      if (match.index > cursor) parts.push(plainLine.slice(cursor, match.index))
       parts.push(<span className="math-fraction" key={`${lineIndex}-${match.index}`}><span>{match[1] || match[3]}</span><span>{match[2] || match[4]}</span></span>)
       cursor = match.index + match[0].length
     }
-    parts.push(line.slice(cursor))
+    parts.push(plainLine.slice(cursor))
     return parts.map((part, index) => typeof part === 'string'
       ? part.replace(/\\sqrt\{([^{}]+)\}|sqrt\(([^()]+)\)/g, '√($1$2)').split(/(\^\{?[-+]?\d+\}?)/g).map((piece, pieceIndex) => piece.startsWith('^') ? <sup key={`${index}-${pieceIndex}`}>{piece.replace(/[^{\d+-]/g, '').replace('}', '')}</sup> : piece)
       : part)
