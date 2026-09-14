@@ -8,6 +8,7 @@ const specialists = {
   tests: 'Admissions Test Support. Help identify tests to investigate and sensible preparation steps. Policies vary and must be checked on official course pages.',
   career: 'Career Explorer. Help students explore career paths and degree routes without presenting any outcome as guaranteed.',
   research: 'Research Project Builder. Help students frame an ethical, manageable independent project. Do not fabricate citations or write a finished project.',
+  study: 'GrowthGrind Study AI exam tutor. Identify the likely subject, level and topic where possible. Default to Socratic tutoring: give one small hint or question at a time, check the student’s reasoning, and reveal a full solution only if they explicitly choose Full Solution. For uploaded workings, identify the first likely error and explain it. Never impersonate an exam board or guarantee marks.',
 }
 
 function clean(message) {

@@ -81,6 +81,7 @@ const aiSpecialists = [
   { id: 'tests', name: 'Admissions Tests', description: 'What to investigate', starter: 'I am considering [course/universities]. Which admissions tests should I check?' },
   { id: 'career', name: 'Career Explorer', description: 'Pathways to explore', starter: 'I enjoy [subjects/activities]. What career paths could I explore?' },
   { id: 'research', name: 'Research Builder', description: 'Build a project idea', starter: 'I’m interested in [topic]. Can you help me turn it into a research project?' },
+  { id: 'study', name: 'GrowthGrind Study', description: 'Your AI exam tutor', starter: 'I need help with [subject/topic]. Please guide me one step at a time instead of giving the answer immediately.' },
 ]
 
 const premiumRoadmap = [
@@ -99,6 +100,7 @@ const premiumRoadmap = [
   { id: 'timeline', stage: 'STAY ON TRACK', title: 'Smart deadline timeline', description: 'Bring course, test, finance, open-day and portfolio deadlines into one plan.' },
   { id: 'progress', stage: 'STAY ON TRACK', title: 'Application progress tracker', description: 'Track decisions, next steps and your personal application timeline.' },
   { id: 'international-quals', stage: 'STAY ON TRACK', title: 'International qualification guide', description: 'Understand qualification terminology and conditions to verify with each university.' },
+  { id: 'study', stage: 'GROWTHGRIND STUDY', title: 'GrowthGrind Study — AI exam tutor', description: 'Scan questions, get Socratic help, save mistakes and build a weakness profile.' },
 ]
 
 function App() {
@@ -241,6 +243,9 @@ function App() {
   const [statementFeedback, setStatementFeedback] = useState(null)
   const [statementFeedbackLoading, setStatementFeedbackLoading] = useState(false)
   const [statementFeedbackError, setStatementFeedbackError] = useState('')
+  const [premiumWorkspaceData, setPremiumWorkspaceData] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('growthgrind_premium_workspace_data') || '{}') } catch { return {} }
+  })
 
   const [isPremium, setIsPremium] = useState(
     localStorage.getItem('growthgrind_demo_premium') === 'true'
@@ -270,6 +275,10 @@ function App() {
   useEffect(() => {
     localStorage.setItem('growthgrind_ai_chats', JSON.stringify(aiChats))
   }, [aiChats])
+
+  useEffect(() => {
+    localStorage.setItem('growthgrind_premium_workspace_data', JSON.stringify(premiumWorkspaceData))
+  }, [premiumWorkspaceData])
 
   useEffect(() => {
     if (!user) return
@@ -2248,10 +2257,13 @@ function App() {
           statementFeedbackLoading={statementFeedbackLoading}
           statementFeedbackError={statementFeedbackError}
           onReviewStatement={reviewStatementAnswers}
+          workspaceData={premiumWorkspaceData[activePremiumWorkspace.id] || {}}
+          setWorkspaceData={(value) => setPremiumWorkspaceData((current) => ({ ...current, [activePremiumWorkspace.id]: value }))}
           onBack={() => goTo('Pricing')}
           onOpenAi={() => {
             const specialist = activePremiumWorkspace.id.includes('statement') ? 'statement'
               : activePremiumWorkspace.id.includes('test') ? 'tests'
+                : activePremiumWorkspace.id === 'study' ? 'study'
                 : activePremiumWorkspace.id.includes('tariff') || activePremiumWorkspace.id.includes('international') ? 'courses'
                   : 'admissions'
             openAiWorkspace(specialist)
@@ -3833,6 +3845,8 @@ function PremiumWorkspacePage({
   statementFeedbackLoading,
   statementFeedbackError,
   onReviewStatement,
+  workspaceData,
+  setWorkspaceData,
   onBack,
   onOpenAi,
 }) {
@@ -3925,16 +3939,96 @@ function PremiumWorkspacePage({
               )}
             </aside>
             </div>
+          ) : feature.id === 'tariff' ? (
+            <TariffWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} onOpenAi={onOpenAi} />
+          ) : feature.id === 'study' ? (
+            <StudyWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} onOpenAi={onOpenAi} />
           ) : (
-            <div className="closing-card" style={{ marginTop: '24px' }}>
-              <h3>Plan this with a specialist</h3>
-              <p>Use GrowthGrind AI to turn your goals and tracked experiences into practical next steps. It will signpost you back to official sources where verification matters.</p>
-              <button className="view-button" onClick={onOpenAi}>Open specialist chat →</button>
-            </div>
+            <InSitePlanner feature={feature} workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} onOpenAi={onOpenAi} />
           )}
         </div>
       </section>
     </main>
+  )
+}
+
+function TariffWorkspace({ workspaceData, setWorkspaceData, onOpenAi }) {
+  const grades = ['A*', 'A', 'B', 'C', 'D', 'E']
+  const points = { 'A*': 56, A: 48, B: 40, C: 32, D: 24, E: 16 }
+  const selectedGrades = workspaceData.grades || ['', '', '']
+  const total = selectedGrades.reduce((sum, grade) => sum + (points[grade] || 0), 0)
+  const updateGrade = (index, grade) => setWorkspaceData({ ...workspaceData, grades: selectedGrades.map((item, itemIndex) => itemIndex === index ? grade : item) })
+  return (
+    <div className="closing-grid" style={{ marginTop: '24px' }}>
+      <div className="closing-card">
+        <div className="days-left">A-LEVEL SCENARIO</div>
+        <h2 style={{ marginTop: '12px' }}>Model your predicted grades</h2>
+        <p>Change a grade to see an indicative UCAS Tariff total. Universities can set subject-specific requirements and do not have to use Tariff points.</p>
+        {selectedGrades.map((grade, index) => <select key={index} value={grade} onChange={(event) => updateGrade(index, event.target.value)} style={{ width: '100%', marginTop: '10px', padding: '12px', borderRadius: '9px', border: '1px solid #d0c4b0', background: '#f5efe5', color: '#315b3d', font: 'inherit' }}><option value="">A-level {index + 1} grade</option>{grades.map((item) => <option key={item}>{item}</option>)}</select>)}
+        <div style={{ marginTop: '18px', padding: '15px', borderRadius: '10px', background: '#dce8dc', color: '#294b35' }}><strong>{total} UCAS Tariff points</strong><br /><span style={{ fontSize: '12px' }}>Indicative A-level total</span></div>
+      </div>
+      <div className="closing-card">
+        <div className="days-left">COURSE CHECKLIST</div>
+        <h3>Check every saved course</h3>
+        <p>Record its published overall grades, required subjects, GCSE requirements, contextual offer and admissions test. GrowthGrind can then help you compare scenarios without pretending to predict an offer.</p>
+        <button className="view-button" onClick={onOpenAi}>Compare requirements with AI →</button>
+      </div>
+    </div>
+  )
+}
+
+function StudyWorkspace({ workspaceData, setWorkspaceData, onOpenAi }) {
+  const mistake = workspaceData.mistake || ''
+  return (
+    <div className="closing-grid" style={{ marginTop: '24px' }}>
+      <div className="closing-card">
+        <div className="days-left">AI EXAM TUTOR</div>
+        <h2 style={{ marginTop: '12px' }}>Question scan, tutor and mistake bank</h2>
+        <p>Use the GrowthGrind Study chat to upload a question, working, screenshot or PDF. Choose Hint, Guide Me, Full Solution, Exam Solution, or “Where did I go wrong?”</p>
+        <button className="view-button" onClick={onOpenAi}>Open GrowthGrind Study →</button>
+      </div>
+      <div className="closing-card">
+        <div className="days-left">MISTAKE BANK</div>
+        <h3>Save an error to revisit</h3>
+        <textarea value={mistake} onChange={(event) => setWorkspaceData({ ...workspaceData, mistake: event.target.value })} placeholder="Example: A-level Maths — integration — I forgot to adjust the limits after substitution. What will I do differently?" style={{ width: '100%', minHeight: '140px', boxSizing: 'border-box', padding: '12px', borderRadius: '9px', border: '1px solid #d0c4b0', background: '#f5efe5', color: '#315b3d', font: 'inherit' }} />
+        <p style={{ fontSize: '12px' }}>This is saved on this device. The next build will turn each saved item into a searchable question library and weakness profile.</p>
+      </div>
+    </div>
+  )
+}
+
+function InSitePlanner({ feature, workspaceData, setWorkspaceData, onOpenAi }) {
+  const prompts = {
+    contextual: ['Your chosen indicators', 'For example: care experience, Free School Meals, postcode, school context — share only what you choose.', 'Potential support to research'],
+    'test-planner': ['Potential tests and courses', 'For example: TMUA — Economics at LSE, UCL and Warwick.', 'Practice target or next deadline'],
+    interview: ['Course and interview type', 'For example: Economics — Oxford tutorial-style interview.', 'Concepts or questions to practise'],
+    portfolio: ['Portfolio project', 'Initial idea → research → experimentation → development → final outcome → reflection.', 'University requirement to verify'],
+    'multi-course': ['Your course choices', 'For example: Economics; Economics and Management; Economics and Finance.', 'Shared themes to explore'],
+    circumstances: ['Factual timeline', 'What happened, when, affected studies, possible evidence and who could verify it.', 'Question to discuss with your school/referee'],
+    balance: ['Your choices', 'University — course — published grades — subject requirements — admissions test.', 'Balance concern to investigate'],
+    'firm-insurance': ['Offers received', 'University — course — conditions — key subject requirements.', 'Results-day scenario to model'],
+    accommodation: ['Your priorities', 'Rank: course, cost, distance, campus/city, accommodation, transport, sport/societies.', 'Accommodation or cost note'],
+    clearing: ['Results-day ready plan', 'Alternative courses, contacts, documents, questions to ask and preferred routes.', 'Plan A / B / C next action'],
+    timeline: ['Deadline or milestone', 'UCAS, tests, open day, scholarship, interview, portfolio, finance or accommodation.', 'What must happen before this date'],
+    progress: ['Application update', 'Choice, current status, date and the next action you control.', 'Next step'],
+    'international-quals': ['Qualification and country', 'For example: Indian CBSE; US AP; French Baccalaureate.', 'Published course condition to verify'],
+  }
+  const [title, placeholder, followUp] = prompts[feature.id] || ['Your plan', 'Add your notes here.', 'Next action']
+  return (
+    <div className="closing-grid" style={{ marginTop: '24px' }}>
+      <div className="closing-card">
+        <div className="days-left">YOUR IN-SITE WORKSPACE</div>
+        <h2 style={{ marginTop: '12px' }}>{title}</h2>
+        <textarea value={workspaceData.notes || ''} onChange={(event) => setWorkspaceData({ ...workspaceData, notes: event.target.value })} placeholder={placeholder} style={{ width: '100%', minHeight: '185px', boxSizing: 'border-box', padding: '13px', borderRadius: '9px', border: '1px solid #d0c4b0', background: '#f5efe5', color: '#315b3d', font: 'inherit', resize: 'vertical' }} />
+        <input value={workspaceData.nextAction || ''} onChange={(event) => setWorkspaceData({ ...workspaceData, nextAction: event.target.value })} placeholder={followUp} style={{ width: '100%', boxSizing: 'border-box', marginTop: '10px', padding: '12px', borderRadius: '9px', border: '1px solid #d0c4b0', background: '#f5efe5', color: '#315b3d', font: 'inherit' }} />
+      </div>
+      <div className="closing-card">
+        <div className="days-left">GUIDED ANALYSIS</div>
+        <h3>Turn notes into a plan</h3>
+        <p>Use the specialist chat to examine this workspace in context, create practical next steps and flag details that must be verified with the university, UCAS or test provider.</p>
+        <button className="view-button" onClick={onOpenAi}>Analyse with GrowthGrind AI →</button>
+      </div>
+    </div>
   )
 }
 
