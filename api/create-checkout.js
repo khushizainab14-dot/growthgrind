@@ -2,7 +2,7 @@ const plans = {
   founding: { priceEnv: 'STRIPE_PRICE_FOUNDING', mode: 'subscription' },
   monthly: { priceEnv: 'STRIPE_PRICE_MONTHLY', mode: 'subscription' },
   annual: { priceEnv: 'STRIPE_PRICE_ANNUAL', mode: 'payment' },
-  twoYear: { priceEnv: 'STRIPE_PRICE_TWO_YEAR', mode: 'payment' },
+  twoYear: { priceEnv: 'STRIPE_PRICE_BIANNUAL', mode: 'payment' },
 }
 
 export default async function handler(request, response) {
