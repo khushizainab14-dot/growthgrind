@@ -3989,6 +3989,10 @@ function TariffWorkspace({ workspaceData, setWorkspaceData, onOpenCourseFinder, 
 }
 
 function InternationalQualificationsWorkspace({ workspaceData, setWorkspaceData }) {
+  const [question, setQuestion] = useState('')
+  const [messages, setMessages] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const countries = {
     'International Baccalaureate': 'Use the International Baccalaureate Diploma name and your actual Higher Level subjects/grades. Universities often state an overall Diploma score and may set individual Higher Level requirements.',
     'India — CBSE': 'Search each university’s international entry-requirements page for CBSE guidance. Requirements are usually stated as an overall percentage and may specify a higher mark in a relevant subject.',
@@ -4004,7 +4008,27 @@ function InternationalQualificationsWorkspace({ workspaceData, setWorkspaceData 
   }
   const country = workspaceData.country || 'International Baccalaureate'
   const searched = workspaceData.searchedInternational
-  return <div className="international-quals-studio"><section><span className="days-left">INTERNATIONAL QUALIFICATIONS</span><h2>Understand your qualification in a UK application.</h2><p>Which country are your current or completed qualifications from?</p><div className="international-search"><select value={country} onChange={(event) => setWorkspaceData({ ...workspaceData, country: event.target.value, searchedInternational: false })}>{Object.keys(countries).map((item) => <option key={item}>{item}</option>)}</select><button className="view-button" onClick={() => setWorkspaceData({ ...workspaceData, searchedInternational: true })}>Search guidance →</button></div></section>{searched && <section className="international-result"><span>GUIDANCE FOR {country.toUpperCase()}</span><h3>How to compare your grades</h3><p>{countries[country]}</p><ul><li>There is no single UK-wide “competitive grade” conversion: each university and course decides its own entry requirements.</li><li>Use the original qualification and grades on your application, not a self-created A-level conversion.</li><li>Check the exact course page, required subjects and English-language requirement before applying.</li></ul><div className="international-links"><a href="https://www.ucas.com/international/international-students/applying-university-international-student/entry-requirements-uk-courses" target="_blank" rel="noreferrer">UCAS international entry requirements ↗</a><a href="https://www.ucas.com/sites/default/files/international_qips_18-11-2024_0.pdf" target="_blank" rel="noreferrer">UCAS qualification profiles ↗</a></div></section>}</div>
+  const askFollowUp = async (event) => {
+    event.preventDefault()
+    const text = question.trim()
+    if (!text || loading) return
+    const userMessage = { role: 'user', content: text }
+    setQuestion('')
+    setLoading(true)
+    setError('')
+    try {
+      const response = await fetch('/api/ai-chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ specialist: 'international', message: `The student is applying with ${country} qualifications. ${text}`, messages }) })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'Could not search right now.')
+      setMessages((current) => [...current, userMessage, { role: 'assistant', content: result.reply }])
+    } catch (requestError) {
+      setError(requestError.message || 'Could not search right now.')
+      setQuestion(text)
+    } finally {
+      setLoading(false)
+    }
+  }
+  return <div className="international-quals-studio"><section><span className="days-left">INTERNATIONAL QUALIFICATIONS</span><h2>Understand your qualification in a UK application.</h2><p>Which country are your current or completed qualifications from?</p><div className="international-search"><select value={country} onChange={(event) => { setWorkspaceData({ ...workspaceData, country: event.target.value, searchedInternational: false }); setMessages([]) }}>{Object.keys(countries).map((item) => <option key={item}>{item}</option>)}</select><button className="view-button" onClick={() => setWorkspaceData({ ...workspaceData, searchedInternational: true })}>Search guidance →</button></div></section>{searched && <section className="international-result"><span>GUIDANCE FOR {country.toUpperCase()}</span><h3>How to compare your grades</h3><p>{countries[country]}</p><ul><li>There is no single UK-wide “competitive grade” conversion: each university and course decides its own entry requirements.</li><li>Use the original qualification and grades on your application, not a self-created A-level conversion.</li><li>Check the exact course page, required subjects and English-language requirement before applying.</li></ul><div className="international-links"><a href="https://www.ucas.com/international/international-students/applying-university-international-student/entry-requirements-uk-courses" target="_blank" rel="noreferrer">UCAS international entry requirements ↗</a><a href="https://www.ucas.com/sites/default/files/international_qips_18-11-2024_0.pdf" target="_blank" rel="noreferrer">UCAS qualification profiles ↗</a></div><div className="international-followups"><div><span>LIVE OFFICIAL-SOURCE SEARCH</span><h4>Ask a follow-up question</h4><p>The assistant searches current UCAS, university and qualification-body pages before replying.</p></div>{messages.map((message, index) => <div className={`international-message ${message.role}`} key={`${message.role}-${index}`}><b>{message.role === 'user' ? 'You' : 'GrowthGrind guide'}</b><p>{message.content}</p></div>)}{error && <p className="international-chat-error">{error}</p>}<form onSubmit={askFollowUp}><textarea value={question} onChange={(event) => setQuestion(event.target.value)} placeholder={`For example: Which UK universities accept ${country} for Computer Science?`} /><button className="view-button" disabled={loading}>{loading ? 'Checking official sources…' : 'Ask with live search →'}</button></form></div></section>}</div>
 }
 
 function StudyWorkspace({ workspaceData, setWorkspaceData, onOpenAi, mistakeBank = [] }) {

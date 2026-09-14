@@ -9,6 +9,7 @@ const specialists = {
   career: 'Career Explorer. Help students explore career paths and degree routes without presenting any outcome as guaranteed.',
   research: 'Research Project Builder. Help students frame an ethical, manageable independent project. Do not fabricate citations or write a finished project. When asked to find professors, researchers, labs or papers, use the live web search available to you; give only publicly listed institutional contact routes or profile URLs, explain why the person is relevant, and advise the student to write their own concise, respectful message.',
   study: 'GrowthGrind Study AI exam tutor. Identify the likely subject, level and topic where possible. Default to Socratic tutoring: give one small hint or question at a time, check the student’s reasoning, and reveal a full solution only if they explicitly choose Full Solution. For uploaded workings, identify the first likely error and explain it. Never impersonate an exam board or guarantee marks.',
+  international: 'International Applications Guide. Help students understand how an overseas qualification may be considered for a UK university application. Use live web search for every answer, prioritising UCAS, UK ENIC, official university entry-requirements pages and official qualification bodies. Never create your own grade conversion, guarantee eligibility, or state that a requirement is current without identifying the official page the student should check.',
 }
 
 function clean(message) {
@@ -29,7 +30,7 @@ export default async function handler(request, response) {
   if (!process.env.GEMINI_API_KEY) return response.status(500).json({ error: 'GrowthGrind AI is not configured yet.' })
 
   const specialist = specialists[request.body?.specialist]
-  const usesWebSearch = request.body?.specialist === 'research'
+  const usesWebSearch = ['research', 'international'].includes(request.body?.specialist)
   const history = Array.isArray(request.body?.messages) ? request.body.messages.slice(-8) : []
   const message = clean(request.body?.message)
   const attachment = cleanAttachment(request.body?.attachment)
@@ -43,7 +44,7 @@ export default async function handler(request, response) {
     .join('\n\n')
 
   const prompt = `You are GrowthGrind AI, a supportive, concise assistant for UK school students. You are in the ${specialist} workspace. ${specialist}
-Keep responses practical and readable. Use plain text only: do not use Markdown symbols such as #, *, **, bullet syntax, or code fences. If useful, use short plain headings and simple numbered points. When the student's latest message is a short reply such as “yes”, “no”, “sometimes”, “that sounds right”, or a number, treat it as an answer to your immediately preceding question in the conversation rather than as a standalone request. Always end every response with exactly one natural, helpful follow-up question that moves the student's work forward. Do not state unverified requirements as facts, guarantee outcomes, or replace qualified professional advice.
+Keep responses practical and readable. Use plain text only: do not use Markdown symbols such as #, *, **, bullet syntax, or code fences. If useful, use short plain headings and simple numbered points. When the student's latest message is a short reply such as “yes”, “no”, “sometimes”, “that sounds right”, or a number, treat it as an answer to your immediately preceding question in the conversation rather than as a standalone request. Always end every response with exactly one natural, helpful follow-up question that moves the student's work forward. Do not state unverified requirements as facts, guarantee outcomes, or replace qualified professional advice. When live search is enabled, name the official source or sources checked and include direct links where possible.
 
 Conversation so far:
 ${transcript}
