@@ -183,18 +183,13 @@ function App() {
   const [authEmail, setAuthEmail] = useState('')
   const [authPassword, setAuthPassword] = useState('')
   const [authMessage, setAuthMessage] = useState('')
-  const [courseProfile, setCourseProfile] = useState({
-    subjects: '',
-    grades: '',
-    interests: '',
-    careers: '',
-    location: 'No preference yet',
-    universityPreferences: '',
-    priorities: '',
-  })
-  const [courseResults, setCourseResults] = useState(null)
+  const [courseQuery, setCourseQuery] = useState('')
+  const [courseRegion, setCourseRegion] = useState('All UK')
+  const [courseMode, setCourseMode] = useState('All study modes')
+  const [courseResults, setCourseResults] = useState([])
   const [courseLoading, setCourseLoading] = useState(false)
   const [courseError, setCourseError] = useState('')
+  const [courseSearched, setCourseSearched] = useState(false)
   const [aiDetails, setAiDetails] = useState({})
   const [aiResults, setAiResults] = useState({})
   const [aiLoading, setAiLoading] = useState('')
@@ -536,27 +531,27 @@ function App() {
     setAuthPassword('')
   }
 
-  const updateCourseProfile = (field, value) => {
-    setCourseProfile((current) => ({ ...current, [field]: value }))
-  }
-
   const findCourses = async (event) => {
     event.preventDefault()
     setCourseError('')
-    setCourseResults(null)
     setCourseLoading(true)
+    setCourseSearched(true)
 
     try {
-      const response = await fetch('/api/course-finder', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(courseProfile),
-      })
-      const result = await response.json()
-      if (!response.ok) throw new Error(result.error || 'Something went wrong.')
-      setCourseResults(result)
+      const safeQuery = courseQuery.trim().replace(/[(),]/g, ' ')
+      let request = supabase
+        .from('university_courses')
+        .select('id, course_title, provider_name, campus_name, country, qualification, study_mode, duration, subjects_text, course_url, source_updated_at')
+        .order('course_title', { ascending: true })
+        .limit(60)
+      if (safeQuery) request = request.or(`course_title.ilike.%${safeQuery}%,provider_name.ilike.%${safeQuery}%,subjects_text.ilike.%${safeQuery}%`)
+      if (courseRegion !== 'All UK') request = request.eq('country', courseRegion)
+      if (courseMode !== 'All study modes') request = request.eq('study_mode', courseMode)
+      const { data, error } = await request
+      if (error) throw error
+      setCourseResults(data || [])
     } catch (error) {
-      setCourseError(error.message || 'We could not generate recommendations.')
+      setCourseError('The course catalogue is being updated. Please try again shortly.')
     } finally {
       setCourseLoading(false)
     }
@@ -2909,133 +2904,33 @@ function App() {
               that fit you.
             </>
           }
-          description="Explore UK university and course options using your interests, subjects and goals."
+          description="Search real UK undergraduate courses, providers and official course pages in one place."
           isPremium={isPremium}
           onUpgrade={() => goTo('Pricing')}
         >
-          {!courseResults && <form className="closing-card" onSubmit={findCourses}>
-            <h3>Tell us about you</h3>
-            <p>
-              We’ll suggest course areas worth exploring and the questions to ask on official university pages. This is guidance, not an admissions decision.
-            </p>
-
-            <CourseField
-              label="Current subjects"
-              placeholder="For example: Maths, Economics, Physics"
-              value={courseProfile.subjects}
-              onChange={(value) => updateCourseProfile('subjects', value)}
-            />
-            <CourseField
-              label="Predicted or current grades"
-              placeholder="For example: A*AA, or GCSE grades if you have not started A-levels"
-              value={courseProfile.grades}
-              onChange={(value) => updateCourseProfile('grades', value)}
-            />
-            <CourseField
-              label="Academic interests"
-              placeholder="What topics make you curious?"
-              value={courseProfile.interests}
-              onChange={(value) => updateCourseProfile('interests', value)}
-              required
-            />
-            <CourseField
-              label="Career ideas"
-              placeholder="Optional — it is fine if you are unsure"
-              value={courseProfile.careers}
-              onChange={(value) => updateCourseProfile('careers', value)}
-            />
-            <CourseField
-              label="Location preferences"
-              placeholder="For example: London, anywhere in the UK, or close to home"
-              value={courseProfile.location}
-              onChange={(value) => updateCourseProfile('location', value)}
-            />
-            <CourseField
-              label="University preferences"
-              placeholder="Optional — particular universities, campus/city preferences, or Russell Group"
-              value={courseProfile.universityPreferences}
-              onChange={(value) => updateCourseProfile('universityPreferences', value)}
-            />
-            <CourseField
-              label="What matters most to you?"
-              placeholder="For example: course content, placement year, location, graduate prospects"
-              value={courseProfile.priorities}
-              onChange={(value) => updateCourseProfile('priorities', value)}
-            />
-
-            {courseError && <p style={{ color: '#9d3c2e', fontWeight: '700' }}>{courseError}</p>}
-
-            <button className="primary-button" disabled={courseLoading} type="submit" style={{ opacity: courseLoading ? 0.65 : 1 }}>
-              {courseLoading ? 'Finding your options…' : 'Find course areas →'}
-            </button>
-          </form>}
-
-          {courseResults && (
-            <div>
-              <div className="closing-card">
-                <div className="days-left">YOUR COURSE EXPLORATION</div>
-                <h3>A starting point, tailored to you</h3>
-                <p>{courseResults.summary}</p>
-              </div>
-              <div className="closing-grid" style={{ marginTop: '18px' }}>
-                {(courseResults.courseAreas || []).map((course) => (
-                  <div className="closing-card" key={course.title}>
-                    <h3>{course.title}</h3>
-                    <p><strong>Why it could fit:</strong> {course.whyItFits}</p>
-                    <p><strong>Explore:</strong> {course.explore}</p>
-                    {(course.universitiesToExplore || []).length > 0 && (
-                      <div style={{ marginTop: '16px' }}>
-                        <strong style={{ color: '#315b3d', fontSize: '12px' }}>Universities to investigate</strong>
-                        <ul style={{ paddingLeft: '20px', lineHeight: '1.55', marginBottom: '12px' }}>
-                          {course.universitiesToExplore.map((university) => (
-                            <li key={university.name}>
-                              <strong>{university.name}:</strong> {university.reason}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    <a
-                      className="view-button"
-                      href={`https://digital.ucas.com/coursedisplay/results/courses?search=${encodeURIComponent(course.title.replace(/\s*\([^)]*\)/g, ''))}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ display: 'inline-block', marginTop: '8px', textDecoration: 'none' }}
-                    >
-                      See all {course.title} courses on UCAS →
-                    </a>
-                  </div>
-                ))}
-              </div>
-              <div className="closing-card" style={{ marginTop: '18px' }}>
-                <h3>What to do next</h3>
-                <ul style={{ paddingLeft: '20px', lineHeight: '1.7' }}>
-                  {(courseResults.nextSteps || []).map((step) => <li key={step}>{step}</li>)}
-                </ul>
-                {(courseResults.questionsToConsider || []).length > 0 && (
-                  <>
-                    <h3 style={{ marginTop: '22px' }}>Questions to consider</h3>
-                    <ul style={{ paddingLeft: '20px', lineHeight: '1.7' }}>
-                      {courseResults.questionsToConsider.map((question) => <li key={question}>{question}</li>)}
-                    </ul>
-                  </>
-                )}
-                <p style={{ marginTop: '22px', fontSize: '12px' }}>
-                  Course and university availability changes regularly. UCAS Search is the source of truth for the full current list.
-                </p>
-                <button
-                  className="filter-button"
-                  onClick={() => {
-                    setCourseResults(null)
-                    setCourseError('')
-                  }}
-                  style={{ marginTop: '10px' }}
-                >
-                  Start a new search
-                </button>
-              </div>
+          <section className="course-search-shell">
+            <div className="course-search-topline">
+              <span>PUBLIC COURSE CATALOGUE</span>
+              <a href="https://www.ucas.com/explore/search/courses" target="_blank" rel="noreferrer">Compare on UCAS ↗</a>
             </div>
-          )}
+            <form onSubmit={findCourses} className="course-search-form">
+              <label className="course-search-input"><span>⌕</span><input value={courseQuery} onChange={(event) => setCourseQuery(event.target.value)} placeholder="Search courses, subjects or universities" /></label>
+              <select value={courseRegion} onChange={(event) => setCourseRegion(event.target.value)}><option>All UK</option><option>England</option><option>Scotland</option><option>Wales</option><option>Northern Ireland</option></select>
+              <select value={courseMode} onChange={(event) => setCourseMode(event.target.value)}><option>All study modes</option><option value="Full time">Full time</option><option value="Part time">Part time</option></select>
+              <button className="primary-button" disabled={courseLoading} type="submit">{courseLoading ? 'Searching…' : 'Search courses'}</button>
+            </form>
+            <p className="course-search-note">Search the GrowthGrind catalogue, then open the university’s own course page for current modules, fees and requirements.</p>
+          </section>
+
+          {courseError && <p style={{ color: '#9d3c2e', fontWeight: '700' }}>{courseError}</p>}
+          {courseSearched && !courseLoading && <section className="course-results-section">
+            <div className="course-results-header"><strong>{courseResults.length ? `${courseResults.length}${courseResults.length === 60 ? '+' : ''} courses found` : 'No matching courses found'}</strong><span>Source: HESA Discover Uni · updated weekly</span></div>
+            {courseResults.map((course) => <article className="course-result-card" key={course.id}>
+              <div><span className="course-result-kicker">{course.qualification || 'UNDERGRADUATE'} · {course.study_mode || 'Study mode not listed'}</span><h3>{course.course_title}</h3><strong>{course.provider_name}</strong><p>{[course.campus_name, course.country, course.duration].filter(Boolean).join(' · ') || 'Details on official course page'}</p>{course.subjects_text && <div className="course-subject-tags">{course.subjects_text.split('|').slice(0, 4).map((subject) => <span key={subject}>{subject}</span>)}</div>}</div>
+              <a className="view-button" href={course.course_url} target="_blank" rel="noreferrer">Official course page ↗</a>
+            </article>)}
+            {!courseResults.length && <p>Try a broader course title, a subject such as “Economics”, or remove a filter.</p>}
+          </section>}
         </PremiumToolPage>
       )}
 
