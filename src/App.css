@@ -861,6 +861,10 @@ footer p {
 .course-search-form select { padding: 12px; border: 1px solid #c7bba7; border-radius: 10px; background: #fffdf8; color: #294b35; font: inherit; }
 .course-search-form .primary-button { white-space: nowrap; }
 .course-search-note { margin: 13px 0 0; font-size: 12px; color: #58715b; }
+.course-suggestion-chips { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-top: 13px; }
+.course-suggestion-chips > span { color: #58715b; font-size: 11px; font-weight: 800; }
+.course-suggestion-chips button { border: 1px solid #b9cbb8; border-radius: 99px; background: #fffdf8; color: #315b3d; padding: 6px 9px; font: inherit; font-size: 11px; font-weight: 750; }
+.course-suggestion-chips button.selected { background: #315b3d; border-color: #315b3d; color: #fff; }
 .course-extra-filters { display: flex; gap: 10px; align-items: end; flex-wrap: wrap; margin-top: 11px; }
 .course-extra-filters label { display: grid; gap: 5px; color: #58715b; font-size: 11px; font-weight: 800; }
 .course-extra-filters input, .course-extra-filters select { min-height: 39px; min-width: 185px; box-sizing: border-box; padding: 9px 11px; border: 1px solid #c7bba7; border-radius: 9px; background: #fffdf8; color: #294b35; font: inherit; }
@@ -903,6 +907,9 @@ footer p {
 .course-suggestion.dream { background: #f5e2de; color: #833d34; }
 .course-suggestion.check { background: #edf0ed; color: #4d5f50; }
 .course-requirements-error { margin: 9px 0 0; color: #9d3c2e; font-size: 12px; font-weight: 700; }
+.manual-offer-helper { display: grid; gap: 8px; margin-top: 12px; padding: 10px; border: 1px dashed #c8bfae; border-radius: 8px; background: #fffcf4; }
+.manual-offer-helper label { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; color: #536652; font-size: 11px; font-weight: 750; }
+.manual-offer-helper input { width: 70px; padding: 7px 9px; border: 1px solid #c7bba7; border-radius: 7px; background: #fff; color: #294b35; font: inherit; font-weight: 800; }
 .course-choice-actions { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 12px; }
 .course-choice-actions button { border: 1px solid #b8cbb8; border-radius: 99px; background: #fff; color: #315b3d; padding: 6px 10px; font: inherit; font-size: 11px; font-weight: 800; }
 .course-choice-actions button.selected { background: #315b3d; border-color: #315b3d; color: #fff; }

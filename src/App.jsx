@@ -186,6 +186,7 @@ function App() {
   const [authPassword, setAuthPassword] = useState('')
   const [authMessage, setAuthMessage] = useState('')
   const [courseQuery, setCourseQuery] = useState('')
+  const [courseSelectedTerms, setCourseSelectedTerms] = useState([])
   const [courseRegion, setCourseRegion] = useState('All UK')
   const [courseMode, setCourseMode] = useState('All study modes')
   const [courseProvider, setCourseProvider] = useState('')
@@ -576,12 +577,16 @@ function App() {
 
     try {
       const safeQuery = courseQuery.trim().replace(/[(),]/g, ' ')
+      const aliases = {
+        maths: ['mathematics', 'mathematical'], math: ['mathematics', 'mathematical'], cs: ['computer science'], econ: ['economics'], lse: ['london school of economics'], ucl: ['university college london'], kcl: ["king's college london"], imperial: ['imperial college london'], warwick: ['university of warwick'], oxford: ['university of oxford'], cambridge: ['university of cambridge'],
+      }
+      const terms = [...new Set([safeQuery, ...courseSelectedTerms].filter(Boolean).flatMap((term) => [term, ...(aliases[term.toLowerCase()] || [])]))]
       let request = supabase
         .from('university_courses')
         .select('id, course_title, provider_name, campus_name, country, qualification, study_mode, duration, subjects_text, course_url, source_updated_at')
         .order('course_title', { ascending: true })
         .limit(60)
-      if (safeQuery) request = request.or(`course_title.ilike.%${safeQuery}%,provider_name.ilike.%${safeQuery}%,subjects_text.ilike.%${safeQuery}%`)
+      if (terms.length) request = request.or(terms.flatMap((term) => [`course_title.ilike.%${term}%,provider_name.ilike.%${term}%,subjects_text.ilike.%${term}%`]).join(','))
       if (courseProvider.trim()) request = request.ilike('provider_name', `%${courseProvider.trim().replace(/[(),]/g, ' ')}%`)
       if (courseRegion !== 'All UK') request = request.eq('country', courseRegion)
       if (courseMode !== 'All study modes') request = request.eq('study_mode', courseMode)
@@ -3001,7 +3006,7 @@ function App() {
               <a href="https://www.ucas.com/explore/search/courses" target="_blank" rel="noreferrer">Compare on UCAS ↗</a>
             </div>
             <form onSubmit={findCourses} className="course-search-form">
-              <label className="course-search-input"><span>⌕</span><input value={courseQuery} onChange={(event) => setCourseQuery(event.target.value)} placeholder="Search courses, subjects or universities" /></label>
+              <label className="course-search-input"><span>⌕</span><input list="course-search-suggestions" value={courseQuery} onChange={(event) => setCourseQuery(event.target.value)} placeholder="Search courses, subjects or universities" /><datalist id="course-search-suggestions">{['Maths', 'Maths with Data Science', 'Economics', 'Computer Science', 'Medicine', 'Law', 'Warwick', 'UCL', 'LSE', 'Oxford', 'Cambridge'].map((item) => <option key={item} value={item} />)}</datalist></label>
               <select value={courseRegion} onChange={(event) => setCourseRegion(event.target.value)}><option>All UK</option><option>England</option><option>Scotland</option><option>Wales</option><option>Northern Ireland</option></select>
               <select value={courseMode} onChange={(event) => setCourseMode(event.target.value)}><option>All study modes</option><option value="Full time">Full time</option><option value="Part time">Part time</option></select>
               <button className="primary-button" disabled={courseLoading} type="submit">{courseLoading ? 'Searching…' : 'Search courses'}</button>
@@ -3011,6 +3016,7 @@ function App() {
               <label>Location <select value={courseAbroad} onChange={(event) => setCourseAbroad(event.target.value)}><option>UK only</option><option>Study abroad option</option></select></label>
               <button className="filter-button" type="button" onClick={findCourses}>Apply filters</button>
             </div>
+            <div className="course-suggestion-chips"><span>Quick add:</span>{['Maths', 'Maths with Data Science', 'Economics', 'Computer Science', 'Warwick', 'UCL', 'LSE'].map((term) => <button key={term} type="button" className={courseSelectedTerms.includes(term) ? 'selected' : ''} onClick={() => setCourseSelectedTerms((current) => current.includes(term) ? current.filter((item) => item !== term) : [...current, term])}>{term}{courseSelectedTerms.includes(term) ? ' ×' : ' +'}</button>)}</div>
             {courseGradeProfile && <p className="course-grade-profile">{courseGradeProfile} <span>Use published requirements before deciding whether a course is safety, target or dream.</span></p>}
             <p className="course-search-note">Search the GrowthGrind catalogue, then open the university’s own course page for current modules, fees and entry requirements.</p>
           </section>
@@ -3721,6 +3727,7 @@ function AuthModal({
 function CourseResultCard({ course, profileGrades, planning, shortlist, setShortlist }) {
   const [requirements, setRequirements] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [manualOffer, setManualOffer] = useState('')
 
   const loadRequirements = async () => {
     if (loading || requirements) return
@@ -3737,6 +3744,12 @@ function CourseResultCard({ course, profileGrades, planning, shortlist, setShort
     }
   }
 
+  const manualGrades = manualOffer.match(/A\*|[A-E]/g) || []
+  const gradePoints = { 'A*': 6, A: 5, B: 4, C: 3, D: 2, E: 1 }
+  const manualSuggestion = profileGrades.length === 3 && manualGrades.length === 3
+    ? (() => { const student = profileGrades.reduce((sum, grade) => sum + gradePoints[grade], 0); const offer = manualGrades.reduce((sum, grade) => sum + gradePoints[grade], 0); return student >= offer + 2 ? 'Safety' : student >= offer ? 'Target' : 'Dream' })()
+    : ''
+
   return <article className="course-result-card">
     <div>
       <span className="course-result-kicker">{course.qualification || 'UNDERGRADUATE'} · {course.study_mode || 'Study mode not listed'}</span>
@@ -3746,6 +3759,7 @@ function CourseResultCard({ course, profileGrades, planning, shortlist, setShort
       <div className="course-admissions-row"><span><b>Entry requirements</b> {requirements?.text || 'Load from official course page'}</span><span><b>Historic acceptance / grade match</b> Check UCAS</span></div>
       {!requirements && <button className="course-requirements-button" onClick={loadRequirements} disabled={loading}>{loading ? 'Reading official requirements…' : 'Show official entry requirements'}</button>}
       {requirements?.suggestion && <div className={`course-suggestion ${requirements.suggestion.toLowerCase()}`}><b>Suggested {requirements.suggestion}</b><span>{requirements.reason}</span></div>}
+      {(!requirements?.suggestion || requirements.suggestion === 'Check manually') && <div className="manual-offer-helper"><label>Typical A-level offer from the official page <input value={manualOffer} onChange={(event) => setManualOffer(event.target.value.toUpperCase())} placeholder="e.g. AAB" maxLength="5" /></label>{manualSuggestion && <div className={`course-suggestion ${manualSuggestion.toLowerCase()}`}><b>Suggested {manualSuggestion}</b><span>Based on your three entered grades versus {manualGrades.join('')} — still check required subjects and contextual criteria.</span></div>}</div>}
       {requirements?.error && <p className="course-requirements-error">{requirements.error} Use the official link to check directly.</p>}
       {planning && <div className="course-choice-actions">{['Safety', 'Target', 'Dream'].map((level) => <button className={shortlist[course.id]?.level === level ? 'selected' : ''} key={level} onClick={() => setShortlist((current) => ({ ...current, [course.id]: { id: course.id, title: course.course_title, provider: course.provider_name, level } }))}>{level}</button>)}</div>}
     </div>
