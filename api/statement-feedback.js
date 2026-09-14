@@ -15,13 +15,14 @@ export default async function handler(request, response) {
 
   const answers = Array.isArray(request.body?.answers) ? request.body.answers.map(clean).slice(0, 3) : []
   const course = clean(request.body?.course)
+  const multiCourse = request.body?.multiCourse === true
   const draft = answers.join('\n\n').trim()
   if (draft.length < 40) return response.status(400).json({ error: 'Please write a little more before asking for feedback.' })
 
-  const prompt = `You are a careful UK university-application writing coach. Review a student's own UCAS personal-statement answers. Do not rewrite passages, generate submit-ready prose, claim to detect AI, score admission chances, or make admissions promises. Keep their authentic voice central.
+  const prompt = `You are a careful UK university-application writing coach. Review a student's own UCAS personal-statement answers. Do not rewrite passages, generate submit-ready prose, claim to detect AI, score admission chances, or make admissions promises. Keep their authentic voice central.${multiCourse ? ' This student is applying across more than one related course. Use live web search only for current official UCAS guidance or official course pages where genuinely helpful. Focus feedback on whether the statement creates a coherent academic thread across all courses without becoming unfocused, and name official sources checked.' : ''}
 Return valid JSON only:
 {"summary":"","strengths":[""],"flags":[{"type":"Grammar & expression|Clarity|Cliche or generic writing|Evidence|Reflection|Specificity|Show, don’t tell|Repetition|Relevance|Academic depth|Supercurricular focus|Connection|Weak sentence|Conciseness|Opening or ending|Course alignment|Formulaic voice warning","excerpt":"short exact excerpt only","advice":"specific question or improvement direction without rewriting it","priority":"high|medium|low"}],"connections":[""],"nextSteps":[""]}
-Give 2-3 genuine strengths, at most 9 flags, up to 3 connections, and 3 next steps. Grammar flags must be real. Flag cliches only if genuinely generic. For evidence/reflection, ask what the student did, thought, learned or changed. For academic depth, ask them to engage with an idea rather than name-drop a source. Formulaic voice is a warning about generic or over-polished phrasing, never an AI verdict. The intended course is: ${course || 'not provided'}.
+Give 2-3 genuine strengths, at most 9 flags, up to 3 connections, and 3 next steps. Grammar flags must be real. Flag cliches only if genuinely generic. For evidence/reflection, ask what the student did, thought, learned or changed. For academic depth, ask them to engage with an idea rather than name-drop a source. Formulaic voice is a warning about generic or over-polished phrasing, never an AI verdict. The intended course${multiCourse ? 's' : ''} ${multiCourse ? 'are' : 'is'}: ${course || 'not provided'}.
 Student answers:\n${answers.map((answer, index) => `Question ${index + 1}: ${answer}`).join('\n\n')}`
 
   try {
@@ -42,7 +43,7 @@ Student answers:\n${answers.map((answer, index) => `Question ${index + 1}: ${ans
       const result = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.2, maxOutputTokens: 900, responseMimeType: 'application/json' } }),
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], ...(multiCourse ? { tools: [{ google_search: {} }] } : {}), generationConfig: { temperature: 0.2, maxOutputTokens: 900, responseMimeType: 'application/json' } }),
       })
       if (result.ok) {
         payload = await result.json()

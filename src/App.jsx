@@ -2342,6 +2342,7 @@ function App() {
           studyMistakeBank={studyMistakeBank}
           onOpenInternational={() => { setActivePremiumWorkspace(premiumRoadmap.find((feature) => feature.id === 'international-quals')); goTo('PremiumWorkspace') }}
           onOpenCourseFinder={openGradeCourseFinder}
+          onOpenMultiCourse={() => { setActivePremiumWorkspace(premiumRoadmap.find((feature) => feature.id === 'multi-course')); goTo('PremiumWorkspace') }}
           workspaceData={premiumWorkspaceData[activePremiumWorkspace.id] || {}}
           setWorkspaceData={(value) => setPremiumWorkspaceData((current) => ({ ...current, [activePremiumWorkspace.id]: value }))}
           onBack={() => goTo('Pricing')}
@@ -3904,6 +3905,7 @@ function PremiumWorkspacePage({
   studyMistakeBank,
   onOpenInternational,
   onOpenCourseFinder,
+  onOpenMultiCourse,
   workspaceData,
   setWorkspaceData,
   onBack,
@@ -3922,7 +3924,7 @@ function PremiumWorkspacePage({
   return (
     <main>
       <section className="hero-section">
-        <div className={`hero-content${['career-quiz', 'tariff', 'international-quals', 'contextual', 'statement-builder', 'interview', 'test-planner', 'portfolio'].includes(feature.id) ? ' premium-tool-wide' : ''}`}>
+        <div className={`hero-content${['career-quiz', 'tariff', 'international-quals', 'contextual', 'statement-builder', 'interview', 'test-planner', 'portfolio', 'multi-course'].includes(feature.id) ? ' premium-tool-wide' : ''}`}>
           <button className="filter-button" onClick={onBack}>← All Premium tools</button>
           <span className="eyebrow" style={{ display: 'block', marginTop: '24px' }}>{feature.stage}</span>
           <h1>{feature.title}</h1>
@@ -3971,6 +3973,7 @@ function PremiumWorkspacePage({
               <button className="view-button" disabled={statementFeedbackLoading} onClick={onReviewStatement}>
                 {statementFeedbackLoading ? 'Reviewing your draft…' : 'Review draft side by side →'}
               </button>
+              <button className="multi-course-link" onClick={onOpenMultiCourse}>Applying to more than one course? Try the Multi-course Statement Analyser →</button>
             </div>
             <aside className="statement-feedback-panel">
               <div className="days-left">DRAFT FEEDBACK</div>
@@ -4014,6 +4017,8 @@ function PremiumWorkspacePage({
             <InterviewPracticeWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} />
           ) : feature.id === 'portfolio' ? (
             <PortfolioHubWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} />
+          ) : feature.id === 'multi-course' ? (
+            <MultiCourseStatementWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} />
           ) : (
             <InSitePlanner feature={feature} workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} onOpenAi={onOpenAi} />
           )}
@@ -4021,6 +4026,28 @@ function PremiumWorkspacePage({
       </section>
     </main>
   )
+}
+
+function MultiCourseStatementWorkspace({ workspaceData, setWorkspaceData }) {
+  const [feedback, setFeedback] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const answers = Array.isArray(workspaceData.answers) ? workspaceData.answers : ['', '', '']
+  const courses = workspaceData.courses || ''
+  const total = answers.reduce((sum, answer) => sum + answer.length, 0)
+  const updateAnswer = (index, value) => setWorkspaceData({ ...workspaceData, answers: answers.map((answer, answerIndex) => answerIndex === index ? value.slice(0, 4000) : answer) })
+  const review = async () => {
+    if (answers.join('').trim().length < 40) { setError('Write a little more before asking for feedback.'); return }
+    setLoading(true); setError('')
+    try {
+      const response = await fetch('/api/statement-feedback', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ answers, course: courses, multiCourse: true }) })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'We could not review this right now.')
+      setFeedback(result)
+    } catch (requestError) { setError(requestError.message || 'We could not review this right now.') } finally { setLoading(false) }
+  }
+  const prompts = ['Why do you want to study these related courses or subjects?', 'How have your qualifications and studies helped you prepare for these courses?', 'What else have you done to prepare outside education, and how does it connect your choices?']
+  return <div className="statement-workspace premium-studio multi-statement-workspace"><div className="statement-editor-panel"><div className="days-left">MULTI-COURSE UCAS FORMAT</div><h2 style={{ marginTop: '12px' }}>Build one coherent story</h2><p>{total.toLocaleString()} / 4,000 characters used across all answers, including spaces.</p><input value={courses} onChange={(event) => setWorkspaceData({ ...workspaceData, courses: event.target.value })} placeholder="Courses you are applying for, e.g. Economics; Economics & Politics" style={{ width: '100%', boxSizing: 'border-box', padding: '12px', borderRadius: '9px', border: '1px solid #d0c4b0', background: '#f5efe5', color: '#315b3d', font: 'inherit' }} />{prompts.map((prompt, index) => <div key={prompt} style={{ marginTop: '22px' }}><label style={{ display: 'block', fontWeight: '750', color: '#294b35', marginBottom: '8px' }}>Question {index + 1}: {prompt}</label><textarea value={answers[index] || ''} onChange={(event) => updateAnswer(index, event.target.value)} placeholder="Write in your own words. Show the academic connection between your choices." style={{ width: '100%', minHeight: '150px', boxSizing: 'border-box', padding: '13px', borderRadius: '9px', border: '1px solid #d0c4b0', background: '#f5efe5', color: '#315b3d', font: 'inherit', resize: 'vertical' }} /><span style={{ color: (answers[index] || '').length >= 350 ? '#315b3d' : '#9d3c2e', fontSize: '12px', fontWeight: '700' }}>{(answers[index] || '').length} characters {(answers[index] || '').length >= 350 ? '✓' : '— minimum 350'}</span></div>)}{error && <p style={{ color: '#9d3c2e', fontWeight: '700' }}>{error}</p>}<button className="view-button" disabled={loading} onClick={review}>{loading ? 'Checking course fit…' : 'Review multi-course balance →'}</button></div><aside className="statement-feedback-panel"><div className="days-left">COURSE-BALANCE FEEDBACK</div>{!feedback ? <><h3 style={{ marginTop: '13px' }}>One statement, more than one direction</h3><p>GrowthGrind checks whether your academic interests form a clear bridge across each course, rather than feeling like separate applications.</p><p style={{ fontSize: '12px' }}>It checks current official guidance and course information when it helps, but never invents requirements or writes a statement for you.</p></> : <><p style={{ fontWeight: '700', color: '#294b35' }}>{feedback.summary}</p><h4>What is working</h4><ul style={{ paddingLeft: '18px', lineHeight: 1.5 }}>{(feedback.strengths || []).map((item) => <li key={item}>{item}</li>)}</ul><h4>Specific improvements</h4>{(feedback.flags || []).map((flag, index) => <div key={`${flag.excerpt}-${index}`} style={{ marginTop: '12px', padding: '11px', borderRadius: '8px', background: '#f5efe5', borderLeft: `3px solid ${flag.priority === 'high' ? '#9d3c2e' : '#d6a343'}` }}><strong style={{ fontSize: '11px', color: '#294b35' }}>{flag.type}</strong>{flag.excerpt && <p style={{ margin: '5px 0', fontStyle: 'italic', fontSize: '12px' }}>“{flag.excerpt}”</p>}<p style={{ margin: 0, fontSize: '12px' }}>{flag.advice}</p></div>)}{(feedback.connections || []).length > 0 && <><h4>Connections to strengthen</h4><ul style={{ paddingLeft: '18px', lineHeight: 1.5 }}>{feedback.connections.map((item) => <li key={item}>{item}</li>)}</ul></>}<h4>Next steps</h4><ol style={{ paddingLeft: '18px', lineHeight: 1.5 }}>{(feedback.nextSteps || []).map((item) => <li key={item}>{item}</li>)}</ol></>}</aside></div>
 }
 
 function TariffWorkspace({ workspaceData, setWorkspaceData, onOpenCourseFinder, onOpenInternational }) {
