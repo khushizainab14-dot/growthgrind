@@ -237,12 +237,35 @@ function App() {
   const [checkoutLoading, setCheckoutLoading] = useState('')
   const [activePremiumWorkspace, setActivePremiumWorkspace] = useState(null)
   const [statementAnswers, setStatementAnswers] = useState(['', '', ''])
+  const [statementCourse, setStatementCourse] = useState('')
+  const [statementFeedback, setStatementFeedback] = useState(null)
+  const [statementFeedbackLoading, setStatementFeedbackLoading] = useState(false)
+  const [statementFeedbackError, setStatementFeedbackError] = useState('')
 
   const [isPremium, setIsPremium] = useState(
     localStorage.getItem('growthgrind_demo_premium') === 'true'
   )
+  const [foundingMembersClaimed, setFoundingMembersClaimed] = useState(0)
 
   const user = session?.user || null
+
+  useEffect(() => {
+    const loadPremiumStatus = async () => {
+      const headers = session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}
+      const response = await fetch('/api/premium-status', { headers })
+      if (!response.ok) return
+      const status = await response.json()
+      setFoundingMembersClaimed(status.foundingMembersClaimed || 0)
+      if (status.active) {
+        setIsPremium(true)
+        if (new URLSearchParams(window.location.search).get('premium') === 'success') {
+          setShowPremiumWelcome(true)
+          window.history.replaceState({}, '', window.location.pathname)
+        }
+      }
+    }
+    loadPremiumStatus()
+  }, [user, session])
 
   useEffect(() => {
     localStorage.setItem('growthgrind_ai_chats', JSON.stringify(aiChats))
@@ -350,7 +373,6 @@ function App() {
     loadUserData()
   }, [user])
 
-  const foundingMembersClaimed = 0
   const foundingMemberLimit = 30
   const foundingSpotsLeft = Math.max(
     0,
@@ -574,6 +596,29 @@ function App() {
     }
     setActivePremiumWorkspace(feature)
     goTo('PremiumWorkspace')
+  }
+
+  const reviewStatementAnswers = async () => {
+    if (statementAnswers.join('').trim().length < 40) {
+      setStatementFeedbackError('Write a little more before asking for feedback.')
+      return
+    }
+    setStatementFeedbackLoading(true)
+    setStatementFeedbackError('')
+    try {
+      const response = await fetch('/api/statement-feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ answers: statementAnswers, course: statementCourse }),
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'We could not review this right now.')
+      setStatementFeedback(result)
+    } catch (error) {
+      setStatementFeedbackError(error.message || 'We could not review this right now.')
+    } finally {
+      setStatementFeedbackLoading(false)
+    }
   }
 
 
@@ -2197,6 +2242,12 @@ function App() {
           feature={activePremiumWorkspace}
           statementAnswers={statementAnswers}
           setStatementAnswers={setStatementAnswers}
+          statementCourse={statementCourse}
+          setStatementCourse={setStatementCourse}
+          statementFeedback={statementFeedback}
+          statementFeedbackLoading={statementFeedbackLoading}
+          statementFeedbackError={statementFeedbackError}
+          onReviewStatement={reviewStatementAnswers}
           onBack={() => goTo('Pricing')}
           onOpenAi={() => {
             const specialist = activePremiumWorkspace.id.includes('statement') ? 'statement'
@@ -3776,6 +3827,12 @@ function PremiumWorkspacePage({
   feature,
   statementAnswers,
   setStatementAnswers,
+  statementCourse,
+  setStatementCourse,
+  statementFeedback,
+  statementFeedbackLoading,
+  statementFeedbackError,
+  onReviewStatement,
   onBack,
   onOpenAi,
 }) {
@@ -3806,10 +3863,17 @@ function PremiumWorkspacePage({
           </div>
 
           {feature.id === 'statement-builder' ? (
-            <div className="closing-card" style={{ marginTop: '24px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.25fr) minmax(280px, 0.75fr)', gap: '20px', marginTop: '24px' }} className="statement-workspace">
+            <div className="closing-card">
               <div className="days-left">2026 ENTRY FORMAT</div>
               <h2 style={{ marginTop: '12px' }}>Build your three answers</h2>
               <p>{characterTotal.toLocaleString()} / 4,000 characters used across all answers, including spaces.</p>
+              <input
+                value={statementCourse}
+                onChange={(event) => setStatementCourse(event.target.value)}
+                placeholder="Course you are applying for, e.g. Economics"
+                style={{ width: '100%', boxSizing: 'border-box', padding: '12px', borderRadius: '9px', border: '1px solid #d0c4b0', background: '#f5efe5', color: '#315b3d', font: 'inherit' }}
+              />
               {[
                 'Why do you want to study this course or subject?',
                 'How have your qualifications and studies helped you prepare for this course or subject?',
@@ -3828,6 +3892,38 @@ function PremiumWorkspacePage({
                   </span>
                 </div>
               ))}
+              {statementFeedbackError && <p style={{ color: '#9d3c2e', fontWeight: '700' }}>{statementFeedbackError}</p>}
+              <button className="view-button" disabled={statementFeedbackLoading} onClick={onReviewStatement}>
+                {statementFeedbackLoading ? 'Reviewing your draft…' : 'Review draft side by side →'}
+              </button>
+            </div>
+            <aside className="closing-card" style={{ alignSelf: 'start', position: 'sticky', top: '90px', maxHeight: '75vh', overflowY: 'auto' }}>
+              <div className="days-left">DRAFT FEEDBACK</div>
+              {!statementFeedback ? (
+                <>
+                  <h3 style={{ marginTop: '13px' }}>Feedback that keeps your voice</h3>
+                  <p>Review grammar and expression, clarity, clichés, evidence, reflection, specificity, relevance, academic depth, repetition and course alignment.</p>
+                  <p style={{ fontSize: '12px' }}>It does not write a statement for you or claim it can reliably identify AI writing.</p>
+                </>
+              ) : (
+                <>
+                  <p style={{ fontWeight: '700', color: '#294b35' }}>{statementFeedback.summary}</p>
+                  <h4>What is working</h4>
+                  <ul style={{ paddingLeft: '18px', lineHeight: 1.5 }}>{(statementFeedback.strengths || []).map((item) => <li key={item}>{item}</li>)}</ul>
+                  <h4>Specific improvements</h4>
+                  {(statementFeedback.flags || []).map((flag, index) => (
+                    <div key={`${flag.excerpt}-${index}`} style={{ marginTop: '12px', padding: '11px', borderRadius: '8px', background: '#f5efe5', borderLeft: `3px solid ${flag.priority === 'high' ? '#9d3c2e' : '#d6a343'}` }}>
+                      <strong style={{ fontSize: '11px', color: '#294b35' }}>{flag.type}</strong>
+                      {flag.excerpt && <p style={{ margin: '5px 0', fontStyle: 'italic', fontSize: '12px' }}>“{flag.excerpt}”</p>}
+                      <p style={{ margin: 0, fontSize: '12px' }}>{flag.advice}</p>
+                    </div>
+                  ))}
+                  {(statementFeedback.connections || []).length > 0 && <><h4>Connections to strengthen</h4><ul style={{ paddingLeft: '18px', lineHeight: 1.5 }}>{statementFeedback.connections.map((item) => <li key={item}>{item}</li>)}</ul></>}
+                  <h4>Next steps</h4>
+                  <ol style={{ paddingLeft: '18px', lineHeight: 1.5 }}>{(statementFeedback.nextSteps || []).map((item) => <li key={item}>{item}</li>)}</ol>
+                </>
+              )}
+            </aside>
             </div>
           ) : (
             <div className="closing-card" style={{ marginTop: '24px' }}>

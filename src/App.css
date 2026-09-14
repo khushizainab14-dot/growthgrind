@@ -741,4 +741,13 @@ footer p {
     border-right: 0 !important;
     border-bottom: 1px solid #d0c4b0;
   }
+
+  .statement-workspace {
+    grid-template-columns: 1fr !important;
+  }
+
+  .statement-workspace aside {
+    position: static !important;
+    max-height: none !important;
+  }
 }

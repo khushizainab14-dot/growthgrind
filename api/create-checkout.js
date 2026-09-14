@@ -20,6 +20,7 @@ export default async function handler(request, response) {
     'line_items[0][price_data][product_data][name]': plan.name,
     'line_items[0][price_data][unit_amount]': String(plan.amount),
     'line_items[0][quantity]': '1',
+    'metadata[plan]': request.body?.plan,
   })
   if (plan.mode === 'subscription') params.set('line_items[0][price_data][recurring][interval]', plan.interval)
   if (request.body?.userId) params.set('client_reference_id', String(request.body.userId).slice(0, 128))
