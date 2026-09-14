@@ -191,6 +191,7 @@ function App() {
   const [courseProvider, setCourseProvider] = useState('')
   const [courseAbroad, setCourseAbroad] = useState('UK only')
   const [courseGradeProfile, setCourseGradeProfile] = useState('')
+  const [courseProfileGrades, setCourseProfileGrades] = useState([])
   const [coursePlanning, setCoursePlanning] = useState(false)
   const [courseShortlist, setCourseShortlist] = useState({})
   const [courseResults, setCourseResults] = useState([])
@@ -599,6 +600,7 @@ function App() {
     const aLevels = entries.filter((entry) => entry.qualification === 'A level' && entry.grade).slice(0, 3)
     setCourseGradeProfile(aLevels.length ? `Predicted A-level profile: ${aLevels.map((entry) => entry.grade).join(' ')}` : 'Add your predicted grades to personalise this search.')
     setCoursePlanning(false)
+    setCourseProfileGrades(aLevels.map((entry) => entry.grade))
     goTo('CourseFinder')
   }
 
@@ -3019,10 +3021,7 @@ function App() {
             <div className="course-data-notice"><strong>Requirements and historic grade data</strong><span>are shown on the current university and UCAS course pages. UCAS does not provide its course-level acceptance and matching-grade dataset for reuse in this public catalogue, so GrowthGrind will never invent those figures.</span><a href="https://www.ucas.com/applying/before-you-apply/what-and-where-to-study/entry-requirements/understanding-historical-entry" target="_blank" rel="noreferrer">How UCAS historical grades work ↗</a></div>
             <div className="course-planner-bar"><div><strong>Build a five-choice shortlist</strong><span>Mark courses after checking their current published requirements.</span></div><button className="view-button" onClick={() => setCoursePlanning((current) => !current)}>{coursePlanning ? 'Hide shortlist' : 'Organise safety / target / dream →'}</button></div>
             {coursePlanning && <div className="course-shortlist-grid">{['Safety', 'Target', 'Dream'].map((level) => <section key={level}><span>{level.toUpperCase()}</span>{Object.values(courseShortlist).filter((item) => item.level === level).length ? Object.values(courseShortlist).filter((item) => item.level === level).map((item) => <div key={item.id}>{item.title}<small>{item.provider}</small></div>) : <p>No courses marked yet.</p>}</section>)}</div>}
-            {courseResults.map((course) => <article className="course-result-card" key={course.id}>
-              <div><span className="course-result-kicker">{course.qualification || 'UNDERGRADUATE'} · {course.study_mode || 'Study mode not listed'}</span><h3>{course.course_title}</h3><strong>{course.provider_name}</strong><p>{[course.campus_name, course.country, course.duration].filter(Boolean).join(' · ') || 'Details on official course page'}</p>{course.subjects_text && <div className="course-subject-tags">{course.subjects_text.split('|').slice(0, 4).map((subject) => <span key={subject}>{subject}</span>)}</div>}<div className="course-admissions-row"><span><b>Entry requirements</b> Check official page</span><span><b>Historic acceptance / grade match</b> Check UCAS</span></div>{coursePlanning && <div className="course-choice-actions">{['Safety', 'Target', 'Dream'].map((level) => <button className={courseShortlist[course.id]?.level === level ? 'selected' : ''} key={level} onClick={() => setCourseShortlist((current) => ({ ...current, [course.id]: { id: course.id, title: course.course_title, provider: course.provider_name, level } }))}>{level}</button>)}</div>}</div>
-              <div className="course-card-links"><a className="view-button" href={course.course_url} target="_blank" rel="noreferrer">Official requirements ↗</a><a className="filter-button" href={`https://www.ucas.com/explore/search/courses?query=${encodeURIComponent(`${course.course_title} ${course.provider_name}`)}`} target="_blank" rel="noreferrer">UCAS historic data ↗</a></div>
-            </article>)}
+            {courseResults.map((course) => <CourseResultCard key={course.id} course={course} profileGrades={courseProfileGrades} planning={coursePlanning} shortlist={courseShortlist} setShortlist={setCourseShortlist} />)}
             {!courseResults.length && <p>Try a broader course title, a subject such as “Economics”, or remove a filter.</p>}
           </section>}
         </PremiumToolPage>
@@ -3717,6 +3716,41 @@ function AuthModal({
       </form>
     </div>
   )
+}
+
+function CourseResultCard({ course, profileGrades, planning, shortlist, setShortlist }) {
+  const [requirements, setRequirements] = useState(null)
+  const [loading, setLoading] = useState(false)
+
+  const loadRequirements = async () => {
+    if (loading || requirements) return
+    setLoading(true)
+    try {
+      const response = await fetch('/api/course-requirements', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: course.course_url, grades: profileGrades }) })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'Could not read the official course page.')
+      setRequirements(result)
+    } catch (error) {
+      setRequirements({ error: error.message || 'Could not read the official course page.' })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return <article className="course-result-card">
+    <div>
+      <span className="course-result-kicker">{course.qualification || 'UNDERGRADUATE'} · {course.study_mode || 'Study mode not listed'}</span>
+      <h3>{course.course_title}</h3><strong>{course.provider_name}</strong>
+      <p>{[course.campus_name, course.country, course.duration].filter(Boolean).join(' · ') || 'Details on official course page'}</p>
+      {course.subjects_text && <div className="course-subject-tags">{course.subjects_text.split('|').slice(0, 4).map((subject) => <span key={subject}>{subject}</span>)}</div>}
+      <div className="course-admissions-row"><span><b>Entry requirements</b> {requirements?.text || 'Load from official course page'}</span><span><b>Historic acceptance / grade match</b> Check UCAS</span></div>
+      {!requirements && <button className="course-requirements-button" onClick={loadRequirements} disabled={loading}>{loading ? 'Reading official requirements…' : 'Show official entry requirements'}</button>}
+      {requirements?.suggestion && <div className={`course-suggestion ${requirements.suggestion.toLowerCase()}`}><b>Suggested {requirements.suggestion}</b><span>{requirements.reason}</span></div>}
+      {requirements?.error && <p className="course-requirements-error">{requirements.error} Use the official link to check directly.</p>}
+      {planning && <div className="course-choice-actions">{['Safety', 'Target', 'Dream'].map((level) => <button className={shortlist[course.id]?.level === level ? 'selected' : ''} key={level} onClick={() => setShortlist((current) => ({ ...current, [course.id]: { id: course.id, title: course.course_title, provider: course.provider_name, level } }))}>{level}</button>)}</div>}
+    </div>
+    <div className="course-card-links"><a className="view-button" href={course.course_url} target="_blank" rel="noreferrer">Official requirements ↗</a><a className="filter-button" href={`https://www.ucas.com/explore/search/courses?query=${encodeURIComponent(`${course.course_title} ${course.provider_name}`)}`} target="_blank" rel="noreferrer">UCAS historic data ↗</a></div>
+  </article>
 }
 
 function CourseField({ label, placeholder, value, onChange, required = false }) {
