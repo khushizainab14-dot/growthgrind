@@ -810,6 +810,12 @@ footer p {
 .course-result-card p { margin: 6px 0 0; color: #5d6d5d; font-size: 13px; }
 .course-subject-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
 .course-subject-tags span { padding: 4px 8px; border-radius: 99px; background: #e6eee3; color: #45664b; font-size: 11px; font-weight: 700; }
+.premium-tool-wide { max-width: none; }
+.statement-ai-welcome { max-width: 760px; padding: 32px; border: 1px solid #b9c9b9; border-radius: 16px; background: linear-gradient(120deg, #eef4ea, #fff8eb); }
+.statement-ai-welcome h3 { margin: 12px 0 10px; color: #294b35; font-size: 25px; line-height: 1.15; }
+.statement-ai-welcome p { max-width: 650px; }
+.statement-ai-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 22px; }
+.statement-ai-note { margin: 18px 0 0; color: #58715b; font-size: 12px; }
 
 @media (max-width: 500px) {
   .sign-out {

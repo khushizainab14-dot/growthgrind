@@ -2807,7 +2807,16 @@ function App() {
                   </div>
                   <div style={{ flex: 1, padding: '24px', overflowY: 'auto', maxHeight: '440px' }}>
                     {(aiChats[activeAiChat] || []).length === 0 ? (
-                      <div className="closing-card" style={{ boxShadow: 'none' }}>
+                      activeAiChat === 'statement' ? <div className="statement-ai-welcome">
+                        <span className="days-left">PERSONAL STATEMENT PLANNING</span>
+                        <h3>I can help you plan your personal statement before you start writing.</h3>
+                        <p>Tell me the course you are considering and the experiences, books, projects or ideas you want to explore. We will turn rough thoughts into a clear direction — in your own voice.</p>
+                        <div className="statement-ai-actions">
+                          <button className="view-button" onClick={() => setAiChatInput('I am considering [course]. I have explored [experiences/ideas]. Help me identify the strongest themes for my personal statement plan.')}>Plan with GrowthGrind AI →</button>
+                          <button className="filter-button" onClick={() => { setActivePremiumWorkspace(premiumRoadmap.find((feature) => feature.id === 'statement-builder')); goTo('PremiumWorkspace') }}>Start side-by-side builder →</button>
+                        </div>
+                        <p className="statement-ai-note">Plan first, then build: use the side-by-side builder to draft your three UCAS answers and receive feedback.</p>
+                      </div> : <div className="closing-card" style={{ boxShadow: 'none' }}>
                         <h3>Start the conversation</h3>
                         <p>Tell me what you are thinking about. You can keep asking questions here and I’ll use this conversation as context.</p>
                         <button
@@ -2894,6 +2903,7 @@ function App() {
 
       {page === 'CourseFinder' && (
         <PremiumToolPage
+          wide
           eyebrow="UNIVERSITY & COURSE FINDER"
           title={
             <>
@@ -4627,12 +4637,13 @@ function PremiumToolPage({
   description,
   isPremium,
   onUpgrade,
+  wide = false,
   children,
 }) {
   return (
     <main>
       <section className="hero-section">
-        <div className="hero-content">
+        <div className={`hero-content${wide ? ' premium-tool-wide' : ''}`}>
           <span className="eyebrow">
             {eyebrow}
           </span>
