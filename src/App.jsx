@@ -79,7 +79,6 @@ const aiSpecialists = [
   { id: 'admissions', name: 'Admissions Advisor', description: 'Your application strategy', starter: 'I’m considering [course/universities]. What should I focus on next?' },
   { id: 'statement', name: 'Personal Statement', description: 'Reflect on your evidence', starter: 'I want to study [course]. How can I reflect on my experiences without just listing them?' },
   { id: 'tests', name: 'Admissions Tests', description: 'What to investigate', starter: 'I am considering [course/universities]. Which admissions tests should I check?' },
-  { id: 'career', name: 'Career Explorer', description: 'Pathways to explore', starter: 'I enjoy [subjects/activities]. What career paths could I explore?' },
   { id: 'research', name: 'Research Builder', description: 'Build a project idea', starter: 'I’m interested in [topic]. Can you help me turn it into a research project?' },
   { id: 'study', name: 'GrowthGrind Study', description: 'Your AI exam tutor', starter: 'I need help with [subject/topic]. Please guide me one step at a time instead of giving the answer immediately.' },
 ]
@@ -100,6 +99,7 @@ const premiumRoadmap = [
   { id: 'timeline', stage: 'STAY ON TRACK', title: 'Smart deadline timeline', description: 'Bring course, test, finance, open-day and portfolio deadlines into one plan.' },
   { id: 'progress', stage: 'STAY ON TRACK', title: 'Application progress tracker', description: 'Track decisions, next steps and your personal application timeline.' },
   { id: 'international-quals', stage: 'STAY ON TRACK', title: 'International qualification guide', description: 'Understand qualification terminology and conditions to verify with each university.' },
+  { id: 'career-quiz', stage: 'EXPLORE', title: 'Career Quiz', description: 'Answer quick yes/no questions to discover your top three career sectors and job routes.' },
   { id: 'study', stage: 'GROWTHGRIND STUDY', title: 'GrowthGrind Study — AI exam tutor', description: 'Scan questions, get Socratic help, save mistakes and build a weakness profile.' },
 ]
 
@@ -595,7 +595,7 @@ function App() {
       return
     }
     setActiveAiChat(specialist)
-    goTo('AI')
+    goTo('Specialist')
   }
 
   const openPremiumWorkspace = (feature) => {
@@ -2670,9 +2670,7 @@ function App() {
                     number="05"
                     title="Career Quiz"
                     description="Discover career and degree pathways suited to you."
-                    onClick={() =>
-                      openAiWorkspace('career')
-                    }
+                    onClick={() => openPremiumWorkspace(premiumRoadmap.find((feature) => feature.id === 'career-quiz'))}
                   />
 
                   <PremiumFeature
@@ -2766,18 +2764,18 @@ function App() {
       )}
 
       {/* PREMIUM FEATURE PAGES */}
-      {page === 'AI' && (
+      {(page === 'AI' || page === 'Specialist') && (
         <main>
           <section className="hero-section" style={{ paddingTop: '36px' }}>
             <div className="hero-content" style={{ maxWidth: '1120px' }}>
               <span className="eyebrow">GROWTHGRIND AI</span>
-              <h1 style={{ fontSize: 'clamp(34px, 5vw, 58px)' }}>Your student<br />thinking partner.</h1>
-              <p>Choose a specialist chat, ask follow-up questions, and build on the conversation as you go.</p>
+              <h1 style={{ fontSize: 'clamp(34px, 5vw, 58px)' }}>{page === 'Specialist' ? aiSpecialists.find((item) => item.id === activeAiChat)?.name : 'Your student'}<br />{page === 'Specialist' ? 'workspace.' : 'thinking partner.'}</h1>
+              <p>{page === 'Specialist' ? 'A dedicated workspace that remembers this conversation and stays focused on one task.' : 'Choose a specialist chat, ask follow-up questions, and build on the conversation as you go.'}</p>
 
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: 'minmax(210px, 0.72fr) minmax(0, 2fr)',
+                  gridTemplateColumns: page === 'Specialist' ? 'minmax(0, 1fr)' : 'minmax(210px, 0.72fr) minmax(0, 2fr)',
                   minHeight: '620px',
                   marginTop: '32px',
                   border: '1px solid #d0c4b0',
@@ -2786,7 +2784,7 @@ function App() {
                   background: '#f5efe5',
                 }}
               >
-                <aside style={{ padding: '18px 12px', background: '#e9dfcf', borderRight: '1px solid #d0c4b0' }}>
+                {page === 'AI' && <aside style={{ padding: '18px 12px', background: '#e9dfcf', borderRight: '1px solid #d0c4b0' }}>
                   <div className="eyebrow" style={{ padding: '0 8px 12px' }}>FEATURED CHATS</div>
                   {aiSpecialists.map((specialist) => {
                     const isActive = activeAiChat === specialist.id
@@ -2808,7 +2806,7 @@ function App() {
                       </button>
                     )
                   })}
-                </aside>
+                </aside>}
 
                 <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                   <div style={{ padding: '20px 24px', borderBottom: '1px solid #d0c4b0' }}>
@@ -2832,7 +2830,7 @@ function App() {
                       (aiChats[activeAiChat] || []).map((message, index) => (
                         <div key={`${message.role}-${index}`} style={{ display: 'flex', justifyContent: message.role === 'user' ? 'flex-end' : 'flex-start', marginBottom: '14px' }}>
                           <div style={{ maxWidth: '82%', whiteSpace: 'pre-wrap', padding: '13px 15px', borderRadius: '13px', lineHeight: 1.55, background: message.role === 'user' ? '#315b3d' : '#e9dfcf', color: message.role === 'user' ? '#fff' : '#294b35' }}>
-                            {message.content}
+                            <MathText text={message.content} />
                           </div>
                         </div>
                       ))
@@ -3950,6 +3948,8 @@ function PremiumWorkspacePage({
             <TariffWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} onOpenAi={onOpenAi} />
           ) : feature.id === 'study' ? (
             <StudyWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} onOpenAi={onOpenAi} />
+          ) : feature.id === 'career-quiz' ? (
+            <CareerQuizWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} />
           ) : (
             <InSitePlanner feature={feature} workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} onOpenAi={onOpenAi} />
           )}
@@ -4004,6 +4004,59 @@ function StudyWorkspace({ workspaceData, setWorkspaceData, onOpenAi }) {
   )
 }
 
+function CareerQuizWorkspace({ workspaceData, setWorkspaceData }) {
+  const questions = [
+    ['I enjoy using numbers, data or patterns to solve problems.', ['Finance', 'Technology']],
+    ['I am interested in how organisations make money and take decisions.', ['Finance', 'Business']],
+    ['I would enjoy building, testing or improving a product or system.', ['Technology', 'Engineering']],
+    ['I am curious about health, biology or helping people directly.', ['Healthcare', 'Science']],
+    ['I enjoy arguing a case, analysing rules or persuading others.', ['Law', 'Business']],
+    ['I like writing, visual ideas, storytelling or creating content.', ['Creative & Media', 'Marketing']],
+    ['I would rather work through a difficult problem than avoid it.', ['Engineering', 'Technology']],
+    ['I care about public issues, policy, fairness or global events.', ['Public Policy', 'Law']],
+    ['I enjoy explaining ideas and working closely with other people.', ['Healthcare', 'Education']],
+    ['I am interested in markets, companies and investment.', ['Finance', 'Business']],
+    ['I enjoy science experiments, research or finding out why something works.', ['Science', 'Healthcare']],
+    ['I want work that combines creativity with commercial thinking.', ['Marketing', 'Creative & Media']],
+  ]
+  const answers = workspaceData.answers || []
+  const scores = answers.reduce((result, answer, index) => {
+    if (!answer) return result
+    questions[index][1].forEach((sector) => { result[sector] = (result[sector] || 0) + 1 })
+    return result
+  }, {})
+  const jobs = {
+    Finance: ['Investment banking', 'Asset management', 'Hedge-fund analysis', 'Corporate finance'],
+    Technology: ['Software engineering', 'Data science', 'Cyber security', 'Product management'],
+    Business: ['Consulting', 'Entrepreneurship', 'Operations', 'Strategy'],
+    Engineering: ['Civil engineering', 'Mechanical engineering', 'Aerospace engineering', 'Renewable energy'],
+    Healthcare: ['Medicine', 'Nursing', 'Physiotherapy', 'Clinical research'],
+    Science: ['Research scientist', 'Pharmaceutical science', 'Environmental science', 'Laboratory analytics'],
+    Law: ['Solicitor', 'Barrister', 'Commercial law', 'Policy advisory'],
+    'Creative & Media': ['Film production', 'Design', 'Journalism', 'Animation'],
+    Marketing: ['Brand management', 'Digital marketing', 'Market research', 'Communications'],
+    'Public Policy': ['Civil service', 'International development', 'Think-tank research', 'Public affairs'],
+    Education: ['Teaching', 'Educational psychology', 'Learning design', 'Youth work'],
+  }
+  const topThree = Object.entries(scores).sort((first, second) => second[1] - first[1]).slice(0, 3)
+  return (
+    <div className="closing-card" style={{ marginTop: '24px', maxWidth: '900px' }}>
+      <div className="days-left">YES / NO CAREER QUIZ</div>
+      <h2 style={{ marginTop: '12px' }}>Find career sectors worth exploring</h2>
+      <p>There are no right answers. This is a starting point for exploration, not a judgement about what you can do.</p>
+      {questions.map(([question], index) => (
+        <div key={question} style={{ display: 'flex', justifyContent: 'space-between', gap: '14px', alignItems: 'center', padding: '15px 0', borderTop: index ? '1px solid #ded3c1' : 0 }}>
+          <span style={{ color: '#294b35', fontWeight: '650' }}>{index + 1}. {question}</span>
+          <div style={{ display: 'flex', gap: '7px', flexShrink: 0 }}>
+            {['Yes', 'No'].map((option) => <button key={option} className="filter-button" onClick={() => { const nextAnswers = [...answers]; nextAnswers[index] = option === 'Yes'; setWorkspaceData({ ...workspaceData, answers: nextAnswers }) }} style={{ background: answers[index] === (option === 'Yes') ? '#315b3d' : undefined, color: answers[index] === (option === 'Yes') ? '#fff' : undefined }}>{option}</button>)}
+          </div>
+        </div>
+      ))}
+      {topThree.length > 0 && <div style={{ marginTop: '25px', paddingTop: '20px', borderTop: '1px solid #b9c9b9' }}><div className="days-left">YOUR TOP THREE</div><div className="closing-grid" style={{ marginTop: '14px' }}>{topThree.map(([sector]) => <div className="closing-card" key={sector} style={{ boxShadow: 'none' }}><h3>{sector}</h3><ul style={{ paddingLeft: '18px', lineHeight: 1.6 }}>{jobs[sector].map((job) => <li key={job}>{job}</li>)}</ul></div>)}</div></div>}
+    </div>
+  )
+}
+
 function InSitePlanner({ feature, workspaceData, setWorkspaceData, onOpenAi }) {
   const prompts = {
     contextual: ['Your chosen indicators', 'For example: care experience, Free School Meals, postcode, school context — share only what you choose.', 'Potential support to research'],
@@ -4037,6 +4090,25 @@ function InSitePlanner({ feature, workspaceData, setWorkspaceData, onOpenAi }) {
       </div>
     </div>
   )
+}
+
+function MathText({ text }) {
+  const formatLine = (line, lineIndex) => {
+    const fractionPattern = /\\frac\{([^{}]+)\}\{([^{}]+)\}|\(([^()]+)\)\/\(([^()]+)\)/g
+    const parts = []
+    let cursor = 0
+    let match
+    while ((match = fractionPattern.exec(line))) {
+      if (match.index > cursor) parts.push(line.slice(cursor, match.index))
+      parts.push(<span className="math-fraction" key={`${lineIndex}-${match.index}`}><span>{match[1] || match[3]}</span><span>{match[2] || match[4]}</span></span>)
+      cursor = match.index + match[0].length
+    }
+    parts.push(line.slice(cursor))
+    return parts.map((part, index) => typeof part === 'string'
+      ? part.replace(/\\sqrt\{([^{}]+)\}|sqrt\(([^()]+)\)/g, '√($1$2)').split(/(\^\{?[-+]?\d+\}?)/g).map((piece, pieceIndex) => piece.startsWith('^') ? <sup key={`${index}-${pieceIndex}`}>{piece.replace(/[^{\d+-]/g, '').replace('}', '')}</sup> : piece)
+      : part)
+  }
+  return <>{String(text || '').split('\n').map((line, index) => <span key={index}>{formatLine(line, index)}{index < String(text || '').split('\n').length - 1 && <br />}</span>)}</>
 }
 
 function PremiumFeature({

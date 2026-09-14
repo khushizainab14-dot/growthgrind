@@ -706,6 +706,24 @@ footer p {
   to { transform: translateY(115vh) rotate(720deg); }
 }
 
+.math-fraction {
+  display: inline-flex;
+  flex-direction: column;
+  vertical-align: middle;
+  margin: 0 3px;
+  line-height: 1.05;
+  text-align: center;
+}
+
+.math-fraction span:first-child {
+  padding: 0 3px 2px;
+  border-bottom: 1px solid currentColor;
+}
+
+.math-fraction span:last-child {
+  padding: 2px 3px 0;
+}
+
 @media (max-width: 500px) {
   .sign-out {
     display: none;
