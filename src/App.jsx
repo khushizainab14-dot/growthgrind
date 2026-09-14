@@ -186,10 +186,13 @@ function App() {
   const [authPassword, setAuthPassword] = useState('')
   const [authMessage, setAuthMessage] = useState('')
   const [courseQuery, setCourseQuery] = useState('')
-  const [courseSelectedTerms, setCourseSelectedTerms] = useState([])
+  const [selectedCourseTitles, setSelectedCourseTitles] = useState([])
+  const [courseSuggestions, setCourseSuggestions] = useState([])
   const [courseRegion, setCourseRegion] = useState('All UK')
   const [courseMode, setCourseMode] = useState('All study modes')
   const [courseProvider, setCourseProvider] = useState('')
+  const [selectedProviders, setSelectedProviders] = useState([])
+  const [providerSuggestions, setProviderSuggestions] = useState([])
   const [courseAbroad, setCourseAbroad] = useState('UK only')
   const [courseGradeProfile, setCourseGradeProfile] = useState('')
   const [courseProfileGrades, setCourseProfileGrades] = useState([])
@@ -580,14 +583,16 @@ function App() {
       const aliases = {
         maths: ['mathematics', 'mathematical'], math: ['mathematics', 'mathematical'], cs: ['computer science'], econ: ['economics'], lse: ['london school of economics'], ucl: ['university college london'], kcl: ["king's college london"], imperial: ['imperial college london'], warwick: ['university of warwick'], oxford: ['university of oxford'], cambridge: ['university of cambridge'],
       }
-      const terms = [...new Set([safeQuery, ...courseSelectedTerms].filter(Boolean).flatMap((term) => [term, ...(aliases[term.toLowerCase()] || [])]))]
+      const terms = [...new Set([safeQuery].filter(Boolean).flatMap((term) => [term, ...(aliases[term.toLowerCase()] || [])]))]
       let request = supabase
         .from('university_courses')
         .select('id, course_title, provider_name, campus_name, country, qualification, study_mode, duration, subjects_text, course_url, source_updated_at')
         .order('course_title', { ascending: true })
         .limit(60)
-      if (terms.length) request = request.or(terms.flatMap((term) => [`course_title.ilike.%${term}%,provider_name.ilike.%${term}%,subjects_text.ilike.%${term}%`]).join(','))
-      if (courseProvider.trim()) request = request.ilike('provider_name', `%${courseProvider.trim().replace(/[(),]/g, ' ')}%`)
+      if (selectedCourseTitles.length) request = request.in('course_title', selectedCourseTitles)
+      else if (terms.length) request = request.or(terms.flatMap((term) => [`course_title.ilike.%${term}%,subjects_text.ilike.%${term}%`]).join(','))
+      if (selectedProviders.length) request = request.in('provider_name', selectedProviders)
+      else if (courseProvider.trim()) request = request.ilike('provider_name', `%${courseProvider.trim().replace(/[(),]/g, ' ')}%`)
       if (courseRegion !== 'All UK') request = request.eq('country', courseRegion)
       if (courseMode !== 'All study modes') request = request.eq('study_mode', courseMode)
       if (courseAbroad === 'Study abroad option') request = request.ilike('course_title', '%study abroad%')
@@ -600,6 +605,24 @@ function App() {
       setCourseLoading(false)
     }
   }
+
+  useEffect(() => {
+    const searchCatalogue = async () => {
+      const courseTerm = courseQuery.trim().replace(/[(),]/g, ' ')
+      const providerTerm = courseProvider.trim().replace(/[(),]/g, ' ')
+      if (courseTerm.length < 2 && providerTerm.length < 2) { setCourseSuggestions([]); setProviderSuggestions([]); return }
+      const requests = []
+      if (courseTerm.length >= 2) requests.push(supabase.from('university_courses').select('course_title').ilike('course_title', `%${courseTerm}%`).order('course_title').limit(12))
+      else requests.push(Promise.resolve({ data: [] }))
+      if (providerTerm.length >= 2) requests.push(supabase.from('university_courses').select('provider_name').ilike('provider_name', `%${providerTerm}%`).order('provider_name').limit(30))
+      else requests.push(Promise.resolve({ data: [] }))
+      const [courseResponse, providerResponse] = await Promise.all(requests)
+      setCourseSuggestions([...new Set((courseResponse.data || []).map((item) => item.course_title))])
+      setProviderSuggestions([...new Set((providerResponse.data || []).map((item) => item.provider_name))])
+    }
+    const timer = setTimeout(searchCatalogue, 180)
+    return () => clearTimeout(timer)
+  }, [courseQuery, courseProvider])
 
   const openGradeCourseFinder = (entries) => {
     const aLevels = entries.filter((entry) => entry.qualification === 'A level' && entry.grade).slice(0, 3)
@@ -3006,17 +3029,17 @@ function App() {
               <a href="https://www.ucas.com/explore/search/courses" target="_blank" rel="noreferrer">Compare on UCAS ↗</a>
             </div>
             <form onSubmit={findCourses} className="course-search-form">
-              <label className="course-search-input"><span>⌕</span><input list="course-search-suggestions" value={courseQuery} onChange={(event) => setCourseQuery(event.target.value)} placeholder="Search courses, subjects or universities" /><datalist id="course-search-suggestions">{['Maths', 'Maths with Data Science', 'Economics', 'Computer Science', 'Medicine', 'Law', 'Warwick', 'UCL', 'LSE', 'Oxford', 'Cambridge'].map((item) => <option key={item} value={item} />)}</datalist></label>
+              <label className="course-search-input course-autocomplete"><span>⌕</span><input value={courseQuery} onChange={(event) => setCourseQuery(event.target.value)} placeholder="Search course name or subject" />{courseSuggestions.length > 0 && <div className="catalogue-options">{courseSuggestions.map((title) => <button key={title} type="button" onClick={() => { setSelectedCourseTitles((current) => current.includes(title) ? current : [...current, title]); setCourseQuery('') }}>{title}</button>)}</div>}</label>
               <select value={courseRegion} onChange={(event) => setCourseRegion(event.target.value)}><option>All UK</option><option>England</option><option>Scotland</option><option>Wales</option><option>Northern Ireland</option></select>
               <select value={courseMode} onChange={(event) => setCourseMode(event.target.value)}><option>All study modes</option><option value="Full time">Full time</option><option value="Part time">Part time</option></select>
               <button className="primary-button" disabled={courseLoading} type="submit">{courseLoading ? 'Searching…' : 'Search courses'}</button>
             </form>
             <div className="course-extra-filters">
-              <label>University <input value={courseProvider} onChange={(event) => setCourseProvider(event.target.value)} placeholder="e.g. Bristol" /></label>
+              <label className="course-autocomplete">University <input value={courseProvider} onChange={(event) => setCourseProvider(event.target.value)} placeholder="Search every university" />{providerSuggestions.length > 0 && <div className="catalogue-options">{providerSuggestions.map((provider) => <button key={provider} type="button" onClick={() => { setSelectedProviders((current) => current.includes(provider) ? current : [...current, provider]); setCourseProvider('') }}>{provider}</button>)}</div>}</label>
               <label>Location <select value={courseAbroad} onChange={(event) => setCourseAbroad(event.target.value)}><option>UK only</option><option>Study abroad option</option></select></label>
               <button className="filter-button" type="button" onClick={findCourses}>Apply filters</button>
             </div>
-            <div className="course-suggestion-chips"><span>Quick add:</span>{['Maths', 'Maths with Data Science', 'Economics', 'Computer Science', 'Warwick', 'UCL', 'LSE'].map((term) => <button key={term} type="button" className={courseSelectedTerms.includes(term) ? 'selected' : ''} onClick={() => setCourseSelectedTerms((current) => current.includes(term) ? current.filter((item) => item !== term) : [...current, term])}>{term}{courseSelectedTerms.includes(term) ? ' ×' : ' +'}</button>)}</div>
+            {(selectedCourseTitles.length > 0 || selectedProviders.length > 0) && <div className="course-selected-filters">{selectedCourseTitles.map((title) => <button key={title} onClick={() => setSelectedCourseTitles((current) => current.filter((item) => item !== title))}>{title} ×</button>)}{selectedProviders.map((provider) => <button key={provider} onClick={() => setSelectedProviders((current) => current.filter((item) => item !== provider))}>{provider} ×</button>)}</div>}
             {courseGradeProfile && <p className="course-grade-profile">{courseGradeProfile} <span>Use published requirements before deciding whether a course is safety, target or dream.</span></p>}
             <p className="course-search-note">Search the GrowthGrind catalogue, then open the university’s own course page for current modules, fees and entry requirements.</p>
           </section>
@@ -3727,13 +3750,12 @@ function AuthModal({
 function CourseResultCard({ course, profileGrades, planning, shortlist, setShortlist }) {
   const [requirements, setRequirements] = useState(null)
   const [loading, setLoading] = useState(false)
-  const [manualOffer, setManualOffer] = useState('')
 
   const loadRequirements = async () => {
     if (loading || requirements) return
     setLoading(true)
     try {
-      const response = await fetch('/api/course-requirements', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: course.course_url, grades: profileGrades }) })
+      const response = await fetch('/api/course-requirements', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: course.course_url, title: course.course_title, provider: course.provider_name, grades: profileGrades }) })
       const result = await response.json()
       if (!response.ok) throw new Error(result.error || 'Could not read the official course page.')
       setRequirements(result)
@@ -3744,11 +3766,6 @@ function CourseResultCard({ course, profileGrades, planning, shortlist, setShort
     }
   }
 
-  const manualGrades = manualOffer.match(/A\*|[A-E]/g) || []
-  const gradePoints = { 'A*': 6, A: 5, B: 4, C: 3, D: 2, E: 1 }
-  const manualSuggestion = profileGrades.length === 3 && manualGrades.length === 3
-    ? (() => { const student = profileGrades.reduce((sum, grade) => sum + gradePoints[grade], 0); const offer = manualGrades.reduce((sum, grade) => sum + gradePoints[grade], 0); return student >= offer + 2 ? 'Safety' : student >= offer ? 'Target' : 'Dream' })()
-    : ''
 
   return <article className="course-result-card">
     <div>
@@ -3757,13 +3774,11 @@ function CourseResultCard({ course, profileGrades, planning, shortlist, setShort
       <p>{[course.campus_name, course.country, course.duration].filter(Boolean).join(' · ') || 'Details on official course page'}</p>
       {course.subjects_text && <div className="course-subject-tags">{course.subjects_text.split('|').slice(0, 4).map((subject) => <span key={subject}>{subject}</span>)}</div>}
       <div className="course-admissions-row"><span><b>Entry requirements</b> {requirements?.text || 'Load from official course page'}</span><span><b>Historic acceptance / grade match</b> Check UCAS</span></div>
-      {!requirements && <button className="course-requirements-button" onClick={loadRequirements} disabled={loading}>{loading ? 'Reading official requirements…' : 'Show official entry requirements'}</button>}
-      {requirements?.suggestion && <div className={`course-suggestion ${requirements.suggestion.toLowerCase()}`}><b>Suggested {requirements.suggestion}</b><span>{requirements.reason}</span></div>}
-      {(!requirements?.suggestion || requirements.suggestion === 'Check manually') && <div className="manual-offer-helper"><label>Typical A-level offer from the official page <input value={manualOffer} onChange={(event) => setManualOffer(event.target.value.toUpperCase())} placeholder="e.g. AAB" maxLength="5" /></label>{manualSuggestion && <div className={`course-suggestion ${manualSuggestion.toLowerCase()}`}><b>Suggested {manualSuggestion}</b><span>Based on your three entered grades versus {manualGrades.join('')} — still check required subjects and contextual criteria.</span></div>}</div>}
+      {!requirements && <button className="course-requirements-button" onClick={loadRequirements} disabled={loading}>{loading ? 'Checking live requirements…' : 'Show entry requirements'}</button>}
       {requirements?.error && <p className="course-requirements-error">{requirements.error} Use the official link to check directly.</p>}
       {planning && <div className="course-choice-actions">{['Safety', 'Target', 'Dream'].map((level) => <button className={shortlist[course.id]?.level === level ? 'selected' : ''} key={level} onClick={() => setShortlist((current) => ({ ...current, [course.id]: { id: course.id, title: course.course_title, provider: course.provider_name, level } }))}>{level}</button>)}</div>}
     </div>
-    <div className="course-card-links"><a className="view-button" href={course.course_url} target="_blank" rel="noreferrer">Official requirements ↗</a><a className="filter-button" href={`https://www.ucas.com/explore/search/courses?query=${encodeURIComponent(`${course.course_title} ${course.provider_name}`)}`} target="_blank" rel="noreferrer">UCAS historic data ↗</a></div>
+    <div className="course-card-links"><div className="course-grade-panel"><span>GRADE-BASED SUGGESTION</span>{requirements?.suggestion ? <><strong className={requirements.suggestion.toLowerCase().replace(' ', '-')}>Suggested: {requirements.suggestion}</strong><p>{requirements.reason}</p></> : <p>{profileGrades.length === 3 ? 'Check live official requirements to receive a suggested Safety, Target or Dream category.' : 'Add three predicted A-level grades in the Tariff Calculator first.'}</p>}</div><a className="view-button" href={course.course_url} target="_blank" rel="noreferrer">Official requirements ↗</a><a className="filter-button" href={`https://www.ucas.com/explore/search/courses?query=${encodeURIComponent(`${course.course_title} ${course.provider_name}`)}`} target="_blank" rel="noreferrer">UCAS historic data ↗</a></div>
   </article>
 }
 
@@ -3993,6 +4008,8 @@ function PremiumWorkspacePage({
             <StudyWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} onOpenAi={onOpenAi} mistakeBank={studyMistakeBank} />
           ) : feature.id === 'career-quiz' ? (
             <CareerQuizWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} />
+          ) : feature.id === 'contextual' ? (
+            <ContextualSupportWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} />
           ) : (
             <InSitePlanner feature={feature} workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} onOpenAi={onOpenAi} />
           )}
@@ -4077,6 +4094,24 @@ function InternationalQualificationsWorkspace({ workspaceData, setWorkspaceData 
     }
   }
   return <div className="international-quals-studio"><section><span className="days-left">INTERNATIONAL QUALIFICATIONS</span><h2>Understand your qualification in a UK application.</h2><p>Which country are your current or completed qualifications from?</p><div className="international-search"><select value={country} onChange={(event) => { setWorkspaceData({ ...workspaceData, country: event.target.value, searchedInternational: false }); setMessages([]) }}>{Object.keys(countries).map((item) => <option key={item}>{item}</option>)}</select><button className="view-button" onClick={() => setWorkspaceData({ ...workspaceData, searchedInternational: true })}>Search guidance →</button></div></section>{searched && <section className="international-result"><span>GUIDANCE FOR {country.toUpperCase()}</span><h3>How to compare your grades</h3><p>{countries[country]}</p><ul><li>There is no single UK-wide “competitive grade” conversion: each university and course decides its own entry requirements.</li><li>Use the original qualification and grades on your application, not a self-created A-level conversion.</li><li>Check the exact course page, required subjects and English-language requirement before applying.</li></ul><div className="international-links"><a href="https://www.ucas.com/international/international-students/applying-university-international-student/entry-requirements-uk-courses" target="_blank" rel="noreferrer">UCAS international entry requirements ↗</a><a href="https://www.ucas.com/sites/default/files/international_qips_18-11-2024_0.pdf" target="_blank" rel="noreferrer">UCAS qualification profiles ↗</a></div><div className="international-followups"><div><span>LIVE OFFICIAL-SOURCE SEARCH</span><h4>Ask a follow-up question</h4><p>The assistant searches current UCAS, university and qualification-body pages before replying.</p></div>{messages.map((message, index) => <div className={`international-message ${message.role}`} key={`${message.role}-${index}`}><b>{message.role === 'user' ? 'You' : 'GrowthGrind guide'}</b><p>{message.content}</p></div>)}{error && <p className="international-chat-error">{error}</p>}<form onSubmit={askFollowUp}><textarea value={question} onChange={(event) => setQuestion(event.target.value)} placeholder={`For example: Which UK universities accept ${country} for Computer Science?`} /><button className="view-button" disabled={loading}>{loading ? 'Checking official sources…' : 'Ask with live search →'}</button></form></div></section>}</div>
+}
+
+function ContextualSupportWorkspace({ workspaceData, setWorkspaceData }) {
+  const [feedback, setFeedback] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const details = workspaceData.details || ''
+  const review = async () => {
+    if (details.trim().length < 25) { setError('Add a little factual detail before requesting feedback.'); return }
+    setLoading(true); setError('')
+    try {
+      const response = await fetch('/api/ai-chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ specialist: 'contextual', message: details }) })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'Could not review this right now.')
+      setFeedback(result.reply)
+    } catch (requestError) { setError(requestError.message || 'Could not review this right now.') } finally { setLoading(false) }
+  }
+  return <div className="contextual-studio"><section className="contextual-editor"><span className="days-left">FACTS, NOT EXCUSES</span><h2>Describe your context in your own words.</h2><p>Include what happened, when it affected your education, and what evidence a school or professional could confirm. Avoid uploading medical evidence or unnecessary sensitive details here.</p><textarea value={details} onChange={(event) => setWorkspaceData({ ...workspaceData, details: event.target.value })} placeholder="For example: In Year 12, I had caring responsibilities for a family member for several months. This affected my attendance and meant I missed…" /><button className="view-button" disabled={loading} onClick={review}>{loading ? 'Reviewing your wording…' : 'Get side-by-side guidance →'}</button>{error && <p className="contextual-error">{error}</p>}</section><aside className="contextual-feedback"><span className="days-left">FORMALITY & IMPACT CHECK</span>{feedback ? <><h3>How to make this clearer</h3><p>{feedback}</p></> : <><h3>What GrowthGrind will check</h3><ul><li>Factual timeline and specific educational impact.</li><li>Clear, professional language without overstating a claim.</li><li>Evidence to discuss with a referee or support team.</li><li>Whether to check the university’s own contextual-offer policy.</li></ul><p className="contextual-note">This does not decide eligibility or replace a school reference, medical professional, or university admissions team.</p></>}</aside></div>
 }
 
 function StudyWorkspace({ workspaceData, setWorkspaceData, onOpenAi, mistakeBank = [] }) {
