@@ -85,16 +85,15 @@ const aiSpecialists = [
 
 const premiumRoadmap = [
   { id: 'tariff', stage: 'EXPLORE', title: 'Tariff & grade calculator', description: 'Convert qualifications and understand how grades compare with course requirements.' },
-  { id: 'contextual', stage: 'EXPLORE', title: 'Contextual support finder', description: 'Explore bursaries, contextual offers and eligibility checks with official sources.' },
+  { id: 'contextual', stage: 'EXPLORE', title: 'Contextual support finder', description: 'Answer a short eligibility questionnaire, then check a university’s live contextual-admissions policy.' },
   { id: 'statement-builder', stage: 'APPLY', title: 'Interactive personal statement builder', description: 'Plan responses, track characters and receive feedback that preserves your own voice.' },
   { id: 'test-planner', stage: 'APPLY', title: 'Admissions test planner', description: 'Identify tests to investigate, build practice habits and track registration dates.' },
   { id: 'interview', stage: 'APPLY', title: 'Interview practice hub', description: 'Prepare for interviews with structured question practice and reflection.' },
   { id: 'portfolio', stage: 'APPLY', title: 'Creative portfolio hub', description: 'Organise portfolio work, requirements and feedback for creative applications.' },
   { id: 'multi-course', stage: 'APPLY', title: 'Multi-course statement analyser', description: 'Check whether one statement gives the right weight to every course you are applying for.' },
-  { id: 'circumstances', stage: 'APPLY', title: 'Extenuating-circumstances guide', description: 'Turn a difficult situation into a factual timeline to discuss with a trusted referee.' },
+  { id: 'circumstances', stage: 'APPLY', title: 'Extenuating circumstances guide', description: 'Turn a difficult situation into a factual timeline to discuss with a trusted referee.' },
   { id: 'balance', stage: 'DECIDE', title: 'Choice balance dashboard', description: 'Review whether your university choices are balanced around your own goals and grades.' },
   { id: 'firm-insurance', stage: 'DECIDE', title: 'Firm & insurance planner', description: 'Compare offer conditions and map realistic results-day scenarios.' },
-  { id: 'accommodation', stage: 'DECIDE', title: 'Campus & accommodation comparison', description: 'Compare course, living and travel priorities in one structured view.' },
   { id: 'clearing', stage: 'DECIDE', title: 'Clearing & Extra planner', description: 'Save a prepared plan for late applications and results-day options.' },
   { id: 'timeline', stage: 'STAY ON TRACK', title: 'Smart deadline timeline', description: 'Bring course, test, finance, open-day and portfolio deadlines into one plan.' },
   { id: 'progress', stage: 'STAY ON TRACK', title: 'Application progress tracker', description: 'Track decisions, next steps and your personal application timeline.' },
@@ -4012,6 +4011,8 @@ function PremiumWorkspacePage({
           ) : feature.id === 'career-quiz' ? (
             <CareerQuizWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} />
           ) : feature.id === 'contextual' ? (
+            <ContextualEligibilityWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} />
+          ) : feature.id === 'circumstances' ? (
             <ContextualSupportWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} />
           ) : feature.id === 'interview' ? (
             <InterviewPracticeWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} />
@@ -4125,6 +4126,42 @@ function InternationalQualificationsWorkspace({ workspaceData, setWorkspaceData 
     }
   }
   return <div className="international-quals-studio"><section><span className="days-left">INTERNATIONAL QUALIFICATIONS</span><h2>Understand your qualification in a UK application.</h2><p>Which country are your current or completed qualifications from?</p><div className="international-search"><select value={country} onChange={(event) => { setWorkspaceData({ ...workspaceData, country: event.target.value, searchedInternational: false }); setMessages([]) }}>{Object.keys(countries).map((item) => <option key={item}>{item}</option>)}</select><button className="view-button" onClick={() => setWorkspaceData({ ...workspaceData, searchedInternational: true })}>Search guidance →</button></div></section>{searched && <section className="international-result"><span>GUIDANCE FOR {country.toUpperCase()}</span><h3>How to compare your grades</h3><p>{countries[country]}</p><ul><li>There is no single UK-wide “competitive grade” conversion: each university and course decides its own entry requirements.</li><li>Use the original qualification and grades on your application, not a self-created A-level conversion.</li><li>Check the exact course page, required subjects and English-language requirement before applying.</li></ul><div className="international-links"><a href="https://www.ucas.com/international/international-students/applying-university-international-student/entry-requirements-uk-courses" target="_blank" rel="noreferrer">UCAS international entry requirements ↗</a><a href="https://www.ucas.com/sites/default/files/international_qips_18-11-2024_0.pdf" target="_blank" rel="noreferrer">UCAS qualification profiles ↗</a></div><div className="international-followups"><div><span>LIVE OFFICIAL-SOURCE SEARCH</span><h4>Ask a follow-up question</h4><p>The assistant searches current UCAS, university and qualification-body pages before replying.</p></div>{messages.map((message, index) => <div className={`international-message ${message.role}`} key={`${message.role}-${index}`}><b>{message.role === 'user' ? 'You' : 'GrowthGrind guide'}</b><p>{message.content}</p></div>)}{error && <p className="international-chat-error">{error}</p>}<form onSubmit={askFollowUp}><textarea value={question} onChange={(event) => setQuestion(event.target.value)} placeholder={`For example: Which UK universities accept ${country} for Computer Science?`} /><button className="view-button" disabled={loading}>{loading ? 'Checking official sources…' : 'Ask with live search →'}</button></form></div></section>}</div>
+}
+
+function ContextualEligibilityWorkspace({ workspaceData, setWorkspaceData }) {
+  const [policy, setPolicy] = useState('')
+  const [policyLoading, setPolicyLoading] = useState(false)
+  const [policyError, setPolicyError] = useState('')
+  const questions = [
+    { id: 'stateSchool', text: 'Do you attend or have you attended a UK state school or college?' },
+    { id: 'fsm', text: 'Have you been eligible for Free School Meals during secondary education?' },
+    { id: 'care', text: 'Have you spent time in local-authority care or are you care-experienced?' },
+    { id: 'carer', text: 'Do you have unpaid caring responsibilities?' },
+    { id: 'estranged', text: 'Are you estranged from your parents or independent of family support?' },
+    { id: 'firstGen', text: 'Would you be the first in your family to enter higher education?' },
+    { id: 'outreach', text: 'Have you completed a university outreach or widening-participation programme?' },
+    { id: 'area', text: 'Do you think you live in an area of low higher-education participation or high deprivation?' },
+  ]
+  const answers = workspaceData.answers || {}
+  const current = Math.min(workspaceData.currentQuestion || 0, questions.length - 1)
+  const question = questions[current]
+  const answered = Object.prototype.hasOwnProperty.call(answers, question.id)
+  const score = Object.values(answers).reduce((total, value) => total + (value === 'yes' ? 1 : value === 'sometimes' ? .5 : 0), 0)
+  const complete = workspaceData.complete
+  const setAnswer = (value) => setWorkspaceData({ ...workspaceData, answers: { ...answers, [question.id]: value }, complete: false })
+  const next = () => { if (!answered) return; setWorkspaceData({ ...workspaceData, answers, currentQuestion: current >= questions.length - 1 ? current : current + 1, complete: current >= questions.length - 1 }) }
+  const searchPolicy = async () => {
+    const university = (workspaceData.university || '').trim()
+    if (!university) { setPolicyError('Search for a university first.'); return }
+    setPolicyLoading(true); setPolicyError('')
+    try {
+      const response = await fetch('/api/ai-chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ specialist: 'contextual-research', message: `Find the current official contextual admissions guidance for ${university}.` }) })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'Could not find the policy.')
+      setPolicy(result.reply)
+    } catch (error) { setPolicyError(error.message || 'Could not find the policy.') } finally { setPolicyLoading(false) }
+  }
+  return <div className="contextual-eligibility"><header><span className="days-left">CONTEXTUAL OFFER CHECKER</span><h2>See what may be worth checking.</h2><p>This is not an eligibility decision. Universities use different criteria and can assess information automatically from a UCAS application.</p><div className="quiz-progress"><i style={{ width: `${Math.round((Object.keys(answers).length / questions.length) * 100)}%` }} /></div><div className="quiz-progress-copy"><span>{Math.round((Object.keys(answers).length / questions.length) * 100)}% complete</span><span>Question {current + 1} of {questions.length}</span></div></header><section className="contextual-question"><span className="career-question-number">{current + 1}</span><h3>{question.text}</h3><div className="career-answer-buttons">{[['yes', 'Yes'], ['sometimes', 'Not sure'], ['no', 'No']].map(([value, label]) => <button key={value} className={`career-answer ${answers[question.id] === value ? 'selected' : ''}`} onClick={() => setAnswer(value)}>{label}</button>)}</div><div className="career-navigation"><button className="filter-button" disabled={current === 0} onClick={() => setWorkspaceData({ ...workspaceData, answers, currentQuestion: current - 1, complete: false })}>← Back</button><button className="view-button" disabled={!answered} onClick={next}>{current === questions.length - 1 ? 'See my next steps →' : 'Next question →'}</button></div></section>{complete && <section className="contextual-result"><div><span className="days-left">YOUR INDICATIVE RESULT</span><h3>{score >= 2 ? 'You have indicators worth checking.' : 'It is still worth checking each policy.'}</h3><p>{score >= 2 ? 'Your answers include factors that many universities may consider, but no result here confirms eligibility.' : 'Some universities use criteria that this short checker cannot assess, including postcode and school data.'}</p><ul><li>Answer contextual questions in UCAS accurately and completely.</li><li>Check each course and university’s policy before relying on a contextual offer.</li><li>Ask a teacher or adviser for help if you are unsure how to share circumstances.</li></ul></div><div className="contextual-policy-search"><label>Search a university’s current policy<input value={workspaceData.university || ''} onChange={(event) => setWorkspaceData({ ...workspaceData, university: event.target.value })} placeholder="e.g. University of Bristol" /></label><button className="view-button" disabled={policyLoading} onClick={searchPolicy}>{policyLoading ? 'Searching official guidance…' : 'Find official guidance →'}</button><a href={`https://www.google.com/search?q=${encodeURIComponent(`${workspaceData.university || 'UK university'} contextual admissions official`)}`} target="_blank" rel="noreferrer">Open a direct official-policy search ↗</a>{policy && <p>{policy}</p>}{policyError && <p className="contextual-error">{policyError}</p>}</div></section>}</div>
 }
 
 function ContextualSupportWorkspace({ workspaceData, setWorkspaceData }) {
