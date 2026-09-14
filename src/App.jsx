@@ -234,6 +234,7 @@ function App() {
 
   const [premiumModal, setPremiumModal] = useState(null)
   const [showPremiumWelcome, setShowPremiumWelcome] = useState(false)
+  const [checkoutLoading, setCheckoutLoading] = useState('')
   const [activePremiumWorkspace, setActivePremiumWorkspace] = useState(null)
   const [statementAnswers, setStatementAnswers] = useState(['', '', ''])
 
@@ -575,6 +576,7 @@ function App() {
     goTo('PremiumWorkspace')
   }
 
+
   const saveAiMessage = async (specialist, message) => {
     if (!user) return
     const { error } = await supabase.from('ai_chat_messages').insert({
@@ -709,6 +711,28 @@ function App() {
   const deactivateDemoPremium = () => {
     localStorage.removeItem('growthgrind_demo_premium')
     setIsPremium(false)
+  }
+
+  const startCheckout = async (plan) => {
+    if (!user) {
+      openAuth()
+      return
+    }
+    setCheckoutLoading(plan)
+    try {
+      const response = await fetch('/api/create-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan, userId: user.id }),
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'Checkout could not be opened.')
+      window.location.assign(result.url)
+    } catch (error) {
+      setAuthMessage(error.message || 'Checkout could not be opened.')
+    } finally {
+      setCheckoutLoading('')
+    }
   }
 
   const getMatchScore = (opportunity) => {
@@ -2217,13 +2241,12 @@ function App() {
                 </div>
 
                 <h3>
-                  First 30 students get their first month FREE.
+                  First 30 students get Premium for £2.99/month.
                 </h3>
 
                 <p>
-                  Join GrowthGrind early and claim your free first
-                  month of Premium before the founding-member places
-                  are gone.
+                  Join GrowthGrind early and lock in the founding-member
+                  monthly price before the first 30 places are gone.
                 </p>
 
                 <div
@@ -2450,6 +2473,24 @@ function App() {
                   </div>
                 </div>
 
+                <div style={{ display: 'grid', gap: '8px', marginTop: '15px' }}>
+                  {[
+                    ['founding', 'Founding Member — £2.99/month'],
+                    ['monthly', 'Monthly — £8.99/month'],
+                    ['annual', 'One Year — £89.99'],
+                    ['twoYear', 'Two Years — £169.99'],
+                  ].map(([plan, label]) => (
+                    <button
+                      key={plan}
+                      className="filter-button"
+                      disabled={Boolean(checkoutLoading) || isPremium}
+                      onClick={() => startCheckout(plan)}
+                    >
+                      {checkoutLoading === plan ? 'Opening secure checkout…' : label}
+                    </button>
+                  ))}
+                </div>
+
                 <button
                   className="view-button"
                   onClick={() =>
@@ -2486,7 +2527,7 @@ function App() {
                     }}
                   >
                     This lets you test the Premium experience
-                    before Stripe is connected.
+                    without a payment while Stripe is being finalised.
                   </p>
 
                   <button
