@@ -43,7 +43,7 @@ export default async function handler(request, response) {
     .join('\n\n')
 
   const prompt = `You are GrowthGrind AI, a supportive, concise assistant for UK school students. You are in the ${specialist} workspace. ${specialist}
-Keep responses practical and readable. Use plain text only: do not use Markdown symbols such as #, *, **, bullet syntax, or code fences. If useful, use short plain headings and simple numbered points. Always end every response with exactly one natural, helpful follow-up question that moves the student's work forward. Do not state unverified requirements as facts, guarantee outcomes, or replace qualified professional advice.
+Keep responses practical and readable. Use plain text only: do not use Markdown symbols such as #, *, **, bullet syntax, or code fences. If useful, use short plain headings and simple numbered points. When the student's latest message is a short reply such as “yes”, “no”, “sometimes”, “that sounds right”, or a number, treat it as an answer to your immediately preceding question in the conversation rather than as a standalone request. Always end every response with exactly one natural, helpful follow-up question that moves the student's work forward. Do not state unverified requirements as facts, guarantee outcomes, or replace qualified professional advice.
 
 Conversation so far:
 ${transcript}

@@ -177,6 +177,8 @@ function App() {
   const [saved, setSaved] = useState([])
   const [tracked, setTracked] = useState([])
   const [trackedActivities, setTrackedActivities] = useState({})
+  const [journeyExplanations, setJourneyExplanations] = useState({})
+  const [journeyExplanationLoading, setJourneyExplanationLoading] = useState('')
   const [session, setSession] = useState(null)
   const [authModal, setAuthModal] = useState(false)
   const [authMode, setAuthMode] = useState('signin')
@@ -509,6 +511,28 @@ function App() {
       .update({ reflection: trackedActivities[opportunityId].reflection })
       .eq('user_id', user.id)
       .eq('opportunity_id', opportunityId)
+  }
+
+  const explainJourneyConnection = async (opportunity, linkedActivities) => {
+    if (journeyExplanations[opportunity.id] || journeyExplanationLoading) return
+    setJourneyExplanationLoading(opportunity.id)
+    try {
+      const response = await fetch('/api/journey-connection', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          activity: linkedActivities[0] && { title: linkedActivities[0].title, category: linkedActivities[0].category, type: linkedActivities[0].activityType, subjects: linkedActivities[0].subjects },
+          nextOpportunity: { title: opportunity.title, category: opportunity.category, type: opportunity.activityType, subjects: opportunity.subjects },
+        }),
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'Could not explain this connection.')
+      setJourneyExplanations((current) => ({ ...current, [opportunity.id]: result.explanation }))
+    } catch (error) {
+      setJourneyExplanations((current) => ({ ...current, [opportunity.id]: 'This is a relevant next step because it develops a related interest or skill. Open both opportunities and consider what you could learn or explore next.' }))
+    } finally {
+      setJourneyExplanationLoading('')
+    }
   }
 
   const submitAuth = async (event) => {
@@ -2225,9 +2249,17 @@ function App() {
                               <span>{opportunity.format || 'Format not listed'}</span>
                               <span>{opportunity.deadline || 'Deadline not listed'}</span>
                             </div>
-                            <button className="view-button" onClick={() => setSelectedOpportunity(opportunity)}>
-                              See why it connects →
-                            </button>
+                            {!journeyExplanations[opportunity.id] ? <button className="view-button" disabled={journeyExplanationLoading === opportunity.id} onClick={() => explainJourneyConnection(opportunity, linkedActivities)}>
+                              {journeyExplanationLoading === opportunity.id ? 'Explaining the connection…' : 'See why it connects →'}
+                            </button> : <div className="journey-connection">
+                              <div className="journey-map">
+                                <div className="journey-map-node"><span>YOU TRACKED</span><strong>{linkedActivities[0]?.title}</strong></div>
+                                <div className="journey-map-arrow">↓<small>builds towards</small></div>
+                                <div className="journey-map-node next"><span>POSSIBLE NEXT STEP</span><strong>{opportunity.title}</strong></div>
+                              </div>
+                              <p><strong>Why this connects:</strong> {journeyExplanations[opportunity.id]}</p>
+                              <button className="filter-button" onClick={() => setSelectedOpportunity(opportunity)}>View opportunity →</button>
+                            </div>}
                           </article>
                         ))}
                       </div>
@@ -3780,7 +3812,7 @@ function PremiumWorkspacePage({
   return (
     <main>
       <section className="hero-section">
-        <div className="hero-content">
+        <div className={`hero-content${feature.id === 'career-quiz' ? ' premium-tool-wide' : ''}`}>
           <button className="filter-button" onClick={onBack}>← All Premium tools</button>
           <span className="eyebrow" style={{ display: 'block', marginTop: '24px' }}>{feature.stage}</span>
           <h1>{feature.title}</h1>
@@ -3942,8 +3974,9 @@ function CareerQuizWorkspace({ workspaceData, setWorkspaceData }) {
     ? rawAnswers.reduce((result, answer, index) => (answer === undefined ? result : { ...result, [questions[index]?.id]: answer }), {})
     : rawAnswers
   const scores = questions.reduce((result, question) => {
-    if (!answers[question.id]) return result
-    question.sectors.forEach((sector) => { result[sector] = (result[sector] || 0) + 1 })
+    const weight = answers[question.id] === true ? 1 : answers[question.id] === 'sometimes' ? 0.5 : 0
+    if (!weight) return result
+    question.sectors.forEach((sector) => { result[sector] = (result[sector] || 0) + weight })
     return result
   }, {})
   const jobs = {
@@ -3994,6 +4027,7 @@ function CareerQuizWorkspace({ workspaceData, setWorkspaceData }) {
         <p>Choose the answer that feels most true right now.</p>
         <div className="career-answer-buttons">
           <button className={`career-answer${answers[currentQuestion?.id] === true ? ' selected' : ''}`} onClick={() => setAnswer(true)}>Yes</button>
+          <button className={`career-answer${answers[currentQuestion?.id] === 'sometimes' ? ' selected' : ''}`} onClick={() => setAnswer('sometimes')}>Sometimes</button>
           <button className={`career-answer${answers[currentQuestion?.id] === false ? ' selected' : ''}`} onClick={() => setAnswer(false)}>No</button>
         </div>
         <div className="career-navigation"><button className="filter-button" disabled={currentStep === 0} onClick={() => setWorkspaceData({ ...workspaceData, answers, currentStep: currentStep - 1, careerQuizComplete: false })}>← Back</button><button className="view-button" disabled={!currentHasAnswer} onClick={moveNext}>{currentStep >= questionOrder.length - 1 ? 'See my direction →' : 'Next question →'}</button></div>
