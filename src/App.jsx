@@ -206,6 +206,9 @@ function App() {
   const [aiChatLoading, setAiChatLoading] = useState(false)
   const [aiChatError, setAiChatError] = useState('')
   const [aiAttachment, setAiAttachment] = useState(null)
+  const [studyMistakeBank, setStudyMistakeBank] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('growthgrind_study_mistakes') || '[]') } catch { return [] }
+  })
 
   const [showFilters, setShowFilters] = useState(false)
   const [sort, setSort] = useState('Most relevant')
@@ -272,6 +275,10 @@ function App() {
   useEffect(() => {
     localStorage.setItem('growthgrind_ai_chats', JSON.stringify(aiChats))
   }, [aiChats])
+
+  useEffect(() => {
+    localStorage.setItem('growthgrind_study_mistakes', JSON.stringify(studyMistakeBank))
+  }, [studyMistakeBank])
 
   useEffect(() => {
     localStorage.setItem('growthgrind_premium_workspace_data', JSON.stringify(premiumWorkspaceData))
@@ -615,6 +622,11 @@ function App() {
     }
     setActiveAiChat(specialist)
     goTo('Specialist')
+  }
+
+  const saveStudyMistake = (question, response) => {
+    const entry = { id: `${Date.now()}-${Math.random()}`, question: question.slice(0, 900), response: response.slice(0, 1400), savedAt: new Date().toISOString() }
+    setStudyMistakeBank((current) => [entry, ...current.filter((item) => item.question !== entry.question)].slice(0, 25))
   }
 
   const openPremiumWorkspace = (feature) => {
@@ -2283,6 +2295,7 @@ function App() {
           statementFeedbackLoading={statementFeedbackLoading}
           statementFeedbackError={statementFeedbackError}
           onReviewStatement={reviewStatementAnswers}
+          studyMistakeBank={studyMistakeBank}
           workspaceData={premiumWorkspaceData[activePremiumWorkspace.id] || {}}
           setWorkspaceData={(value) => setPremiumWorkspaceData((current) => ({ ...current, [activePremiumWorkspace.id]: value }))}
           onBack={() => goTo('Pricing')}
@@ -2790,8 +2803,8 @@ function App() {
       {/* PREMIUM FEATURE PAGES */}
       {(page === 'AI' || page === 'Specialist') && (
         <main>
-          <section className="hero-section" style={{ paddingTop: '36px' }}>
-            <div className="hero-content" style={{ maxWidth: '1120px' }}>
+          <section className={`hero-section${activeAiChat === 'study' ? ' study-ai-section' : ''}`} style={{ paddingTop: '36px' }}>
+            <div className="hero-content" style={{ maxWidth: activeAiChat === 'study' ? 'none' : '1120px' }}>
               <span className="eyebrow">GROWTHGRIND AI</span>
               <h1 style={{ fontSize: 'clamp(34px, 5vw, 58px)' }}>{page === 'Specialist' ? aiSpecialists.find((item) => item.id === activeAiChat)?.name : 'Your student'}<br />{page === 'Specialist' ? 'workspace.' : 'thinking partner.'}</h1>
               <p>{page === 'Specialist' ? 'A dedicated workspace that remembers this conversation and stays focused on one task.' : 'Choose a specialist chat, ask follow-up questions, and build on the conversation as you go.'}</p>
@@ -2872,8 +2885,14 @@ function App() {
                     ) : (
                       (aiChats[activeAiChat] || []).map((message, index) => (
                         <div key={`${message.role}-${index}`} style={{ display: 'flex', justifyContent: message.role === 'user' ? 'flex-end' : 'flex-start', marginBottom: '14px' }}>
-                          <div style={{ maxWidth: '82%', whiteSpace: 'pre-wrap', padding: '13px 15px', borderRadius: '13px', lineHeight: 1.55, background: message.role === 'user' ? '#315b3d' : '#e9dfcf', color: message.role === 'user' ? '#fff' : '#294b35' }}>
-                            <MathText text={message.content} />
+                          <div style={{ maxWidth: '82%' }}>
+                            <div style={{ whiteSpace: 'pre-wrap', padding: '13px 15px', borderRadius: '13px', lineHeight: 1.55, background: message.role === 'user' ? '#315b3d' : '#e9dfcf', color: message.role === 'user' ? '#fff' : '#294b35' }}>
+                              <MathText text={message.content} />
+                            </div>
+                            {activeAiChat === 'study' && message.role === 'assistant' && <button className="save-mistake-button" onClick={() => {
+                              const priorQuestion = (aiChats.study || []).slice(0, index).reverse().find((item) => item.role === 'user')?.content || 'Study question'
+                              saveStudyMistake(priorQuestion, message.content)
+                            }}>＋ Save to mistake bank</button>}
                           </div>
                         </div>
                       ))
@@ -3794,6 +3813,7 @@ function PremiumWorkspacePage({
   statementFeedbackLoading,
   statementFeedbackError,
   onReviewStatement,
+  studyMistakeBank,
   workspaceData,
   setWorkspaceData,
   onBack,
@@ -3893,7 +3913,7 @@ function PremiumWorkspacePage({
           ) : feature.id === 'tariff' ? (
             <TariffWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} onOpenAi={onOpenAi} />
           ) : feature.id === 'study' ? (
-            <StudyWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} onOpenAi={onOpenAi} />
+            <StudyWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} onOpenAi={onOpenAi} mistakeBank={studyMistakeBank} />
           ) : feature.id === 'career-quiz' ? (
             <CareerQuizWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} />
           ) : (
@@ -3931,7 +3951,7 @@ function TariffWorkspace({ workspaceData, setWorkspaceData, onOpenAi }) {
   )
 }
 
-function StudyWorkspace({ workspaceData, setWorkspaceData, onOpenAi }) {
+function StudyWorkspace({ workspaceData, setWorkspaceData, onOpenAi, mistakeBank = [] }) {
   const mistake = workspaceData.mistake || ''
   return (
     <div className="premium-studio study-studio">
@@ -3946,7 +3966,8 @@ function StudyWorkspace({ workspaceData, setWorkspaceData, onOpenAi }) {
         <div className="days-left">MISTAKE BANK</div>
         <h3>Save an error to revisit</h3>
         <textarea value={mistake} onChange={(event) => setWorkspaceData({ ...workspaceData, mistake: event.target.value })} placeholder="Example: A-level Maths — integration — I forgot to adjust the limits after substitution. What will I do differently?" style={{ width: '100%', minHeight: '140px', boxSizing: 'border-box', padding: '12px', borderRadius: '9px', border: '1px solid #d0c4b0', background: '#f5efe5', color: '#315b3d', font: 'inherit' }} />
-        <p style={{ fontSize: '12px' }}>This is saved on this device. The next build will turn each saved item into a searchable question library and weakness profile.</p>
+        <p style={{ fontSize: '12px' }}>Saved on this device. Use the button beneath any GrowthGrind Study reply to add a question and its guidance here.</p>
+        {mistakeBank.length > 0 && <div className="saved-mistakes"><strong>{mistakeBank.length} saved question{mistakeBank.length === 1 ? '' : 's'}</strong>{mistakeBank.slice(0, 3).map((entry) => <div key={entry.id}><span>{entry.question}</span></div>)}</div>}
       </section>
     </div>
   )
