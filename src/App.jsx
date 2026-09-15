@@ -211,7 +211,9 @@ function App() {
   const [courseGradeProfile, setCourseGradeProfile] = useState('')
   const [courseProfileGrades, setCourseProfileGrades] = useState([])
   const [coursePlanning, setCoursePlanning] = useState(false)
-  const [courseShortlist, setCourseShortlist] = useState({})
+  const [courseShortlist, setCourseShortlist] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('growthgrind_course_shortlist') || '{}') } catch { return {} }
+  })
   const [courseResults, setCourseResults] = useState([])
   const [courseLoading, setCourseLoading] = useState(false)
   const [courseError, setCourseError] = useState('')
@@ -278,6 +280,8 @@ function App() {
   const [foundingMembersClaimed, setFoundingMembersClaimed] = useState(0)
 
   const user = session?.user || null
+  const shortlistEntries = Object.values(courseShortlist)
+  const shortlistCounts = Object.fromEntries(['Safety', 'Target', 'Dream'].map((level) => [level, shortlistEntries.filter((item) => item.level === level).length]))
 
   useEffect(() => {
     const loadPremiumStatus = async () => {
@@ -312,6 +316,10 @@ function App() {
   useEffect(() => {
     localStorage.setItem('growthgrind_premium_workspace_data', JSON.stringify(premiumWorkspaceData))
   }, [premiumWorkspaceData])
+
+  useEffect(() => {
+    localStorage.setItem('growthgrind_course_shortlist', JSON.stringify(courseShortlist))
+  }, [courseShortlist])
 
   useEffect(() => {
     if (!user) return
@@ -649,6 +657,17 @@ function App() {
     setCoursePlanning(false)
     setCourseProfileGrades(aLevels.map((entry) => entry.grade))
     goTo('CourseFinder')
+  }
+
+  const addCourseToShortlist = (course, level) => {
+    setCourseShortlist((current) => {
+      const alreadyShortlisted = Boolean(current[course.id])
+      if (!alreadyShortlisted && Object.keys(current).length >= 5) return current
+      return {
+        ...current,
+        [course.id]: { id: course.id, title: course.course_title, provider: course.provider_name, level },
+      }
+    })
   }
 
   const runPremiumTool = async (event, tool) => {
@@ -3057,9 +3076,9 @@ function App() {
           {courseSearched && !courseLoading && <section className="course-results-section">
             <div className="course-results-header"><strong>{courseResults.length ? `${courseResults.length}${courseResults.length === 60 ? '+' : ''} courses found` : 'No matching courses found'}</strong><span>Source: public HESA Discover Uni catalogue</span></div>
             <div className="course-data-notice"><strong>Requirements and historic grade data</strong><span>are shown on the current university and UCAS course pages. UCAS does not provide its course-level acceptance and matching-grade dataset for reuse in this public catalogue, so GrowthGrind will never invent those figures.</span><a href="https://www.ucas.com/applying/before-you-apply/what-and-where-to-study/entry-requirements/understanding-historical-entry" target="_blank" rel="noreferrer">How UCAS historical grades work ↗</a></div>
-            <div className="course-planner-bar"><div><strong>Build a five-choice shortlist</strong><span>Mark courses after checking their current published requirements.</span></div><button className="view-button" onClick={() => setCoursePlanning((current) => !current)}>{coursePlanning ? 'Hide shortlist' : 'Organise safety / target / dream →'}</button></div>
-            {coursePlanning && <div className="course-shortlist-grid">{['Safety', 'Target', 'Dream'].map((level) => <section key={level}><span>{level.toUpperCase()}</span>{Object.values(courseShortlist).filter((item) => item.level === level).length ? Object.values(courseShortlist).filter((item) => item.level === level).map((item) => <div key={item.id}>{item.title}<small>{item.provider}</small></div>) : <p>No courses marked yet.</p>}</section>)}</div>}
-            {courseResults.map((course) => <CourseResultCard key={course.id} course={course} profileGrades={courseProfileGrades} planning={coursePlanning} shortlist={courseShortlist} setShortlist={setCourseShortlist} />)}
+            <div className="course-planner-bar"><div><strong>Build a five-choice shortlist <em>{shortlistEntries.length}/5 selected</em></strong><span>{shortlistEntries.length ? `${shortlistCounts.Safety} safety · ${shortlistCounts.Target} target · ${shortlistCounts.Dream} dream` : 'Mark courses after checking their current published requirements.'}</span></div><button className="view-button" onClick={() => setCoursePlanning((current) => !current)}>{coursePlanning ? 'Hide shortlist' : 'Organise safety / target / dream →'}</button></div>
+            {coursePlanning && <><p className="course-shortlist-guidance">A balanced list often includes a mix of realistic and ambitious choices. GrowthGrind’s labels are planning aids, not admission predictions — check each current official requirement.</p><div className="course-shortlist-grid">{['Safety', 'Target', 'Dream'].map((level) => <section key={level}><span>{level.toUpperCase()} · {shortlistCounts[level]}</span>{shortlistEntries.filter((item) => item.level === level).length ? shortlistEntries.filter((item) => item.level === level).map((item) => <div key={item.id}>{item.title}<small>{item.provider}</small><button type="button" onClick={() => setCourseShortlist((current) => Object.fromEntries(Object.entries(current).filter(([id]) => id !== item.id)))}>Remove</button></div>) : <p>No courses marked yet.</p>}</section>)}</div></>}
+            {courseResults.map((course) => <CourseResultCard key={course.id} course={course} profileGrades={courseProfileGrades} planning={coursePlanning} shortlist={courseShortlist} shortlistFull={shortlistEntries.length >= 5} onShortlist={addCourseToShortlist} onRemoveShortlist={(id) => setCourseShortlist((current) => Object.fromEntries(Object.entries(current).filter(([entryId]) => entryId !== id)))} />)}
             {!courseResults.length && <p>Try a broader course title, a subject such as “Economics”, or remove a filter.</p>}
           </section>}
         </PremiumToolPage>
@@ -3767,7 +3786,7 @@ function AuthModal({
   )
 }
 
-function CourseResultCard({ course, profileGrades, planning, shortlist, setShortlist }) {
+function CourseResultCard({ course, profileGrades, planning, shortlist, shortlistFull, onShortlist, onRemoveShortlist }) {
   const [requirements, setRequirements] = useState(null)
   const [loading, setLoading] = useState(false)
 
@@ -3796,7 +3815,7 @@ function CourseResultCard({ course, profileGrades, planning, shortlist, setShort
       <div className="course-admissions-row"><span><b>Entry requirements</b> {requirements?.text || 'Load from official course page'}</span><span><b>Historic acceptance / grade match</b> Check UCAS</span></div>
       {!requirements && <button className="course-requirements-button" onClick={loadRequirements} disabled={loading}>{loading ? 'Checking live requirements…' : 'Show entry requirements'}</button>}
       {requirements?.error && <p className="course-requirements-error">{requirements.error} Use the official link to check directly.</p>}
-      {planning && <div className="course-choice-actions">{['Safety', 'Target', 'Dream'].map((level) => <button className={shortlist[course.id]?.level === level ? 'selected' : ''} key={level} onClick={() => setShortlist((current) => ({ ...current, [course.id]: { id: course.id, title: course.course_title, provider: course.provider_name, level } }))}>{level}</button>)}</div>}
+      {planning && <div className="course-choice-actions">{['Safety', 'Target', 'Dream'].map((level) => <button disabled={shortlistFull && !shortlist[course.id]} className={shortlist[course.id]?.level === level ? 'selected' : ''} key={level} onClick={() => onShortlist(course, level)}>{level}</button>)}{shortlist[course.id] && <button className="remove-choice" onClick={() => onRemoveShortlist(course.id)}>Remove</button>}</div>}
     </div>
     <div className="course-card-links"><div className="course-grade-panel"><span>GRADE-BASED SUGGESTION</span>{requirements?.suggestion ? <><strong className={requirements.suggestion.toLowerCase().replace(' ', '-')}>Suggested: {requirements.suggestion}</strong><p>{requirements.reason}</p></> : <p>{profileGrades.length === 3 ? 'Check live official requirements to receive a suggested Safety, Target or Dream category.' : 'Add three predicted A-level grades in the Tariff Calculator first.'}</p>}</div><a className="view-button" href={course.course_url} target="_blank" rel="noreferrer">Official requirements ↗</a><a className="filter-button" href={`https://www.ucas.com/explore/search/courses?query=${encodeURIComponent(`${course.course_title} ${course.provider_name}`)}`} target="_blank" rel="noreferrer">UCAS historic data ↗</a></div>
   </article>
