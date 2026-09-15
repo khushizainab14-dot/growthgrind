@@ -3107,8 +3107,9 @@ function App() {
         >
           <PremiumAiTool
             tool="statement"
+            variant="statement-plan"
             title="Reflect on your experiences"
-            description="GrowthGrind helps you find your own evidence and ideas; it will not write a statement for you."
+            description="Build a clear planning direction before drafting. GrowthGrind helps you find your own evidence and ideas; it will not write a statement for you."
             fields={[
               ['Course interests', 'What you may want to study and why'],
               ['Experiences to reflect on', 'Activities, books, projects, work experience, volunteering or competitions'],
@@ -3120,6 +3121,7 @@ function App() {
             error={aiError.statement}
             onChange={(field, value) => updateAiDetail('statement', field, value)}
             onSubmit={(event) => runPremiumTool(event, 'statement')}
+            onOpenBuilder={() => { setActivePremiumWorkspace(premiumRoadmap.find((feature) => feature.id === 'statement-builder')); goTo('PremiumWorkspace') }}
           />
         </PremiumToolPage>
       )}
@@ -3841,6 +3843,7 @@ function PremiumAiTool({
   error,
   onChange,
   onSubmit,
+  onOpenBuilder,
 }) {
   return (
     <>
@@ -3893,6 +3896,18 @@ function PremiumAiTool({
             <h3>{result.nextAction || 'Choose one action to complete this week.'}</h3>
             {(result.questionsToConsider || []).length > 0 && <><h3 style={{ marginTop: '22px' }}>Questions to consider</h3><ul style={{ paddingLeft: '20px', lineHeight: '1.65' }}>{result.questionsToConsider.map((question) => <li key={question}>{question}</li>)}</ul></>}
           </div>
+        </div> : variant === 'statement-plan' ? <div className="statement-plan-result">
+          <div className="closing-card">
+            <div className="days-left">YOUR PLANNING DIRECTION</div>
+            <h3>{title}</h3>
+            <p>{result.summary}</p>
+          </div>
+          <div className="closing-grid" style={{ marginTop: '18px' }}>
+            <div className="closing-card"><div className="days-left">STRONGEST THEMES</div><h3>What your statement could show</h3><ul style={{ paddingLeft: '20px', lineHeight: '1.65' }}>{(result.themes || []).map((item) => <li key={item}>{item}</li>)}</ul></div>
+            <div className="closing-card"><div className="days-left">DEVELOP THE EVIDENCE</div><h3>What to explore further</h3><ul style={{ paddingLeft: '20px', lineHeight: '1.65' }}>{(result.evidenceToDevelop || []).map((item) => <li key={item}>{item}</li>)}</ul></div>
+            <div className="closing-card"><div className="days-left">REFLECT, DON'T LIST</div><h3>Questions to answer in your own words</h3><ul style={{ paddingLeft: '20px', lineHeight: '1.65' }}>{(result.reflectionPrompts || []).map((item) => <li key={item}>{item}</li>)}</ul></div>
+          </div>
+          <div className="closing-card" style={{ marginTop: '18px', borderLeft: '5px solid #315b3d' }}><div className="days-left">FIRST NEXT STEP</div><h3>{result.nextAction || 'Choose one experience and write down what it changed in your thinking.'}</h3><p>When you have your direction, use the Interactive Personal Statement Builder to draft the three UCAS responses side by side.</p>{onOpenBuilder && <button className="view-button" onClick={onOpenBuilder}>Open the Interactive Builder →</button>}</div>
         </div> : <div>
           <div className="closing-card">
             <div className="days-left">PERSONALISED STARTING POINT</div>
