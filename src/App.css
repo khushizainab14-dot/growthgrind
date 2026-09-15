@@ -102,6 +102,36 @@ button {
   font-size: 11px;
 }
 
+.premium-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.premium-summary-list {
+  display: grid;
+  gap: 10px;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.premium-summary-list li {
+  position: relative;
+  padding-left: 20px;
+  color: #4e594f;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.premium-summary-list li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: #315b3d;
+  font-weight: 850;
+}
+
 .sign-out {
   border: 1px solid #cfc2ad;
   background: transparent;
@@ -645,6 +675,10 @@ footer p {
 
   .closing-grid,
   .opportunity-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .premium-summary-grid {
     grid-template-columns: 1fr;
   }
 

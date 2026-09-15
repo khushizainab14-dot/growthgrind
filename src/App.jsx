@@ -102,6 +102,21 @@ const premiumRoadmap = [
   { id: 'study', stage: 'GROWTHGRIND STUDY', title: 'GrowthGrind Study — AI exam tutor', description: 'Scan questions, get Socratic help, save mistakes and build a weakness profile.' },
 ]
 
+const premiumFeatureGroups = [
+  {
+    label: 'PLAN & EXPLORE',
+    features: ['GrowthGrind AI', 'AI Admissions Advisor', 'University & Course Finder', 'Career Quiz', 'Tariff & Grade Calculator', 'Contextual Support Finder', 'International Qualification Guide'],
+  },
+  {
+    label: 'BUILD YOUR APPLICATION',
+    features: ['Personal Statement Guidance', 'Interactive Personal Statement Builder', 'Multi-course Statement Analyser', 'AI Research Project Builder', 'Admissions Test Support', 'Admissions Test Planner', 'Interview Practice Hub', 'Creative Portfolio Hub'],
+  },
+  {
+    label: 'MAKE SMARTER CHOICES',
+    features: ['Super & Extra-Curricular Tracker', 'GrowthGrind Study & Mistake Bank', 'Extenuating Circumstances Guide', 'Choice Balance Dashboard', 'Firm & Insurance Planner', 'Clearing & Extra Planner', 'Smart Deadline Timeline', 'Application Progress Tracker'],
+  },
+]
+
 function App() {
     const [opportunities, setOpportunities] = useState([])
 
@@ -2693,6 +2708,29 @@ function App() {
                 </div>
               </div>
 
+            </div>
+          </section>
+
+          <section className="opportunities-section" style={{ paddingTop: 0 }}>
+            <div className="section-heading">
+              <div>
+                <span className="eyebrow">EVERYTHING INCLUDED</span>
+                <h2>23 Premium features. One application system.</h2>
+                <p>Pricing stays simple. Your dedicated Premium page is where you open and use each workspace.</p>
+              </div>
+              <button className="filter-button" onClick={() => goTo('Premium')}>
+                Explore Premium tools →
+              </button>
+            </div>
+            <div className="premium-summary-grid">
+              {premiumFeatureGroups.map((group) => (
+                <div className="closing-card" key={group.label} style={{ boxShadow: 'none' }}>
+                  <div className="days-left">{group.label}</div>
+                  <ul className="premium-summary-list">
+                    {group.features.map((feature) => <li key={feature}>{feature}</li>)}
+                  </ul>
+                </div>
+              ))}
             </div>
           </section>
 
