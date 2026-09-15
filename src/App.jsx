@@ -230,6 +230,7 @@ function App() {
   const [aiChatLoading, setAiChatLoading] = useState(false)
   const [aiChatError, setAiChatError] = useState('')
   const [aiAttachment, setAiAttachment] = useState(null)
+  const [aiGoal, setAiGoal] = useState(() => localStorage.getItem('growthgrind_ai_goal') || 'Explore my next best step')
   const [studyMistakeBank, setStudyMistakeBank] = useState(() => {
     try { return JSON.parse(localStorage.getItem('growthgrind_study_mistakes') || '[]') } catch { return [] }
   })
@@ -299,6 +300,10 @@ function App() {
   useEffect(() => {
     localStorage.setItem('growthgrind_ai_chats', JSON.stringify(aiChats))
   }, [aiChats])
+
+  useEffect(() => {
+    localStorage.setItem('growthgrind_ai_goal', aiGoal)
+  }, [aiGoal])
 
   useEffect(() => {
     localStorage.setItem('growthgrind_study_mistakes', JSON.stringify(studyMistakeBank))
@@ -770,6 +775,35 @@ function App() {
     reader.readAsDataURL(file)
   })
 
+  const getAiStudentContext = () => {
+    const opportunityById = new Map(opportunities.map((opportunity) => [opportunity.id, opportunity]))
+    const compactOpportunity = (id) => {
+      const opportunity = opportunityById.get(id)
+      if (!opportunity) return null
+      return {
+        title: opportunity.title,
+        category: opportunity.category,
+        activity: opportunity.activityType,
+        subjects: (opportunity.subjects || []).slice(0, 4),
+      }
+    }
+
+    return {
+      goal: aiGoal,
+      matchPreferences: {
+        yearGroups: matchYearGroups.slice(0, 4),
+        activities: matchActivityTypes.slice(0, 6),
+        subjects: matchSubjects.slice(0, 6),
+        locations: matchLocations.slice(0, 4),
+      },
+      savedOpportunities: saved.map(compactOpportunity).filter(Boolean).slice(0, 6),
+      trackedActivities: tracked.map((id) => {
+        const activity = compactOpportunity(id)
+        return activity ? { ...activity, status: applicationStatus[id] || 'Tracking', hasReflection: Boolean(trackedActivities[id]?.reflection?.trim()) } : null
+      }).filter(Boolean).slice(0, 8),
+    }
+  }
+
   const sendAiChat = async (event) => {
     event.preventDefault()
     const message = aiChatInput.trim()
@@ -793,7 +827,7 @@ function App() {
       const response = await fetch('/api/ai-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ specialist: chatId, messages: currentMessages, message: message || 'Please analyse this attachment.', attachment, stream: true }),
+        body: JSON.stringify({ specialist: chatId, messages: currentMessages, message: message || 'Please analyse this attachment.', attachment, studentContext: getAiStudentContext(), stream: true }),
       })
       if (!response.ok) {
         const result = await response.json()
@@ -2854,7 +2888,20 @@ function App() {
                 <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                   <div style={{ padding: '20px 24px', borderBottom: '1px solid #d0c4b0' }}>
                     <div className="days-left">SPECIALIST CHAT</div>
-                    <h3 style={{ margin: '8px 0 0' }}>{aiSpecialists.find((item) => item.id === activeAiChat)?.name}</h3>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', alignItems: 'end', flexWrap: 'wrap' }}>
+                      <h3 style={{ margin: '8px 0 0' }}>{aiSpecialists.find((item) => item.id === activeAiChat)?.name}</h3>
+                      <label style={{ display: 'grid', gap: '4px', minWidth: '230px', color: '#777065', fontSize: '10px', fontWeight: '700', letterSpacing: '0.08em' }}>
+                        CURRENT GOAL
+                        <select value={aiGoal} onChange={(event) => setAiGoal(event.target.value)} style={{ padding: '8px 10px', border: '1px solid #d0c4b0', borderRadius: '8px', color: '#294b35', background: '#fffaf2', font: 'inherit', letterSpacing: 0 }}>
+                          <option>Explore my next best step</option>
+                          <option>Find opportunities that build my application</option>
+                          <option>Plan my university application</option>
+                          <option>Develop my academic interests</option>
+                          <option>Prepare for a course or admissions test</option>
+                        </select>
+                      </label>
+                    </div>
+                    <p style={{ margin: '10px 0 0', color: '#777065', fontSize: '12px' }}>Personalised using your match preferences and saved or tracked opportunities. Your private reflections are not sent automatically.</p>
                   </div>
                   <div style={{ flex: 1, padding: '24px', overflowY: 'auto', maxHeight: '440px' }}>
                     {(aiChats[activeAiChat] || []).length === 0 ? (
