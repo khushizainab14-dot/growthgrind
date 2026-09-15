@@ -660,7 +660,7 @@ function App() {
 
   const openGradeCourseFinder = (entries) => {
     const aLevels = entries.filter((entry) => entry.qualification === 'A level' && entry.grade).slice(0, 3)
-    setCourseGradeProfile(aLevels.length ? `Predicted A-level profile: ${aLevels.map((entry) => entry.grade).join(' ')}` : 'Add your predicted grades to personalise this search.')
+    setCourseGradeProfile(aLevels.length ? `Predicted A-level profile: ${aLevels.map((entry) => `${entry.subject?.trim() ? `${entry.subject.trim()} ` : ''}${entry.grade}`).join(', ')}` : 'Add your predicted grades to personalise this search.')
     setCoursePlanning(false)
     setCourseProfileGrades(aLevels.map((entry) => entry.grade))
     goTo('CourseFinder')
@@ -4115,10 +4115,12 @@ function TariffWorkspace({ workspaceData, setWorkspaceData, onOpenCourseFinder, 
   const grades = ['A*', 'A', 'B', 'C', 'D', 'E']
   const points = { 'A level': { 'A*': 56, A: 48, B: 40, C: 32, D: 24, E: 16 }, EPQ: { 'A*': 28, A: 24, B: 20, C: 16, D: 12, E: 8 } }
   const rawEntries = workspaceData.grades || ['', '', '']
-  const entries = rawEntries.map((entry) => typeof entry === 'string' ? { qualification: 'A level', grade: entry } : entry)
+  const entries = rawEntries.map((entry) => typeof entry === 'string' ? { qualification: 'A level', grade: entry, subject: '' } : { subject: '', ...entry })
   const aLevelEntries = entries.filter((entry) => entry.qualification === 'A level')
   const standardAlevelPoints = aLevelEntries.slice(0, 3).reduce((sum, entry) => sum + (points['A level'][entry.grade] || 0), 0)
   const enteredTariff = entries.reduce((sum, entry) => sum + (points[entry.qualification]?.[entry.grade] || 0), 0)
+  const namedAlevels = aLevelEntries.filter((entry) => entry.subject?.trim())
+  const completeAlevels = aLevelEntries.filter((entry) => entry.grade)
   const updateEntry = (index, field, value) => setWorkspaceData({ ...workspaceData, grades: entries.map((entry, entryIndex) => entryIndex === index ? { ...entry, [field]: value } : entry) })
   const addEntry = (qualification) => setWorkspaceData({ ...workspaceData, grades: [...entries, { qualification, grade: '' }] })
   return (
@@ -4126,10 +4128,11 @@ function TariffWorkspace({ workspaceData, setWorkspaceData, onOpenCourseFinder, 
       <section className="tariff-form-panel">
         <div className="days-left">A-LEVEL SCENARIO</div>
         <h2>Model your predicted grades</h2>
-        <p>Add the qualifications you are taking to see an indicative UCAS Tariff total. Universities can set subject-specific requirements and do not have to use Tariff points.</p>
-        <div className="tariff-entry-list">{entries.map((entry, index) => <div className="tariff-entry" key={index}><label><span>Qualification</span><select value={entry.qualification} onChange={(event) => updateEntry(index, 'qualification', event.target.value)}><option>A level</option><option>EPQ</option></select></label><label><span>{entry.qualification} grade</span><select value={entry.grade} onChange={(event) => updateEntry(index, 'grade', event.target.value)}><option value="">Choose grade</option>{grades.map((item) => <option key={item}>{item}</option>)}</select></label>{entries.length > 3 && <button className="tariff-remove" onClick={() => setWorkspaceData({ ...workspaceData, grades: entries.filter((_, entryIndex) => entryIndex !== index) })}>Remove</button>}</div>)}</div>
+        <p>Add your predicted qualifications to see an indicative UCAS Tariff total and a subject-aware profile for your course search. Universities can set subject-specific requirements and do not have to use Tariff points.</p>
+        <div className="tariff-entry-list">{entries.map((entry, index) => <div className="tariff-entry" key={index}><label><span>Qualification</span><select value={entry.qualification} onChange={(event) => updateEntry(index, 'qualification', event.target.value)}><option>A level</option><option>EPQ</option></select></label><label><span>{entry.qualification === 'EPQ' ? 'EPQ topic (optional)' : 'A-level subject'}</span><input value={entry.subject} onChange={(event) => updateEntry(index, 'subject', event.target.value)} placeholder={entry.qualification === 'EPQ' ? 'e.g. Prison economics' : 'e.g. Mathematics'} /></label><label><span>{entry.qualification} grade</span><select value={entry.grade} onChange={(event) => updateEntry(index, 'grade', event.target.value)}><option value="">Choose grade</option>{grades.map((item) => <option key={item}>{item}</option>)}</select></label>{entries.length > 3 && <button className="tariff-remove" onClick={() => setWorkspaceData({ ...workspaceData, grades: entries.filter((_, entryIndex) => entryIndex !== index) })}>Remove</button>}</div>)}</div>
         <div className="tariff-add-actions"><button className="filter-button" onClick={() => addEntry('A level')}>＋ Add A-level</button><button className="filter-button" onClick={() => addEntry('EPQ')}>＋ Add EPQ</button></div>
         {aLevelEntries.length > 3 && <p className="tariff-warning">You have added more than three A-levels. Many standard offers are based on three A-levels and may not count extra A-levels, so check each course’s published requirements.</p>}
+        <div className="tariff-profile-check"><strong>Application profile check</strong><span>{completeAlevels.length < 3 ? `Add ${3 - completeAlevels.length} more predicted A-level grade${3 - completeAlevels.length === 1 ? '' : 's'} to compare a standard three-grade profile.` : namedAlevels.length < Math.min(3, completeAlevels.length) ? 'Add your A-level subject names too — courses can require specific subjects, not just grades.' : `Ready to search with ${completeAlevels.slice(0, 3).map((entry) => `${entry.subject || 'Subject'} ${entry.grade}`).join(', ')}.`}</span></div>
       </section>
       <aside className="tariff-result-panel">
         <span>YOUR INDICATIVE TOTAL</span>
@@ -4140,6 +4143,7 @@ function TariffWorkspace({ workspaceData, setWorkspaceData, onOpenCourseFinder, 
         <ul><li>Check whether the university uses Tariff points.</li><li>Check required subjects and individual grades.</li><li>Record contextual and admissions-test requirements.</li></ul>
         <button className="view-button" onClick={() => onOpenCourseFinder(entries)}>Find matching courses →</button>
         <button className="tariff-international-button" onClick={onOpenInternational}>Applying with international qualifications? →</button>
+        <a className="tariff-other-qualifications" href="https://www.ucas.com/undergraduate/applying-university/entry-requirements/calculate-your-ucas-tariff-points" target="_blank" rel="noreferrer">Using BTEC, IB, Scottish or another qualification? Check the official UCAS calculator ↗</a>
       </aside>
     </div>
   )

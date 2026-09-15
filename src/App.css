@@ -794,12 +794,15 @@ footer p {
 .tariff-result-panel ul { padding-left: 18px; line-height: 1.55; color: #e2eee0; font-size: 13px; }
 .tariff-result-panel .view-button { background: #f3d983; color: #294b35; }
 .tariff-entry-list { display: grid; gap: 10px; margin-top: 22px; }
-.tariff-entry { display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; align-items: end; padding: 12px; border: 1px solid #ddd1bf; border-radius: 11px; background: #fffdf8; }
+.tariff-entry { display: grid; grid-template-columns: 1fr 1.25fr 1fr auto; gap: 10px; align-items: end; padding: 12px; border: 1px solid #ddd1bf; border-radius: 11px; background: #fffdf8; }
 .tariff-entry label { display: grid; gap: 6px; color: #45634c; font-size: 11px; font-weight: 750; }
-.tariff-entry select { width: 100%; padding: 11px; border: 1px solid #cfc3b0; border-radius: 8px; background: #f6efe4; color: #294b35; font: inherit; }
+.tariff-entry select, .tariff-entry input { width: 100%; box-sizing: border-box; padding: 11px; border: 1px solid #cfc3b0; border-radius: 8px; background: #f6efe4; color: #294b35; font: inherit; }
 .tariff-remove { border: 0; background: transparent; color: #9d3c2e; padding: 10px 4px; font: inherit; font-size: 12px; font-weight: 750; }
 .tariff-add-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 13px; }
 .tariff-warning { margin: 15px 0 0; padding: 11px; border-radius: 9px; background: #fff0d1; color: #79530a; font-size: 12px; }
+.tariff-profile-check { display: grid; gap: 5px; margin-top: 14px; padding: 12px; border-radius: 10px; background: #edf4ea; color: #315b3d; font-size: 12px; line-height: 1.45; }
+.tariff-profile-check span { color: #58715b; }
+.tariff-other-qualifications { display: block; margin-top: 14px; color: #dcecd8; font-size: 12px; font-weight: 700; line-height: 1.45; }
 .tariff-standard-total { margin: 17px 0 0; padding: 10px; border-radius: 9px; background: rgba(255,255,255,.13); color: #f0f6ed; font-size: 13px; }
 .tariff-standard-total strong { font-size: inherit; letter-spacing: normal; }
 .tariff-international-button { width: 100%; margin-top: 12px; padding: 11px; border: 1px solid #82a281; border-radius: 9px; background: transparent; color: #edf5e9; font: inherit; font-size: 12px; font-weight: 750; }
