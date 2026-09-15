@@ -47,17 +47,22 @@ export default async function handler(request, response) {
 
   const admissionsAudit = request.body?.tool === 'admissions'
   const statementPlan = request.body?.tool === 'statement'
+  const researchPlan = request.body?.tool === 'research'
   const prompt = `You are GrowthGrind's ${tool.title} assistant for UK school students. ${tool.instruction}
 Return valid JSON only:
 ${admissionsAudit
   ? '{"summary":"","strengths":[""],"develop":[""],"urgentChecks":[""],"nextAction":"","questionsToConsider":[""]}'
   : statementPlan
     ? '{"summary":"","themes":[""],"evidenceToDevelop":[""],"reflectionPrompts":[""],"nextAction":""}'
+    : researchPlan
+      ? '{"summary":"","researchQuestion":"","scope":[""],"method":[""],"sourcePlan":[""],"milestones":[""],"nextAction":""}'
   : '{"summary":"","sections":[{"title":"","points":[""]}],"nextSteps":[""],"questionsToConsider":[""]}'}
 ${admissionsAudit
   ? 'Include 2 or 3 concise points in each list. Strengths must be grounded in the student information, not generic praise. Urgent checks must be official things to verify. Make nextAction one specific task the student can complete this week.'
   : statementPlan
     ? 'Include 2 or 3 concise themes, evidence gaps and reflection prompts. Do not write or rewrite application prose. Make nextAction one concrete planning task the student can do in their own words.'
+    : researchPlan
+      ? 'Include one focused, feasible researchQuestion. Give 2 or 3 concise items each for scope, method, sourcePlan and milestones. Suggest source types and search terms, never fabricated citations. Make nextAction one concrete first task.'
   : 'Include 3 sections, each with 2 or 3 concise points, and 3 nextSteps.'} Be clear, supportive and honest about uncertainty.
 Student information: ${JSON.stringify(details)}`
 

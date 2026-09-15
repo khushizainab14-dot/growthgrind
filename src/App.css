@@ -883,6 +883,7 @@ footer p {
 .career-fit-reason { min-height: 58px; padding: 10px; border-radius: 8px; background: #eef4ea; }
 .career-next-test { padding-top: 12px; border-top: 1px solid #dce5d9; }
 .career-no-match { margin-top: 14px; padding: 20px; border: 1px solid #c5d1c2; border-radius: 13px; background: #fffdf8; }
+.research-question { display: grid; gap: 6px; margin-top: 18px; padding: 13px; border-radius: 9px; background: #edf4ea; color: #294b35; }.research-question span { color: #58715b; font-size: 10px; font-weight: 800; letter-spacing: .8px; }.research-question strong { line-height: 1.45; }
 .planner-studio { display: grid; grid-template-columns: minmax(0, 1.23fr) minmax(300px, .77fr); background: #fffaf2; }
 .planner-main-panel { padding: 34px; }
 .planner-main-panel > p { margin-bottom: 20px; max-width: 650px; }

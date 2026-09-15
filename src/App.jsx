@@ -3193,8 +3193,9 @@ function App() {
         >
           <PremiumAiTool
             tool="research"
+            variant="research-plan"
             title="Develop your project idea"
-            description="Turn a curiosity into a focused, manageable independent project—without inventing sources or writing it for you."
+            description="Turn a curiosity into a focused question, method, reading plan and realistic milestones—without inventing sources or writing the project for you."
             fields={[
               ['Your topic or curiosity', 'For example: I am interested in the economics of football'],
               ['Subjects or links to your interests', 'What makes this topic meaningful to you?'],
@@ -3908,6 +3909,12 @@ function PremiumAiTool({
             <div className="closing-card"><div className="days-left">REFLECT, DON'T LIST</div><h3>Questions to answer in your own words</h3><ul style={{ paddingLeft: '20px', lineHeight: '1.65' }}>{(result.reflectionPrompts || []).map((item) => <li key={item}>{item}</li>)}</ul></div>
           </div>
           <div className="closing-card" style={{ marginTop: '18px', borderLeft: '5px solid #315b3d' }}><div className="days-left">FIRST NEXT STEP</div><h3>{result.nextAction || 'Choose one experience and write down what it changed in your thinking.'}</h3><p>When you have your direction, use the Interactive Personal Statement Builder to draft the three UCAS responses side by side.</p>{onOpenBuilder && <button className="view-button" onClick={onOpenBuilder}>Open the Interactive Builder →</button>}</div>
+        </div> : variant === 'research-plan' ? <div className="research-plan-result">
+          <div className="closing-card"><div className="days-left">YOUR PROJECT BLUEPRINT</div><h3>{title}</h3><p>{result.summary}</p><div className="research-question"><span>FOCUSED RESEARCH QUESTION</span><strong>{result.researchQuestion || 'Refine your question with the scope below.'}</strong></div></div>
+          <div className="closing-grid" style={{ marginTop: '18px' }}>
+            {[["A MANAGEABLE SCOPE", "Scope", result.scope], ["A SIMPLE METHOD", "Method", result.method], ["WHAT TO READ", "Source plan", result.sourcePlan]].map(([eyebrow, heading, items]) => <div className="closing-card" key={heading}><div className="days-left">{eyebrow}</div><h3>{heading}</h3><ul style={{ paddingLeft: '20px', lineHeight: '1.65' }}>{(items || []).map((item) => <li key={item}>{item}</li>)}</ul></div>)}
+          </div>
+          <div className="closing-card" style={{ marginTop: '18px', borderLeft: '5px solid #315b3d' }}><div className="days-left">MILESTONES & FIRST MOVE</div><ul style={{ paddingLeft: '20px', lineHeight: '1.65' }}>{(result.milestones || []).map((item) => <li key={item}>{item}</li>)}</ul><h3>{result.nextAction || 'Write down your first source-search terms and a realistic finishing date.'}</h3></div>
         </div> : <div>
           <div className="closing-card">
             <div className="days-left">PERSONALISED STARTING POINT</div>
