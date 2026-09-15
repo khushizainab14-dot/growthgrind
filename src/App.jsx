@@ -774,8 +774,19 @@ function App() {
   }
 
   const saveStudyMistake = (question, response) => {
-    const entry = { id: `${Date.now()}-${Math.random()}`, question: question.slice(0, 900), response: response.slice(0, 1400), savedAt: new Date().toISOString() }
+    const entry = { id: `${Date.now()}-${Math.random()}`, question: question.slice(0, 900), response: response.slice(0, 1400), savedAt: new Date().toISOString(), reviews: 0, nextReview: new Date().toISOString() }
     setStudyMistakeBank((current) => [entry, ...current.filter((item) => item.question !== entry.question)].slice(0, 25))
+  }
+
+  const reviewStudyMistake = (id) => {
+    const intervals = [1, 3, 7, 14, 30]
+    setStudyMistakeBank((current) => current.map((item) => {
+      if (item.id !== id) return item
+      const reviews = (item.reviews || 0) + 1
+      const nextReview = new Date()
+      nextReview.setDate(nextReview.getDate() + intervals[Math.min(reviews - 1, intervals.length - 1)])
+      return { ...item, reviews, nextReview: nextReview.toISOString() }
+    }))
   }
 
   const openPremiumWorkspace = (feature) => {
@@ -4153,7 +4164,7 @@ function PremiumWorkspacePage({
           ) : feature.id === 'international-quals' ? (
             <InternationalQualificationsWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} />
           ) : feature.id === 'study' ? (
-            <StudyWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} onOpenAi={onOpenAi} mistakeBank={studyMistakeBank} />
+            <StudyWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} onOpenAi={onOpenAi} mistakeBank={studyMistakeBank} onReviewMistake={reviewStudyMistake} />
           ) : feature.id === 'career-quiz' ? (
             <CareerQuizWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} />
           ) : feature.id === 'contextual' ? (
@@ -4417,8 +4428,10 @@ function PortfolioHubWorkspace({ workspaceData, setWorkspaceData }) {
   return <div className="portfolio-studio"><section className="portfolio-brief"><span className="days-left">CREATIVE PORTFOLIO HUB</span><h2>Plan the work you want to show.</h2><p>Set a context so the guide can help you organise work, captions, presentation and practical next steps.</p><div className="portfolio-fields"><input value={workspaceData.course || ''} onChange={(event) => setWorkspaceData({ ...workspaceData, course: event.target.value })} placeholder="Course, e.g. Architecture" /><input value={workspaceData.university || ''} onChange={(event) => setWorkspaceData({ ...workspaceData, university: event.target.value })} placeholder="University, optional" /><select value={workspaceData.medium || ''} onChange={(event) => setWorkspaceData({ ...workspaceData, medium: event.target.value })}><option value="">Choose creative medium</option><option>Fine art / drawing</option><option>Design</option><option>Architecture</option><option>Photography</option><option>Film / animation</option><option>Fashion / textiles</option><option>Music / performance</option><option>Other</option></select></div><div className="portfolio-checklist"><span>Select and sequence work</span><span>Document your process</span><span>Write concise captions</span><span>Check submission format</span></div></section><section className="portfolio-chat"><span className="days-left">YOUR PORTFOLIO GUIDE</span><div className="portfolio-messages">{messages.map((message, index) => <div className={`portfolio-message ${message.role}`} key={`${message.role}-${index}`}><b>{message.role === 'assistant' ? 'GrowthGrind portfolio guide' : 'You'}</b><p>{message.content}</p></div>)}{loading && <div className="portfolio-message assistant"><b>GrowthGrind portfolio guide</b><p>Thinking through your next step…</p></div>}</div><form onSubmit={send}><textarea value={input} onChange={(event) => setInput(event.target.value)} placeholder="Tell the guide what you have so far, or what you are unsure about…" /><button className="view-button" disabled={loading}>{loading ? 'Thinking…' : 'Send →'}</button></form>{error && <p className="contextual-error">{error}</p>}</section></div>
 }
 
-function StudyWorkspace({ workspaceData, setWorkspaceData, onOpenAi, mistakeBank = [] }) {
+function StudyWorkspace({ workspaceData, setWorkspaceData, onOpenAi, mistakeBank = [], onReviewMistake }) {
   const mistake = workspaceData.mistake || ''
+  const now = new Date().toISOString()
+  const dueMistakes = mistakeBank.filter((entry) => !entry.nextReview || entry.nextReview <= now)
   return (
     <div className="premium-studio study-studio">
       <section className="study-action-panel">
@@ -4433,7 +4446,7 @@ function StudyWorkspace({ workspaceData, setWorkspaceData, onOpenAi, mistakeBank
         <h3>Save an error to revisit</h3>
         <textarea value={mistake} onChange={(event) => setWorkspaceData({ ...workspaceData, mistake: event.target.value })} placeholder="Example: A-level Maths — integration — I forgot to adjust the limits after substitution. What will I do differently?" style={{ width: '100%', minHeight: '140px', boxSizing: 'border-box', padding: '12px', borderRadius: '9px', border: '1px solid #d0c4b0', background: '#f5efe5', color: '#315b3d', font: 'inherit' }} />
         <p style={{ fontSize: '12px' }}>Saved on this device. Use the button beneath any GrowthGrind Study reply to add a question and its guidance here.</p>
-        {mistakeBank.length > 0 && <div className="saved-mistakes"><strong>{mistakeBank.length} saved question{mistakeBank.length === 1 ? '' : 's'}</strong>{mistakeBank.slice(0, 3).map((entry) => <div key={entry.id}><span>{entry.question}</span></div>)}</div>}
+        {mistakeBank.length > 0 && <div className="saved-mistakes"><strong>{dueMistakes.length ? `${dueMistakes.length} review now` : 'You are up to date'} · {mistakeBank.length} saved question{mistakeBank.length === 1 ? '' : 's'}</strong>{(dueMistakes.length ? dueMistakes : mistakeBank).slice(0, 3).map((entry) => <div key={entry.id}><span>{entry.question}</span><small>{entry.reviews ? `Reviewed ${entry.reviews} time${entry.reviews === 1 ? '' : 's'}` : 'First review'}</small>{onReviewMistake && <button className="filter-button" onClick={() => onReviewMistake(entry.id)}>I reviewed this →</button>}</div>)}</div>}
       </section>
     </div>
   )
