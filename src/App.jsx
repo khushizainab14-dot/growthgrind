@@ -2998,12 +2998,14 @@ function App() {
         >
           <PremiumAiTool
             tool="admissions"
+            variant="admissions-audit"
             title="Build your admissions strategy"
-            description="Get a structured starting point, then verify requirements directly with universities."
+            description="Get a clear admissions audit: what is already working, what to develop and what to verify urgently."
             fields={[
-              ['Subjects and grades', 'For example: Maths, Economics, Physics — predicted A*AA'],
-              ['Courses or universities you are considering', 'Optional — add anything already on your mind'],
-              ['Your goals and current experiences', 'What you enjoy, what you have done, and what you want to develop'],
+              ['Subjects and predicted grades', 'For example: Maths, Economics, Physics — predicted A*AA'],
+              ['Target courses and universities', 'For example: Economics at Warwick, UCL and LSE'],
+              ['Academic evidence so far', 'Books, lectures, courses, competitions, research or projects you have explored'],
+              ['Your biggest question or goal', 'For example: What should I improve before applying?'],
             ]}
             details={aiDetails.admissions || {}}
             result={aiResults.admissions}
@@ -3818,6 +3820,7 @@ function CourseField({ label, placeholder, value, onChange, required = false }) 
 }
 
 function PremiumAiTool({
+  variant,
   title,
   description,
   fields,
@@ -3851,7 +3854,35 @@ function PremiumAiTool({
         </form>
       )}
       {result && (
-        <div>
+        variant === 'admissions-audit' ? <div className="admissions-audit">
+          <div className="closing-card">
+            <div className="days-left">YOUR ADMISSIONS AUDIT</div>
+            <h3>{title}</h3>
+            <p>{result.summary}</p>
+          </div>
+          <div className="closing-grid" style={{ marginTop: '18px' }}>
+            <div className="closing-card">
+              <div className="days-left">ALREADY WORKING</div>
+              <h3>Strengths to build on</h3>
+              <ul style={{ paddingLeft: '20px', lineHeight: '1.65' }}>{(result.strengths || []).map((point) => <li key={point}>{point}</li>)}</ul>
+            </div>
+            <div className="closing-card">
+              <div className="days-left">DEVELOP NEXT</div>
+              <h3>Evidence to strengthen</h3>
+              <ul style={{ paddingLeft: '20px', lineHeight: '1.65' }}>{(result.develop || []).map((point) => <li key={point}>{point}</li>)}</ul>
+            </div>
+            <div className="closing-card">
+              <div className="days-left">CHECK URGENTLY</div>
+              <h3>Official details to verify</h3>
+              <ul style={{ paddingLeft: '20px', lineHeight: '1.65' }}>{(result.urgentChecks || []).map((point) => <li key={point}>{point}</li>)}</ul>
+            </div>
+          </div>
+          <div className="closing-card" style={{ marginTop: '18px', borderLeft: '5px solid #315b3d' }}>
+            <div className="days-left">ONE NEXT ACTION</div>
+            <h3>{result.nextAction || 'Choose one action to complete this week.'}</h3>
+            {(result.questionsToConsider || []).length > 0 && <><h3 style={{ marginTop: '22px' }}>Questions to consider</h3><ul style={{ paddingLeft: '20px', lineHeight: '1.65' }}>{result.questionsToConsider.map((question) => <li key={question}>{question}</li>)}</ul></>}
+          </div>
+        </div> : <div>
           <div className="closing-card">
             <div className="days-left">PERSONALISED STARTING POINT</div>
             <h3>{title}</h3>

@@ -4,7 +4,7 @@ let cachedModels = null
 const tools = {
   admissions: {
     title: 'Admissions strategy',
-    instruction: 'Give a practical UK admissions exploration plan. Cover course fit, evidence to develop through supercurricular activity, and official information the student should verify. Never promise admission or invent requirements.',
+    instruction: 'Create a practical UK admissions audit. Separate genuine current strengths from evidence that needs developing and urgent official checks. Consider course fit, predicted grades, relevant subjects, supercurricular evidence and planned choices. Never promise admission, rank a student, or invent requirements.',
   },
   statement: {
     title: 'Personal statement reflection',
@@ -45,10 +45,15 @@ export default async function handler(request, response) {
     return response.status(400).json({ error: 'Please add a little information before continuing.' })
   }
 
+  const admissionsAudit = request.body?.tool === 'admissions'
   const prompt = `You are GrowthGrind's ${tool.title} assistant for UK school students. ${tool.instruction}
 Return valid JSON only:
-{"summary":"","sections":[{"title":"","points":[""]}],"nextSteps":[""],"questionsToConsider":[""]}
-Include 3 sections, each with 2 or 3 concise points, and 3 nextSteps. Be clear, supportive and honest about uncertainty.
+${admissionsAudit
+  ? '{"summary":"","strengths":[""],"develop":[""],"urgentChecks":[""],"nextAction":"","questionsToConsider":[""]}'
+  : '{"summary":"","sections":[{"title":"","points":[""]}],"nextSteps":[""],"questionsToConsider":[""]}'}
+${admissionsAudit
+  ? 'Include 2 or 3 concise points in each list. Strengths must be grounded in the student information, not generic praise. Urgent checks must be official things to verify. Make nextAction one specific task the student can complete this week.'
+  : 'Include 3 sections, each with 2 or 3 concise points, and 3 nextSteps.'} Be clear, supportive and honest about uncertainty.
 Student information: ${JSON.stringify(details)}`
 
   try {
