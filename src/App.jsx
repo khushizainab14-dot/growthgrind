@@ -273,6 +273,9 @@ function App() {
   const [premiumWorkspaceData, setPremiumWorkspaceData] = useState(() => {
     try { return JSON.parse(localStorage.getItem('growthgrind_premium_workspace_data') || '{}') } catch { return {} }
   })
+  const [careerQuizData, setCareerQuizData] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('growthgrind_career_quiz_data') || '{}') } catch { return {} }
+  })
 
   const [isPremium, setIsPremium] = useState(
     localStorage.getItem('growthgrind_demo_premium') === 'true'
@@ -316,6 +319,10 @@ function App() {
   useEffect(() => {
     localStorage.setItem('growthgrind_premium_workspace_data', JSON.stringify(premiumWorkspaceData))
   }, [premiumWorkspaceData])
+
+  useEffect(() => {
+    localStorage.setItem('growthgrind_career_quiz_data', JSON.stringify(careerQuizData))
+  }, [careerQuizData])
 
   useEffect(() => {
     localStorage.setItem('growthgrind_course_shortlist', JSON.stringify(courseShortlist))
@@ -3164,22 +3171,7 @@ function App() {
           isPremium={isPremium}
           onUpgrade={() => goTo('Pricing')}
         >
-          <PremiumAiTool
-            tool="career"
-            title="Explore career pathways"
-            description="There is no single right career. Use this to find pathways worth exploring further."
-            fields={[
-              ['Subjects and topics you enjoy', 'What do you most enjoy learning about?'],
-              ['Strengths and working style', 'For example: creative, analytical, working with people, independent research'],
-              ['Career ideas or priorities', 'Optional — include anything you want to explore or avoid'],
-            ]}
-            details={aiDetails.career || {}}
-            result={aiResults.career}
-            loading={aiLoading === 'career'}
-            error={aiError.career}
-            onChange={(field, value) => updateAiDetail('career', field, value)}
-            onSubmit={(event) => runPremiumTool(event, 'career')}
-          />
+          <CareerQuizWorkspace workspaceData={careerQuizData} setWorkspaceData={setCareerQuizData} />
         </PremiumToolPage>
       )}
 
@@ -4390,6 +4382,19 @@ function CareerQuizWorkspace({ workspaceData, setWorkspaceData }) {
     'Public Policy': ['Civil service', 'International development', 'Think-tank research', 'Public affairs'],
     Education: ['Teaching', 'Educational psychology', 'Learning design', 'Youth work'],
   }
+  const degreeRoutes = {
+    Finance: ['Economics', 'Finance', 'Mathematics', 'Business'],
+    Technology: ['Computer Science', 'Data Science', 'Software Engineering'],
+    Business: ['Business Management', 'Economics', 'Management', 'Marketing'],
+    Engineering: ['Engineering', 'Physics', 'Design Engineering'],
+    Healthcare: ['Medicine', 'Nursing', 'Biomedical Science', 'Physiotherapy'],
+    Science: ['Biology', 'Chemistry', 'Physics', 'Environmental Science'],
+    Law: ['Law', 'Politics', 'History', 'Philosophy'],
+    'Creative & Media': ['Design', 'Film', 'Animation', 'English'],
+    Marketing: ['Marketing', 'Business', 'Psychology', 'Media'],
+    'Public Policy': ['Politics', 'International Relations', 'Economics', 'Sociology'],
+    Education: ['Education', 'Psychology', 'Subject degree + teacher training'],
+  }
   const rankedSectors = Object.entries(scores).sort((first, second) => second[1] - first[1])
   const coreIds = questions.slice(0, 6).map((question) => question.id)
   const answerCount = Object.keys(answers).length
@@ -4407,6 +4412,10 @@ function CareerQuizWorkspace({ workspaceData, setWorkspaceData }) {
   const estimatedTotal = answerCount >= coreIds.length ? questionOrder.length : 8 + (lead < 2 ? 4 : lead < 3 ? 2 : 0)
   const progress = Math.min(100, Math.round((answerCount / estimatedTotal) * 100))
   const topThree = rankedSectors.slice(0, 3)
+  const signalsFor = (sector) => questions
+    .filter((question) => question.sectors.includes(sector) && (answers[question.id] === true || answers[question.id] === 'sometimes'))
+    .slice(0, 2)
+    .map((question) => question.text.replace(/^I /, 'You ').replace(/\.$/, ''))
   const setAnswer = (value) => setWorkspaceData({ ...workspaceData, answers: { ...answers, [currentQuestion.id]: value }, careerQuizComplete: false })
   const moveNext = () => {
     if (!currentHasAnswer) return
@@ -4430,7 +4439,7 @@ function CareerQuizWorkspace({ workspaceData, setWorkspaceData }) {
         </div>
         <div className="career-navigation"><button className="filter-button" disabled={currentStep === 0} onClick={() => setWorkspaceData({ ...workspaceData, answers, currentStep: currentStep - 1, careerQuizComplete: false })}>← Back</button><button className="view-button" disabled={!currentHasAnswer} onClick={moveNext}>{currentStep >= questionOrder.length - 1 ? 'See my direction →' : 'Next question →'}</button></div>
       </section>
-      {workspaceData.careerQuizComplete && topThree.length > 0 && <section className="career-results"><div className="days-left">YOUR TOP THREE DIRECTIONS</div><div className="career-result-grid">{topThree.map(([sector], index) => <div className="career-result-card" key={sector}><span>0{index + 1}</span><h3>{sector}</h3><ul>{jobs[sector].map((job) => <li key={job}>{job}</li>)}</ul></div>)}</div><button className="filter-button" onClick={() => setWorkspaceData({})} style={{ marginTop: '20px' }}>Start again</button></section>}
+      {workspaceData.careerQuizComplete && <section className="career-results"><div className="days-left">YOUR TOP THREE DIRECTIONS</div>{topThree.length ? <><p className="career-results-intro">These are directions to test, not a prediction of your future. Each card explains the signals behind it and gives a low-risk way to explore it further.</p><div className="career-result-grid">{topThree.map(([sector], index) => <div className="career-result-card" key={sector}><span>0{index + 1} · {Math.round((scores[sector] / Math.max(1, rankedSectors[0]?.[1] || 1)) * 100)}% match signal</span><h3>{sector}</h3><p className="career-fit-reason"><b>Why it appeared:</b> {signalsFor(sector).join('; ') || 'your overall answer pattern points here.'}</p><div><b>Degree routes to explore</b><p>{degreeRoutes[sector].join(' · ')}</p></div><div><b>Specific jobs to investigate</b><ul>{jobs[sector].map((job) => <li key={job}>{job}</li>)}</ul></div><p className="career-next-test"><b>Try it next:</b> find one relevant student society, online insight day, short course or interview with someone in this sector.</p></div>)}</div></> : <div className="career-no-match"><h3>No strong direction yet — that is useful too.</h3><p>Your answers suggest it would help to explore more broadly. Try the quiz again and use “Sometimes” where an interest is still developing.</p></div>}<button className="filter-button" onClick={() => setWorkspaceData({})} style={{ marginTop: '20px' }}>Start again</button></section>}
     </div>
   )
 }
