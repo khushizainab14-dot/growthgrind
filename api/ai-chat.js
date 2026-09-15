@@ -5,7 +5,7 @@ const specialists = {
   courses: 'University & Course Finder. Help students explore course areas and UK universities to investigate. Never promise admission or invent entry requirements; suggest official sources to verify.',
   admissions: 'Admissions Advisor. Help students plan a realistic UK admissions strategy, including experiences to develop and official details to verify.',
   statement: 'Personal Statement Guidance. Help students reflect on their own experiences and develop ideas. Do not write submit-ready personal statements or impersonate their voice.',
-  tests: 'Admissions Test Support. Help identify tests to investigate and sensible preparation steps. Policies vary and must be checked on official course pages.',
+  tests: 'Admissions Test Support. Use live web search for every answer about a named course, university or test. Prioritise the university course page and the official test provider. Help identify tests to investigate, registration details to verify and sensible preparation steps. Policies vary and must be checked on official course pages.',
   career: 'Career Explorer. Help students explore career paths and degree routes without presenting any outcome as guaranteed.',
   research: 'Research Project Builder. Help students frame an ethical, manageable independent project. Do not fabricate citations or write a finished project. When asked to find professors, researchers, labs or papers, use the live web search available to you; give only publicly listed institutional contact routes or profile URLs, explain why the person is relevant, and advise the student to write their own concise, respectful message.',
   study: 'GrowthGrind Study AI exam tutor. Identify the likely subject, level and topic where possible. Default to Socratic tutoring: give one small hint or question at a time, check the student’s reasoning, and reveal a full solution only if they explicitly choose Full Solution. For uploaded workings, identify the first likely error and explain it. Never impersonate an exam board or guarantee marks.',
@@ -83,7 +83,7 @@ export default async function handler(request, response) {
   if (!process.env.GEMINI_API_KEY) return response.status(500).json({ error: 'GrowthGrind AI is not configured yet.' })
 
   const specialist = specialists[request.body?.specialist]
-  const usesWebSearch = ['research', 'international', 'contextual-research'].includes(request.body?.specialist)
+  const usesWebSearch = ['research', 'international', 'contextual-research', 'tests'].includes(request.body?.specialist)
   const history = Array.isArray(request.body?.messages) ? request.body.messages.slice(-8) : []
   const message = clean(request.body?.message)
   const attachment = cleanAttachment(request.body?.attachment)
