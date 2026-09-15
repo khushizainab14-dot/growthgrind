@@ -6,7 +6,7 @@ pages but only imports a result when it comes from a trusted provider domain or
 an official UK university domain. It never scrapes a search-engine results page,
 imports PDFs, follows tracking URLs, or imports social-media posts.
 
-Set BRAVE_SEARCH_API_KEY as a GitHub Actions secret to enable the scheduled
+Set TAVILY_API_KEY as a GitHub Actions secret to enable the scheduled
 run. The key stays server-side; it is never sent to the GrowthGrind browser.
 """
 
@@ -15,14 +15,14 @@ import re
 import sys
 from datetime import datetime, timezone
 from html import unescape
-from urllib.parse import urlencode, urlparse, urlunparse
+from urllib.parse import urlparse, urlunparse
 from urllib.request import Request, urlopen
 
 from supabase import create_client
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
-BRAVE_SEARCH_API_KEY = os.environ.get("BRAVE_SEARCH_API_KEY")
+TAVILY_API_KEY = os.environ.get("TAVILY_API_KEY")
 
 # Official higher-education domains plus organisations already selected for
 # GrowthGrind. New domains must be reviewed and added here in source control.
@@ -94,20 +94,32 @@ def provider_name(host):
 
 
 def search(query):
-    params = urlencode({"q": query, "count": 20, "country": "GB", "search_lang": "en", "freshness": "pm"})
+    import json
     request = Request(
-        f"https://api.search.brave.com/res/v1/web/search?{params}",
-        headers={"Accept": "application/json", "X-Subscription-Token": BRAVE_SEARCH_API_KEY},
+        "https://api.tavily.com/search",
+        data=json.dumps({
+            "query": query,
+            "topic": "general",
+            "search_depth": "basic",
+            "max_results": 20,
+            "time_range": "month",
+            "include_answer": False,
+            "include_raw_content": False,
+        }).encode("utf-8"),
+        headers={
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {TAVILY_API_KEY}",
+        },
     )
     with urlopen(request, timeout=25) as response:
-        import json
         return json.loads(response.read().decode("utf-8"))
 
 
 def as_record(item, category, activity_type, location):
     title = clean_text(item.get("title"))
     link = canonical_url(item.get("url", ""))
-    description = clean_text(item.get("description"))
+    description = clean_text(item.get("content"))
     combined = f"{title} {description} {link}"
     if not title or not link or not trusted_url(link) or not SIGNAL_WORDS.search(combined):
         return None
@@ -131,8 +143,8 @@ def as_record(item, category, activity_type, location):
 
 
 def main():
-    if not BRAVE_SEARCH_API_KEY:
-        print("Discovery skipped: set BRAVE_SEARCH_API_KEY to enable trusted web discovery.")
+    if not TAVILY_API_KEY:
+        print("Discovery skipped: set TAVILY_API_KEY to enable trusted web discovery.")
         return
     if not SUPABASE_URL or not SUPABASE_KEY:
         raise SystemExit("Set SUPABASE_URL and SUPABASE_KEY before running.")
@@ -142,7 +154,7 @@ def main():
     seen = set()
     for category, activity_type, query, location in SEARCHES:
         try:
-            results = search(query).get("web", {}).get("results", [])
+            results = search(query).get("results", [])
         except Exception as error:
             print(f"Search failed for {category}: {error}", file=sys.stderr)
             continue
