@@ -2477,6 +2477,8 @@ function App() {
           onOpenInternational={() => { setActivePremiumWorkspace(premiumRoadmap.find((feature) => feature.id === 'international-quals')); goTo('PremiumWorkspace') }}
           onOpenCourseFinder={openGradeCourseFinder}
           onOpenMultiCourse={() => { setActivePremiumWorkspace(premiumRoadmap.find((feature) => feature.id === 'multi-course')); goTo('PremiumWorkspace') }}
+          applicationChoices={premiumWorkspaceData.application_choices || []}
+          setApplicationChoices={(choices) => setPremiumWorkspaceData((current) => ({ ...current, application_choices: choices }))}
           workspaceData={premiumWorkspaceData[activePremiumWorkspace.id] || {}}
           setWorkspaceData={(value) => setPremiumWorkspaceData((current) => ({ ...current, [activePremiumWorkspace.id]: value }))}
           onBack={() => goTo('Premium')}
@@ -4047,6 +4049,8 @@ function PremiumWorkspacePage({
   onOpenInternational,
   onOpenCourseFinder,
   onOpenMultiCourse,
+  applicationChoices,
+  setApplicationChoices,
   workspaceData,
   setWorkspaceData,
   onBack,
@@ -4164,6 +4168,8 @@ function PremiumWorkspacePage({
             <MultiCourseStatementWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} />
           ) : feature.id === 'timeline' ? (
             <TimelineWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} />
+          ) : ['progress', 'balance', 'firm-insurance'].includes(feature.id) ? (
+            <ApplicationChoicesWorkspace mode={feature.id} choices={applicationChoices} setChoices={setApplicationChoices} />
           ) : (
             <InSitePlanner feature={feature} workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} onOpenAi={onOpenAi} />
           )}
@@ -4452,6 +4458,25 @@ function TimelineWorkspace({ workspaceData, setWorkspaceData }) {
   const upcoming = sortedItems.filter((item) => !item.complete && item.date >= today)
   const overdue = sortedItems.filter((item) => !item.complete && item.date < today)
   return <div className="timeline-workspace premium-studio"><section className="timeline-form"><span className="days-left">YOUR DEADLINE TIMELINE</span><h2>Put every important date in one place.</h2><p>Add dates you know now. GrowthGrind keeps the plan in your account, but official providers remain the source of truth for changing deadlines.</p><form onSubmit={addItem}><input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="e.g. UCAS application complete" /><div className="timeline-input-row"><input type="date" value={date} onChange={(event) => setDate(event.target.value)} required /><select value={type} onChange={(event) => setType(event.target.value)}><option>UCAS</option><option>Admissions test</option><option>Open day</option><option>Portfolio</option><option>Student finance</option><option>Scholarship</option><option>Personal deadline</option></select></div><textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="Optional: what needs doing before this date?" /><button className="view-button" type="submit">Add to timeline →</button></form></section><section className="timeline-list"><div className="days-left">UPCOMING ACTIONS</div><h3>{upcoming.length ? `${upcoming.length} date${upcoming.length === 1 ? '' : 's'} to manage` : 'Your timeline is clear.'}</h3>{overdue.length > 0 && <div className="timeline-overdue"><strong>{overdue.length} overdue item{overdue.length === 1 ? '' : 's'}</strong>{overdue.map((item) => <span key={item.id}>{item.title} · {item.date}</span>)}</div>}<div className="timeline-items">{sortedItems.length ? sortedItems.map((item) => <article className={item.complete ? 'complete' : item.date < today ? 'late' : ''} key={item.id}><button aria-label={`Mark ${item.title} complete`} onClick={() => toggleItem(item.id)}>{item.complete ? '✓' : ''}</button><div><span>{item.type.toUpperCase()} · {item.date}</span><strong>{item.title}</strong>{item.note && <p>{item.note}</p>}</div><button className="timeline-delete" onClick={() => removeItem(item.id)}>Remove</button></article>) : <p className="timeline-empty">Start with the next deadline you already know.</p>}</div></section></div>
+}
+
+function ApplicationChoicesWorkspace({ mode, choices, setChoices }) {
+  const [university, setUniversity] = useState('')
+  const [course, setCourse] = useState('')
+  const [condition, setCondition] = useState('')
+  const addChoice = (event) => {
+    event.preventDefault()
+    if (!university.trim() || !course.trim()) return
+    setChoices([...choices, { id: `${Date.now()}-${Math.random()}`, university: university.trim(), course: course.trim(), condition: condition.trim(), status: 'Researching', role: '' }])
+    setUniversity(''); setCourse(''); setCondition('')
+  }
+  const update = (id, patch) => setChoices(choices.map((choice) => choice.id === id ? { ...choice, ...patch } : choice))
+  const remove = (id) => setChoices(choices.filter((choice) => choice.id !== id))
+  const firm = choices.find((choice) => choice.role === 'Firm')
+  const insurance = choices.find((choice) => choice.role === 'Insurance')
+  const sameConditions = firm && insurance && firm.condition && insurance.condition && firm.condition.trim().toLowerCase() === insurance.condition.trim().toLowerCase()
+  const title = mode === 'progress' ? 'Track every application choice.' : mode === 'balance' ? 'Check the balance of your choices.' : 'Choose a sensible Firm and Insurance.'
+  return <div className="application-choices premium-studio"><section><span className="days-left">YOUR APPLICATION CHOICES</span><h2>{title}</h2><p>Add up to five choices with the published condition you need to verify. This is a planning tool, not an admissions prediction.</p><form onSubmit={addChoice}><input value={university} onChange={(event) => setUniversity(event.target.value)} placeholder="University" /><input value={course} onChange={(event) => setCourse(event.target.value)} placeholder="Course" /><input value={condition} onChange={(event) => setCondition(event.target.value)} placeholder="Published condition, e.g. AAA" /><button className="view-button" disabled={choices.length >= 5}>Add choice →</button></form></section><section className="application-choice-list"><div className="days-left">{choices.length}/5 SAVED</div>{choices.length ? choices.map((choice) => <article key={choice.id}><div><strong>{choice.university} — {choice.course}</strong><span>{choice.condition || 'Add the published condition after checking the official page.'}</span></div><select value={choice.status} onChange={(event) => update(choice.id, { status: event.target.value })}><option>Researching</option><option>Applied</option><option>Interview</option><option>Offer received</option><option>Unsuccessful</option></select>{mode === 'firm-insurance' && <select value={choice.role} onChange={(event) => update(choice.id, { role: event.target.value })}><option value="">No role</option><option>Firm</option><option>Insurance</option></select>}<button onClick={() => remove(choice.id)}>Remove</button></article>) : <p>Add your first choice to begin.</p>}{mode === 'balance' && choices.length > 0 && <div className="choice-insight"><strong>Balance check</strong><p>{choices.length < 5 ? `You have ${5 - choices.length} choice${5 - choices.length === 1 ? '' : 's'} left to research.` : 'You have a full five-choice list. Verify every grade and subject requirement before submitting.'}</p></div>}{mode === 'firm-insurance' && <div className="choice-insight"><strong>Firm / Insurance check</strong><p>{!firm || !insurance ? 'Choose one Firm and one Insurance after offers arrive.' : sameConditions ? 'Your Firm and Insurance currently show the same condition. Check whether your Insurance gives you a realistic alternative.' : 'Your choices have different recorded conditions. Compare required subjects and course fit before deciding.'}</p></div>}</section></div>
 }
 
 function CareerQuizWorkspace({ workspaceData, setWorkspaceData }) {
