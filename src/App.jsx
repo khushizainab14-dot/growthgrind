@@ -276,6 +276,7 @@ function App() {
   const [careerQuizData, setCareerQuizData] = useState(() => {
     try { return JSON.parse(localStorage.getItem('growthgrind_career_quiz_data') || '{}') } catch { return {} }
   })
+  const [workspaceStateHydrated, setWorkspaceStateHydrated] = useState(false)
 
   const [isPremium, setIsPremium] = useState(
     localStorage.getItem('growthgrind_demo_premium') === 'true'
@@ -327,6 +328,65 @@ function App() {
   useEffect(() => {
     localStorage.setItem('growthgrind_course_shortlist', JSON.stringify(courseShortlist))
   }, [courseShortlist])
+
+  useEffect(() => {
+    if (!user) {
+      setWorkspaceStateHydrated(false)
+      return
+    }
+    let cancelled = false
+    const loadWorkspaceState = async () => {
+      const { data, error } = await supabase
+        .from('user_workspace_state')
+        .select('workspace_key, data')
+        .eq('user_id', user.id)
+      if (cancelled) return
+      if (!error) {
+        const state = Object.fromEntries((data || []).map((row) => [row.workspace_key, row.data]))
+        if (state.premium_workspaces && typeof state.premium_workspaces === 'object') setPremiumWorkspaceData(state.premium_workspaces)
+        if (state.course_shortlist && typeof state.course_shortlist === 'object') setCourseShortlist(state.course_shortlist)
+        if (state.career_quiz && typeof state.career_quiz === 'object') setCareerQuizData(state.career_quiz)
+        if (Array.isArray(state.study_mistakes)) setStudyMistakeBank(state.study_mistakes)
+      }
+      setWorkspaceStateHydrated(true)
+    }
+    loadWorkspaceState()
+    return () => { cancelled = true }
+  }, [user])
+
+  const saveWorkspaceState = async (workspaceKey, data) => {
+    if (!user || !workspaceStateHydrated) return
+    const { error } = await supabase.from('user_workspace_state').upsert({
+      user_id: user.id,
+      workspace_key: workspaceKey,
+      data,
+    }, { onConflict: 'user_id,workspace_key' })
+    if (error) console.error('Could not save workspace state:', error.message)
+  }
+
+  useEffect(() => {
+    if (!user || !workspaceStateHydrated) return
+    const timer = window.setTimeout(() => saveWorkspaceState('premium_workspaces', premiumWorkspaceData), 900)
+    return () => window.clearTimeout(timer)
+  }, [user, workspaceStateHydrated, premiumWorkspaceData])
+
+  useEffect(() => {
+    if (!user || !workspaceStateHydrated) return
+    const timer = window.setTimeout(() => saveWorkspaceState('course_shortlist', courseShortlist), 900)
+    return () => window.clearTimeout(timer)
+  }, [user, workspaceStateHydrated, courseShortlist])
+
+  useEffect(() => {
+    if (!user || !workspaceStateHydrated) return
+    const timer = window.setTimeout(() => saveWorkspaceState('career_quiz', careerQuizData), 900)
+    return () => window.clearTimeout(timer)
+  }, [user, workspaceStateHydrated, careerQuizData])
+
+  useEffect(() => {
+    if (!user || !workspaceStateHydrated) return
+    const timer = window.setTimeout(() => saveWorkspaceState('study_mistakes', studyMistakeBank), 900)
+    return () => window.clearTimeout(timer)
+  }, [user, workspaceStateHydrated, studyMistakeBank])
 
   useEffect(() => {
     if (!user) return
