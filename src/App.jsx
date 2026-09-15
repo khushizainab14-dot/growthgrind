@@ -2708,29 +2708,29 @@ function App() {
                 </div>
               </div>
 
-            </div>
-          </section>
-
-          <section className="opportunities-section" style={{ paddingTop: 0 }}>
-            <div className="section-heading">
               <div>
-                <span className="eyebrow">EVERYTHING INCLUDED</span>
-                <h2>23 Premium features. One application system.</h2>
-                <p>Pricing stays simple. Your dedicated Premium page is where you open and use each workspace.</p>
-              </div>
-              <button className="filter-button" onClick={() => goTo('Premium')}>
-                Explore Premium tools →
-              </button>
-            </div>
-            <div className="premium-summary-grid">
-              {premiumFeatureGroups.map((group) => (
-                <div className="closing-card" key={group.label} style={{ boxShadow: 'none' }}>
-                  <div className="days-left">{group.label}</div>
-                  <ul className="premium-summary-list">
-                    {group.features.map((feature) => <li key={feature}>{feature}</li>)}
-                  </ul>
+                <div className="section-heading">
+                  <div>
+                    <span className="eyebrow">EVERYTHING INCLUDED</span>
+                    <h2>23 Premium features. One application system.</h2>
+                    <p>Your dedicated Premium page is where you open and use each workspace.</p>
+                  </div>
+                  <button className="filter-button" onClick={() => goTo('Premium')}>
+                    Explore Premium tools →
+                  </button>
                 </div>
-              ))}
+                <div className="premium-summary-grid">
+                  {premiumFeatureGroups.map((group) => (
+                    <div className="closing-card" key={group.label} style={{ boxShadow: 'none' }}>
+                      <div className="days-left">{group.label}</div>
+                      <ul className="premium-summary-list">
+                        {group.features.map((feature) => <li key={feature}>{feature}</li>)}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
             </div>
           </section>
 
