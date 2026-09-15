@@ -2344,7 +2344,7 @@ function App() {
           onOpenMultiCourse={() => { setActivePremiumWorkspace(premiumRoadmap.find((feature) => feature.id === 'multi-course')); goTo('PremiumWorkspace') }}
           workspaceData={premiumWorkspaceData[activePremiumWorkspace.id] || {}}
           setWorkspaceData={(value) => setPremiumWorkspaceData((current) => ({ ...current, [activePremiumWorkspace.id]: value }))}
-          onBack={() => goTo('Pricing')}
+          onBack={() => goTo('Premium')}
           onOpenAi={() => {
             const specialist = activePremiumWorkspace.id.includes('statement') ? 'statement'
               : activePremiumWorkspace.id.includes('test') ? 'tests'
@@ -2693,144 +2693,6 @@ function App() {
                 </div>
               </div>
 
-              <div>
-                <div className="section-heading">
-                  <div>
-                    <span className="eyebrow">
-                      WHAT YOU GET
-                    </span>
-
-                    <h2>
-                      Premium features
-                    </h2>
-                  </div>
-                </div>
-
-                <div
-                  className="pricing-features"
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns:
-                      'repeat(2, minmax(0, 1fr))',
-                    gap: '12px',
-                  }}
-                >
-                  <PremiumFeature
-                    number="01"
-                    title="AI Admissions Advisor"
-                    description="Personalised UK university and admissions guidance."
-                    onClick={() =>
-                      openAiWorkspace('admissions')
-                    }
-                  />
-
-                  <PremiumFeature
-                    number="02"
-                    title="University & Course Finder"
-                    description="Find UK courses and universities that fit you."
-                    onClick={() => goTo('CourseFinder')}
-                  />
-
-                  <PremiumFeature
-                    number="03"
-                    title="Personal Statement Guidance"
-                    description="Develop stronger ideas and improve your own writing."
-                    onClick={() =>
-                      openAiWorkspace('statement')
-                    }
-                  />
-
-                  <PremiumFeature
-                    number="04"
-                    title="Admissions Test Support"
-                    description="Personalised guidance for relevant UK admissions tests."
-                    onClick={() =>
-                      openAiWorkspace('tests')
-                    }
-                  />
-
-                  <PremiumFeature
-                    number="05"
-                    title="Career Quiz"
-                    description="Discover career and degree pathways suited to you."
-                    onClick={() => openPremiumWorkspace(premiumRoadmap.find((feature) => feature.id === 'career-quiz'))}
-                  />
-
-                  <PremiumFeature
-                    number="06"
-                    title="AI Research Project Builder"
-                    description="Turn an idea into a structured independent research project."
-                    onClick={() =>
-                      openAiWorkspace('research')
-                    }
-                  />
-
-                  <PremiumFeature
-                    number="07"
-                    title="Super & Extra-Curricular Tracker"
-                    description="Keep your competitions, projects, volunteering, sport, work experience and more in one place."
-                    onClick={() => goTo('Track')}
-                  />
-
-                  <PremiumFeature
-                    number="08"
-                    title="GrowthGrind Study"
-                    description="Scan questions, get step-by-step tutoring and build a mistake bank."
-                    onClick={() => openPremiumWorkspace(premiumRoadmap.find((feature) => feature.id === 'study'))}
-                  />
-                </div>
-
-                <div style={{ marginTop: '48px' }}>
-                  <div className="section-heading">
-                    <div>
-                      <span className="eyebrow">THE ADMISSIONS JOURNEY</span>
-                      <h2>More ways Premium supports you</h2>
-                      <p>These specialist workspaces are being added in stages, with official-source checking where a detail can affect an application.</p>
-                    </div>
-                  </div>
-                  <div
-                    className="pricing-features"
-                    style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}
-                  >
-                    {premiumRoadmap.map((feature, index) => (
-                      <div className="closing-card" key={feature.title} style={{ boxShadow: 'none', border: '1px solid #d8cdbb' }}>
-                        <div className="days-left">{feature.stage}</div>
-                        <h3 style={{ marginTop: '12px' }}>{feature.title}</h3>
-                        <p style={{ marginBottom: 0 }}>{feature.description}</p>
-                        <span style={{ display: 'inline-block', marginTop: '13px', color: '#777065', fontWeight: '750', fontSize: '10px' }}>
-                          PREMIUM WORKSPACE
-                        </span>
-                        <button className="filter-button" style={{ marginTop: '12px', width: '100%' }} onClick={() => openPremiumWorkspace(feature)}>
-                          Open workspace →
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div
-                  className="closing-card"
-                  style={{
-                    marginTop: '25px',
-                    border: '1px solid #b9c9b9',
-                  }}
-                >
-                  <div className="days-left">
-                    COMING SOON
-                  </div>
-
-                  <h3>
-                    GrowthGrind Exclusive Events
-                  </h3>
-
-                  <p>
-                    As the GrowthGrind community grows, Premium
-                    members will get access to exclusive events
-                    designed to help build stronger supercurricular
-                    and extracurricular portfolios.
-                  </p>
-                </div>
-              </div>
             </div>
           </section>
 
@@ -2843,6 +2705,66 @@ function App() {
               />
             </section>
           )}
+        </main>
+      )}
+
+      {page === 'Premium' && (
+        <main>
+          <section className="hero-section">
+            <div className="hero-content">
+              <span className="eyebrow">{isPremium ? 'YOUR PREMIUM WORKSPACE' : 'PREMIUM WORKSPACE'}</span>
+              <h1>{isPremium ? 'Everything to build your application.' : 'Your university journey, unlocked.'}</h1>
+              <p>
+                {isPremium
+                  ? 'Open your specialist tools, keep your plans together and build a stronger application step by step.'
+                  : 'Explore every GrowthGrind Premium workspace. Upgrade to unlock the tools and your experience portfolio.'}
+              </p>
+              {!isPremium && (
+                <button className="view-button" onClick={() => goTo('Pricing')}>
+                  🔒 Unlock Premium →
+                </button>
+              )}
+            </div>
+          </section>
+
+          <section className="opportunities-section" style={{ paddingTop: 0 }}>
+            <div className="section-heading">
+              <div>
+                <span className="eyebrow">START HERE</span>
+                <h2>Core Premium tools</h2>
+              </div>
+            </div>
+            <div className="pricing-features" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>
+              <PremiumFeature number="01" title="AI Admissions Advisor" description="Personalised UK university and admissions guidance." isLocked={!isPremium} onClick={() => isPremium ? openAiWorkspace('admissions') : setPremiumModal('subscription')} />
+              <PremiumFeature number="02" title="University & Course Finder" description="Find UK courses and universities that fit you." isLocked={!isPremium} onClick={() => isPremium ? goTo('CourseFinder') : setPremiumModal('subscription')} />
+              <PremiumFeature number="03" title="Personal Statement Guidance" description="Develop stronger ideas and improve your own writing." isLocked={!isPremium} onClick={() => isPremium ? openAiWorkspace('statement') : setPremiumModal('subscription')} />
+              <PremiumFeature number="04" title="Admissions Test Support" description="Plan relevant tests and get tailored preparation guidance." isLocked={!isPremium} onClick={() => isPremium ? openAiWorkspace('tests') : setPremiumModal('subscription')} />
+              <PremiumFeature number="05" title="Career Quiz" description="Discover career and degree pathways suited to you." isLocked={!isPremium} onClick={() => isPremium ? openPremiumWorkspace(premiumRoadmap.find((feature) => feature.id === 'career-quiz')) : setPremiumModal('subscription')} />
+              <PremiumFeature number="06" title="AI Research Project Builder" description="Turn an idea into a structured independent research project." isLocked={!isPremium} onClick={() => isPremium ? openAiWorkspace('research') : setPremiumModal('subscription')} />
+              <PremiumFeature number="07" title="Super & Extra-Curricular Tracker" description="Turn activities into a connected, reflective experience portfolio." isLocked={!isPremium} onClick={() => isPremium ? goTo('Track') : setPremiumModal('tracker')} />
+              <PremiumFeature number="08" title="GrowthGrind Study" description="Get tutoring help and build a personal mistake bank." isLocked={!isPremium} onClick={() => isPremium ? openPremiumWorkspace(premiumRoadmap.find((feature) => feature.id === 'study')) : setPremiumModal('subscription')} />
+            </div>
+
+            <div className="section-heading" style={{ marginTop: '55px' }}>
+              <div>
+                <span className="eyebrow">THE ADMISSIONS JOURNEY</span>
+                <h2>Specialist Premium workspaces</h2>
+                <p>From choices and grades to interviews, contextual support and results day.</p>
+              </div>
+            </div>
+            <div className="pricing-features" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>
+              {premiumRoadmap.map((feature) => (
+                <button className="closing-card" key={feature.id} style={{ boxShadow: 'none', border: '1px solid #d8cdbb', textAlign: 'left', opacity: isPremium ? 1 : 0.76 }} onClick={() => isPremium ? openPremiumWorkspace(feature) : setPremiumModal('subscription')}>
+                  <div className="days-left">{isPremium ? feature.stage : '🔒 PREMIUM'}</div>
+                  <h3 style={{ marginTop: '12px' }}>{feature.title}</h3>
+                  <p style={{ marginBottom: 0 }}>{feature.description}</p>
+                  <span style={{ display: 'inline-block', marginTop: '13px', color: '#315b3d', fontWeight: '800', fontSize: '10px' }}>
+                    {isPremium ? 'OPEN WORKSPACE →' : 'LOCKED — UPGRADE TO OPEN'}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </section>
         </main>
       )}
 
@@ -3621,7 +3543,7 @@ function Navbar({
           }
           onClick={() => setPage('Track')}
         >
-          Track
+          {!isPremium && '🔒 '}Track
 
           {isPremium && tracked.length > 0 && (
             <span className="saved-count">
@@ -3656,6 +3578,17 @@ function Navbar({
           onClick={() => setPage('Profile')}
         >
           Profile
+        </button>
+
+        <button
+          className={
+            page === 'Premium' || page === 'PremiumWorkspace'
+              ? 'nav-link active'
+              : 'nav-link'
+          }
+          onClick={() => setPage('Premium')}
+        >
+          {!isPremium && '🔒 '}Premium
         </button>
 
         <button
@@ -4435,6 +4368,7 @@ function PremiumFeature({
   title,
   description,
   onClick,
+  isLocked = false,
 }) {
   return (
     <button
@@ -4451,6 +4385,7 @@ function PremiumFeature({
           '0 3px 12px rgba(50, 47, 40, 0.05)',
         textAlign: 'left',
         cursor: 'pointer',
+        opacity: isLocked ? 0.76 : 1,
       }}
     >
       <div
@@ -4500,7 +4435,7 @@ function PremiumFeature({
               letterSpacing: '0.5px',
             }}
           >
-            PREMIUM
+            {isLocked ? '🔒 LOCKED' : 'PREMIUM'}
           </span>
         </div>
 
