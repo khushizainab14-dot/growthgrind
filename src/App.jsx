@@ -4162,6 +4162,8 @@ function PremiumWorkspacePage({
             <PortfolioHubWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} />
           ) : feature.id === 'multi-course' ? (
             <MultiCourseStatementWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} />
+          ) : feature.id === 'timeline' ? (
+            <TimelineWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} />
           ) : (
             <InSitePlanner feature={feature} workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} onOpenAi={onOpenAi} />
           )}
@@ -4429,6 +4431,27 @@ function StudyWorkspace({ workspaceData, setWorkspaceData, onOpenAi, mistakeBank
       </section>
     </div>
   )
+}
+
+function TimelineWorkspace({ workspaceData, setWorkspaceData }) {
+  const [title, setTitle] = useState('')
+  const [date, setDate] = useState('')
+  const [type, setType] = useState('UCAS')
+  const [note, setNote] = useState('')
+  const items = Array.isArray(workspaceData.items) ? workspaceData.items : []
+  const sortedItems = [...items].sort((first, second) => (first.date || '9999-12-31').localeCompare(second.date || '9999-12-31'))
+  const today = new Date().toISOString().slice(0, 10)
+  const addItem = (event) => {
+    event.preventDefault()
+    if (!title.trim() || !date) return
+    setWorkspaceData({ ...workspaceData, items: [...items, { id: `${Date.now()}-${Math.random()}`, title: title.trim(), date, type, note: note.trim(), complete: false }] })
+    setTitle(''); setDate(''); setNote('')
+  }
+  const toggleItem = (id) => setWorkspaceData({ ...workspaceData, items: items.map((item) => item.id === id ? { ...item, complete: !item.complete } : item) })
+  const removeItem = (id) => setWorkspaceData({ ...workspaceData, items: items.filter((item) => item.id !== id) })
+  const upcoming = sortedItems.filter((item) => !item.complete && item.date >= today)
+  const overdue = sortedItems.filter((item) => !item.complete && item.date < today)
+  return <div className="timeline-workspace premium-studio"><section className="timeline-form"><span className="days-left">YOUR DEADLINE TIMELINE</span><h2>Put every important date in one place.</h2><p>Add dates you know now. GrowthGrind keeps the plan in your account, but official providers remain the source of truth for changing deadlines.</p><form onSubmit={addItem}><input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="e.g. UCAS application complete" /><div className="timeline-input-row"><input type="date" value={date} onChange={(event) => setDate(event.target.value)} required /><select value={type} onChange={(event) => setType(event.target.value)}><option>UCAS</option><option>Admissions test</option><option>Open day</option><option>Portfolio</option><option>Student finance</option><option>Scholarship</option><option>Personal deadline</option></select></div><textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="Optional: what needs doing before this date?" /><button className="view-button" type="submit">Add to timeline →</button></form></section><section className="timeline-list"><div className="days-left">UPCOMING ACTIONS</div><h3>{upcoming.length ? `${upcoming.length} date${upcoming.length === 1 ? '' : 's'} to manage` : 'Your timeline is clear.'}</h3>{overdue.length > 0 && <div className="timeline-overdue"><strong>{overdue.length} overdue item{overdue.length === 1 ? '' : 's'}</strong>{overdue.map((item) => <span key={item.id}>{item.title} · {item.date}</span>)}</div>}<div className="timeline-items">{sortedItems.length ? sortedItems.map((item) => <article className={item.complete ? 'complete' : item.date < today ? 'late' : ''} key={item.id}><button aria-label={`Mark ${item.title} complete`} onClick={() => toggleItem(item.id)}>{item.complete ? '✓' : ''}</button><div><span>{item.type.toUpperCase()} · {item.date}</span><strong>{item.title}</strong>{item.note && <p>{item.note}</p>}</div><button className="timeline-delete" onClick={() => removeItem(item.id)}>Remove</button></article>) : <p className="timeline-empty">Start with the next deadline you already know.</p>}</div></section></div>
 }
 
 function CareerQuizWorkspace({ workspaceData, setWorkspaceData }) {
