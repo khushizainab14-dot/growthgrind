@@ -2791,15 +2791,15 @@ function App() {
               </div>
             </div>
             <div className="pricing-features" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>
-              {premiumRoadmap.map((feature) => (
-                <button className="closing-card" key={feature.id} style={{ boxShadow: 'none', border: '1px solid #d8cdbb', textAlign: 'left', opacity: isPremium ? 1 : 0.76 }} onClick={() => isPremium ? openPremiumWorkspace(feature) : setPremiumModal('subscription')}>
-                  <div className="days-left">{isPremium ? feature.stage : '🔒 PREMIUM'}</div>
-                  <h3 style={{ marginTop: '12px' }}>{feature.title}</h3>
-                  <p style={{ marginBottom: 0 }}>{feature.description}</p>
-                  <span style={{ display: 'inline-block', marginTop: '13px', color: '#315b3d', fontWeight: '800', fontSize: '10px' }}>
-                    {isPremium ? 'OPEN WORKSPACE →' : 'LOCKED — UPGRADE TO OPEN'}
-                  </span>
-                </button>
+              {premiumRoadmap.map((feature, index) => (
+                <PremiumFeature
+                  key={feature.id}
+                  number={String(index + 9).padStart(2, '0')}
+                  title={feature.title}
+                  description={feature.description}
+                  isLocked={!isPremium}
+                  onClick={() => isPremium ? openPremiumWorkspace(feature) : setPremiumModal('subscription')}
+                />
               ))}
             </div>
           </section>
