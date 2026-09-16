@@ -122,16 +122,38 @@ function App() {
 
   useEffect(() => {
     const loadOpportunities = async () => {
-      const { data, error } = await supabase
-        .from('opportunities')
-        .select('*')
+      const pageSize = 1000
+      let from = 0
+      let allRows = []
+      let error = null
+
+      // Supabase returns at most 1,000 rows per request by default. Keep
+      // fetching until the final short page so Discover reflects the full
+      // GrowthGrind catalogue rather than silently stopping at 1,000.
+      while (true) {
+        const response = await supabase
+          .from('opportunities')
+          .select('*')
+          .order('id', { ascending: true })
+          .range(from, from + pageSize - 1)
+
+        if (response.error) {
+          error = response.error
+          break
+        }
+
+        const rows = response.data || []
+        allRows = allRows.concat(rows)
+        if (rows.length < pageSize) break
+        from += pageSize
+      }
 
       if (error) {
         console.error('Error loading opportunities:', error)
         return
       }
 
-      const formattedOpportunities = (data || []).map((item) => ({
+      const formattedOpportunities = allRows.map((item) => ({
         id: item.id,
         category: item.category,
         activityType: item.activity_type,
@@ -4408,8 +4430,9 @@ function InterviewPracticeWorkspace({ workspaceData, setWorkspaceData }) {
 }
 
 function PortfolioHubWorkspace({ workspaceData, setWorkspaceData }) {
-  const [messages, setMessages] = useState(() => [{ role: 'assistant', content: 'Welcome to your Creative Portfolio Hub. I can help you choose work, research requirements, plan your presentation and build a realistic submission timeline. What course, university and creative medium are you preparing for?' }])
+  const [messages, setMessages] = useState(() => workspaceData.messages || [{ role: 'assistant', content: 'Welcome to your Creative Portfolio Hub. I can help you choose work, research requirements, plan your presentation and build a realistic submission timeline. What course, university and creative medium are you preparing for?' }])
   const [input, setInput] = useState('')
+  const [projectTitle, setProjectTitle] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const send = async (event) => {
@@ -4423,10 +4446,16 @@ function PortfolioHubWorkspace({ workspaceData, setWorkspaceData }) {
       const response = await fetch('/api/ai-chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ specialist: 'portfolio', message: `${context ? `Portfolio context: ${context}. ` : ''}${text}`, messages }) })
       const result = await response.json()
       if (!response.ok) throw new Error(result.error || 'Could not continue the portfolio plan.')
-      setMessages((current) => [...current, userMessage, { role: 'assistant', content: result.reply }])
+      setMessages((current) => {
+        const next = [...current, userMessage, { role: 'assistant', content: result.reply }]
+        setWorkspaceData({ ...workspaceData, messages: next })
+        return next
+      })
     } catch (requestError) { setError(requestError.message || 'Could not continue the portfolio plan.'); setInput(text) } finally { setLoading(false) }
   }
-  return <div className="portfolio-studio"><section className="portfolio-brief"><span className="days-left">CREATIVE PORTFOLIO HUB</span><h2>Plan the work you want to show.</h2><p>Set a context so the guide can help you organise work, captions, presentation and practical next steps.</p><div className="portfolio-fields"><input value={workspaceData.course || ''} onChange={(event) => setWorkspaceData({ ...workspaceData, course: event.target.value })} placeholder="Course, e.g. Architecture" /><input value={workspaceData.university || ''} onChange={(event) => setWorkspaceData({ ...workspaceData, university: event.target.value })} placeholder="University, optional" /><select value={workspaceData.medium || ''} onChange={(event) => setWorkspaceData({ ...workspaceData, medium: event.target.value })}><option value="">Choose creative medium</option><option>Fine art / drawing</option><option>Design</option><option>Architecture</option><option>Photography</option><option>Film / animation</option><option>Fashion / textiles</option><option>Music / performance</option><option>Other</option></select></div><div className="portfolio-checklist"><span>Select and sequence work</span><span>Document your process</span><span>Write concise captions</span><span>Check submission format</span></div></section><section className="portfolio-chat"><span className="days-left">YOUR PORTFOLIO GUIDE</span><div className="portfolio-messages">{messages.map((message, index) => <div className={`portfolio-message ${message.role}`} key={`${message.role}-${index}`}><b>{message.role === 'assistant' ? 'GrowthGrind portfolio guide' : 'You'}</b><p>{message.content}</p></div>)}{loading && <div className="portfolio-message assistant"><b>GrowthGrind portfolio guide</b><p>Thinking through your next step…</p></div>}</div><form onSubmit={send}><textarea value={input} onChange={(event) => setInput(event.target.value)} placeholder="Tell the guide what you have so far, or what you are unsure about…" /><button className="view-button" disabled={loading}>{loading ? 'Thinking…' : 'Send →'}</button></form>{error && <p className="contextual-error">{error}</p>}</section></div>
+  const projects = workspaceData.projects || []
+  const addProject = () => { if (!projectTitle.trim()) return; setWorkspaceData({ ...workspaceData, projects: [...projects, { id: `${Date.now()}`, title: projectTitle.trim(), caption: '', stage: 'Developing' }] }); setProjectTitle('') }
+  return <div className="portfolio-studio"><section className="portfolio-brief"><span className="days-left">CREATIVE PORTFOLIO HUB</span><h2>Plan the work you want to show.</h2><p>Set a context so the guide can help you organise work, captions, presentation and practical next steps.</p><div className="portfolio-fields"><input value={workspaceData.course || ''} onChange={(event) => setWorkspaceData({ ...workspaceData, course: event.target.value })} placeholder="Course, e.g. Architecture" /><input value={workspaceData.university || ''} onChange={(event) => setWorkspaceData({ ...workspaceData, university: event.target.value })} placeholder="University, optional" /><select value={workspaceData.medium || ''} onChange={(event) => setWorkspaceData({ ...workspaceData, medium: event.target.value })}><option value="">Choose creative medium</option><option>Fine art / drawing</option><option>Design</option><option>Architecture</option><option>Photography</option><option>Film / animation</option><option>Fashion / textiles</option><option>Music / performance</option><option>Other</option></select></div><div className="portfolio-checklist"><span>Select and sequence work</span><span>Document your process</span><span>Write concise captions</span><span>Check submission format</span></div><div className="portfolio-projects"><strong>Project board</strong><div><input value={projectTitle} onChange={(event) => setProjectTitle(event.target.value)} placeholder="Add a portfolio piece" /><button className="filter-button" onClick={addProject}>Add</button></div>{projects.map((project) => <article key={project.id}><input value={project.title} onChange={(event) => setWorkspaceData({ ...workspaceData, projects: projects.map((item) => item.id === project.id ? { ...item, title: event.target.value } : item) })} /><select value={project.stage} onChange={(event) => setWorkspaceData({ ...workspaceData, projects: projects.map((item) => item.id === project.id ? { ...item, stage: event.target.value } : item) })}><option>Developing</option><option>Ready to select</option><option>Final piece</option></select><textarea value={project.caption} onChange={(event) => setWorkspaceData({ ...workspaceData, projects: projects.map((item) => item.id === project.id ? { ...item, caption: event.target.value } : item) })} placeholder="Caption: idea, process and what you learned" /><button onClick={() => setWorkspaceData({ ...workspaceData, projects: projects.filter((item) => item.id !== project.id) })}>Remove</button></article>)}</div></section><section className="portfolio-chat"><span className="days-left">YOUR PORTFOLIO GUIDE</span><div className="portfolio-messages">{messages.map((message, index) => <div className={`portfolio-message ${message.role}`} key={`${message.role}-${index}`}><b>{message.role === 'assistant' ? 'GrowthGrind portfolio guide' : 'You'}</b><p>{message.content}</p></div>)}{loading && <div className="portfolio-message assistant"><b>GrowthGrind portfolio guide</b><p>Thinking through your next step…</p></div>}</div><form onSubmit={send}><textarea value={input} onChange={(event) => setInput(event.target.value)} placeholder="Tell the guide what you have so far, or what you are unsure about…" /><button className="view-button" disabled={loading}>{loading ? 'Thinking…' : 'Send →'}</button></form>{error && <p className="contextual-error">{error}</p>}</section></div>
 }
 
 function StudyWorkspace({ workspaceData, setWorkspaceData, onOpenAi, mistakeBank = [], onReviewMistake }) {
