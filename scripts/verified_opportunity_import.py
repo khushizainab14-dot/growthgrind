@@ -398,6 +398,20 @@ https://ocw.mit.edu/
 SOURCES.extend(curated_hub(link) for link in CURATED_HUB_LINKS)
 
 
+# Latest science enrichment sources supplied by the curator.
+SOURCES.extend([
+    additional_source("Cambridge International Science Competition", "Cambridge International", "Academic", "Competition", "Science, STEM", "https://www.cambridgeinternational.org/programmes-and-qualifications/cambridge-upper-secondary/science-competition/", "Official Cambridge International science competition for upper-secondary students.", location="UK and international"),
+    additional_source("Royal Society Education", "The Royal Society", "Academic", "Course / Programme", "Science, STEM", "https://www.royalsociety.org/education/", "Official Royal Society education, schools and science-enrichment opportunities."),
+    additional_source("Royal Society Partnership Grants", "The Royal Society", "Academic", "Grant / Project", "Science, STEM", "https://www.royalsociety.org/grants-schemes-awards/grants/partnership-grants/", "Official partnership grants supporting school science projects."),
+    additional_source("CREST Awards", "British Science Association", "Academic", "Course / Programme", "Science, STEM", "https://www.britishscienceassociation.org/crest-awards", "Official CREST Awards science enrichment programme."),
+    additional_source("British Science Week", "British Science Association", "Academic", "Event", "Science, STEM", "https://www.britishscienceassociation.org/british-science-week", "Official British Science Week activities and events."),
+    additional_source("Biochemical Society Education", "Biochemical Society", "Academic", "Course / Programme", "Biochemistry, Biology, Science", "https://www.biochemistry.org/education/", "Official biochemistry education and enrichment resources."),
+    additional_source("Microbiology Society Careers", "Microbiology Society", "Careers", "Careers Programme", "Biology, Microbiology, Science", "https://microbiologysociety.org/careers.html", "Official microbiology careers guidance and student resources."),
+    additional_source("Genetics Society Education", "Genetics Society", "Academic", "Course / Programme", "Genetics, Biology, Science", "https://www.genetics.org.uk/education/", "Official genetics education and student resources."),
+    additional_source("Institute of Physics Careers", "Institute of Physics", "Careers", "Careers Programme", "Physics, Science, STEM", "https://www.physoc.org/careers/", "Official physics careers guidance and student opportunities."),
+])
+
+
 def record(source):
     return {**source, "deadline": None, "year_groups": None, "interests": None}
 
