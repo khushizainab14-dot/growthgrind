@@ -186,7 +186,7 @@ SOURCES.extend([
 ])
 
 # Curated first wave from the latest subject, volunteering and sport expansion.
-CURATED_HUB_LINKS.extend("""
+LATEST_CURATED_HUB_LINKS = """
 https://www.mmll.cam.ac.uk/news/cambridge-language-collective-schools-essay-competition-2026
 https://www.thecambridgelanguagecollective.com/schools-essay-2026
 https://www.rgs.org/schools/competitions/school-essay-competition
@@ -245,7 +245,7 @@ https://www.panathlon.com/
 https://www.chancetoshine.org/
 https://www.footballbeyondborders.org/
 https://www.creative-lives.org/pages/category/creative-opportunities
-""".split())
+""".split()
 
 
 # Further official sources supplied by GrowthGrind's curator.  These are kept as
@@ -458,6 +458,7 @@ https://oyc.yale.edu/
 https://ocw.mit.edu/
 """.split()
 SOURCES.extend(curated_hub(link) for link in CURATED_HUB_LINKS)
+SOURCES.extend(curated_hub(link) for link in LATEST_CURATED_HUB_LINKS)
 
 
 # Latest science enrichment sources supplied by the curator.
