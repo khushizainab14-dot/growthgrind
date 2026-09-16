@@ -185,6 +185,68 @@ SOURCES.extend([
     additional_source("ScreenSkills", "ScreenSkills", "Careers", "Careers Programme", "Film, Media, Creative", "https://www.screenskills.com/", "Screen-industry careers and skills opportunities."),
 ])
 
+# Curated first wave from the latest subject, volunteering and sport expansion.
+CURATED_HUB_LINKS.extend("""
+https://www.mmll.cam.ac.uk/news/cambridge-language-collective-schools-essay-competition-2026
+https://www.thecambridgelanguagecollective.com/schools-essay-2026
+https://www.rgs.org/schools/competitions/school-essay-competition
+https://www.leedscityoflanguages.leeds.ac.uk/competitions/
+https://www.isaschools.org.uk/arts/essay-competition.html
+https://www.youngarchaeologistsclub.co.uk/
+https://www.statisticsauthority.gov.uk/
+https://rss.org.uk/
+https://www.computer.org/
+https://www.bcs.org/
+https://www.cambridgemaths.org/
+https://www.mathigon.org/
+https://artofproblemsolving.com/
+https://brilliant.org/
+https://www.sanger.ac.uk/engage/
+https://www.ebi.ac.uk/training/
+https://www.crick.ac.uk/engage-with-us
+https://www.stfc.ac.uk/public-engagement/
+https://www.metoffice.gov.uk/weather/learn-about/met-office-for-schools
+https://www.rigb.org/learning
+https://www.linnean.org/learning
+https://www.rvc.ac.uk/study/schools
+https://www.rcpath.org/discover-pathology/competitions.html
+https://www.medschools.ac.uk/studying-medicine/outreach
+https://www.genomicseducation.hee.nhs.uk/
+https://www.gresham.ac.uk/watch-now
+https://www.debate-mate.com/
+https://www.debatingmatters.com/
+https://www.esu.org/competitions/
+https://www.jackpetcheyfoundation.org.uk/opportunities/
+https://www.diana-award.org.uk/
+https://www.annefrank.org.uk/education/
+https://www.woodlandtrust.org.uk/support-us/volunteer-with-us/
+https://www.sustrans.org.uk/get-involved/
+https://www.buglife.org.uk/get-involved/
+https://www.bto.org/community/volunteer
+https://www.surfersagainstsewage.org/volunteer/
+https://www.thames21.org.uk/volunteering/
+https://www.foodcycle.org.uk/volunteer/
+https://www.samaritans.org/support-us/volunteer/
+https://www.nspcc.org.uk/support-us/volunteering-nspcc-childline/
+https://www.londonwildlife.org.uk/volunteer
+https://www.scottishfa.co.uk/football-development/
+https://www.scottishathletics.org.uk/
+https://www.tennis-scotland.com/
+https://www.welshathletics.org/
+https://www.hockeywales.org.uk/
+https://www.athleticsni.org/
+https://www.britishclimbing.com/
+https://www.rya.org.uk/
+https://www.britishsurfing.org/
+https://www.britishequestrian.org.uk/
+https://www.paralympics.org.uk/
+https://www.specialolympicsgb.org.uk/
+https://www.panathlon.com/
+https://www.chancetoshine.org/
+https://www.footballbeyondborders.org/
+https://www.creative-lives.org/pages/category/creative-opportunities
+""".split())
+
 
 # Further official sources supplied by GrowthGrind's curator.  These are kept as
 # direct provider pages (not search-engine results), so a daily refresh always
