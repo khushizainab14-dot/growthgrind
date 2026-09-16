@@ -253,7 +253,11 @@ https://www.creative-lives.org/pages/category/creative-opportunities
 # takes students back to the organisation that runs the opportunity.
 def curated_hub(link):
     host = urlparse(link).netloc.removeprefix("www.")
-    label = host.split(".")[0].replace("-", " ").title()
+    host_parts = host.split(".")
+    # Career portals frequently use careers.brand.com; showing that as simply
+    # “Careers” creates indistinguishable, misleading cards in Discover.
+    label_part = host_parts[1] if host_parts[0] in ("careers", "search") and len(host_parts) > 2 else host_parts[0]
+    label = label_part.replace("-", " ").title()
     lower = link.lower()
     university_hosts = ("ac.uk", "citystgeorges.ac.uk")
     creative_words = ("museum", "gallery", "theatre", "arts", "film", "choir", "ballet", "riba", "architecture", "poetry", "shakespeare")

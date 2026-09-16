@@ -1090,7 +1090,10 @@ function App() {
           .join(' ')
           .toLowerCase()
 
-        return keywords.some((keyword) => searchable.includes(keyword))
+        return keywords.some((keyword) => {
+          const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+          return new RegExp(`(^|[^a-z])${escaped}([^a-z]|$)`, 'i').test(searchable)
+        })
       })
     }
 
