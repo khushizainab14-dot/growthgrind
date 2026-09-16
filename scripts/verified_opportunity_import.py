@@ -8,6 +8,7 @@ the daily run updates them and leaves deadline fields empty rather than inventin
 dates. Add a provider only after checking its public terms and student fit.
 """
 import os
+from urllib.parse import urlparse
 from supabase import create_client
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
@@ -183,6 +184,218 @@ SOURCES.extend([
     additional_source("Into Film", "Into Film", "Creative", "Course / Programme", "Film, Media, Creative", "https://www.intofilm.org/", "Official film education opportunities for young people."),
     additional_source("ScreenSkills", "ScreenSkills", "Careers", "Careers Programme", "Film, Media, Creative", "https://www.screenskills.com/", "Screen-industry careers and skills opportunities."),
 ])
+
+
+# Further official sources supplied by GrowthGrind's curator.  These are kept as
+# direct provider pages (not search-engine results), so a daily refresh always
+# takes students back to the organisation that runs the opportunity.
+def curated_hub(link):
+    host = urlparse(link).netloc.removeprefix("www.")
+    label = host.split(".")[0].replace("-", " ").title()
+    lower = link.lower()
+    university_hosts = ("ac.uk", "citystgeorges.ac.uk")
+    creative_words = ("museum", "gallery", "theatre", "arts", "film", "choir", "ballet", "riba", "architecture", "poetry", "shakespeare")
+    volunteer_words = ("volunteer", "scouts", "guiding", "cadets", "amnesty", "unicef", "youngminds", "rotary", "conservation", "rspca", "wwf", "greenpeace")
+    academic_words = ("stem", "engineering", "math", "science", "learn", "coursera", "edx", "khanacademy", "ocw", "education")
+    if any(word in lower for word in creative_words):
+        category, activity, subjects = "Creative", "Course / Programme", "Art, Media, Writing, Creative"
+    elif any(word in lower for word in volunteer_words):
+        category, activity, subjects = "Volunteering", "Volunteering", "Community, Leadership, Volunteering"
+    elif any(word in host for word in university_hosts):
+        category, activity, subjects = "Academic", "University Outreach", "University, Higher Education"
+    elif any(word in lower for word in academic_words):
+        category, activity, subjects = "Academic", "Course / Programme", "STEM, Academic Enrichment"
+    else:
+        category, activity, subjects = "Careers", "Careers Programme", "Careers, Work Experience"
+    return additional_source(f"{label} student opportunities", label, category, activity, subjects, link, f"Official {label} page for student opportunities, outreach, programmes or early-career guidance.")
+
+
+CURATED_HUB_LINKS = """
+https://www.ucl.ac.uk/widening-participation/
+https://www.imperial.ac.uk/be-inspired/schools-outreach/
+https://www.qmul.ac.uk/undergraduate/teachers/
+https://www.reading.ac.uk/ready-to-study/schools-and-colleges
+https://www.sussex.ac.uk/study/information-for-schools-and-colleges
+https://www.swansea.ac.uk/schools-colleges/
+https://www.ed.ac.uk/studying/undergraduate/access-edinburgh
+https://www.abdn.ac.uk/study/undergraduate/schools/
+https://www.plymouth.ac.uk/study/schools-colleges
+https://www.hull.ac.uk/choose-hull/study-at-hull/schools-and-colleges
+https://www.lincoln.ac.uk/studywithus/schoolsandcolleges/
+https://www.ntu.ac.uk/about-us/schools-colleges-and-community-outreach
+https://www.shu.ac.uk/schools-and-colleges
+https://www.mmu.ac.uk/study/schools-and-colleges
+https://www.salford.ac.uk/schools-and-colleges
+https://www.ljmu.ac.uk/study/schools-and-colleges
+https://www.port.ac.uk/collaborate/schools-and-colleges
+https://www.brighton.ac.uk/studying-here/applying-to-brighton/schools-and-colleges/index.aspx
+https://www.herts.ac.uk/schools-of-study/schools-and-colleges
+https://www.brunel.ac.uk/study/schools-and-colleges
+https://www.gold.ac.uk/schools-and-colleges/
+https://www.royalholloway.ac.uk/studying-here/schools-and-colleges/
+https://www.citystgeorges.ac.uk/prospective-students/schools-and-colleges
+https://www.suttontrust.com/our-programmes/uk-summer-schools/
+https://summerschools.suttontrust.com/
+https://www.socialmobility.org.uk/aspiring-professionals-programme
+https://www.upreach.org.uk/
+https://www.pwc.co.uk/careers/early-careers.html
+https://www.deloitte.com/uk/en/careers/discover-your-path/early-careers.html
+https://www.ey.com/en_uk/careers/students
+https://www.kpmgcareers.co.uk/apprentice/
+https://www.bdo.co.uk/en-gb/careers/early-careers
+https://careers.grantthornton.co.uk/early-careers/
+https://www.rsmuk.com/careers/early-careers
+https://www.mazarscareers.co.uk/
+https://www.icaew.com/learning-and-development/job-essential-skills
+https://www.barclayslifeskills.com/
+https://search.jobs.barclays/students-and-graduates
+https://www.hsbc.com/careers/students-and-graduates
+https://www.jpmorganchase.com/careers/explore-opportunities/programs
+https://www.goldmansachs.com/careers/students/
+https://www.morganstanley.com/people-opportunities/students-graduates
+https://careers.bankofamerica.com/en-us/students
+https://www.citi.com/careers/students-and-graduates
+https://careers.db.com/students-graduates/
+https://www.ubs.com/global/en/careers/early-careers.html
+https://www.blackrock.com/corporate/careers/students
+https://www.fidelityinternational.com/careers/students-and-graduates/
+https://www.schroders.com/en/global/individual/careers/early-careers/
+https://www.mandg.com/careers/early-careers
+https://www.aviva.com/careers/early-careers/
+https://www.lloydsbankinggrouptalent.com/early-careers/
+https://www.natwestgroup.com/careers/early-careers.html
+https://careers.santander.co.uk/early-careers/
+https://careers.linklaters.com/en/early-careers
+https://www.cliffordchance.com/careers/london.html
+https://www.slaughterandmay.com/careers/
+https://www.aoshearman.com/en/careers
+https://www.freshfields.com/en-gb/careers/uk/early-careers/
+https://www.hsfkramer.com/careers
+https://www.whitecase.com/careers/locations/uk
+https://www.hoganlovells.com/en/careers
+https://www.nortonrosefulbright.com/en-gb/careers
+https://www.eversheds-sutherland.com/en/united-kingdom/careers
+https://www.dlapiper.com/en-gb/careers
+https://www.addleshawgoddard.com/en/careers/
+https://www.legalcheek.com/
+https://www.lawcareers.net/
+https://www.thecorporatelawacademy.com/
+https://www.rolls-royce.com/careers/students-and-graduates.aspx
+https://www.baesystems.com/en/careers/careers-in-the-uk/early-careers
+https://www.airbus.com/en/careers/students-and-graduates
+https://careers.jaguarlandrover.com/early-careers
+https://careers.dyson.com/en-gb/early-careers/
+https://www.siemens.com/uk/en/company/jobs/early-careers.html
+https://www.arup.com/careers/early-careers/
+https://www.atkinsrealis.com/en/careers/early-careers
+https://www.mottmac.com/careers/early-careers/
+https://www.ibm.com/uk-en/careers
+https://www.microsoft.com/en-gb/earlycareers/
+https://www.google.com/about/careers/applications/students/
+https://www.amazon.jobs/content/en/career-programs/student-programs
+https://careers.arm.com/early-careers
+https://www.bt.com/careers/early-careers
+https://careers.sky.com/earlycareers
+https://www.bbc.co.uk/careers/trainee-schemes-and-apprenticeships
+https://www.itvjobs.com/
+https://www.channel4.com/careers
+https://www.nationalarchives.gov.uk/education/
+https://www.parliament.uk/education/
+https://learning.parliament.uk/
+https://www.supremecourt.uk/education
+https://www.amnesty.org.uk/youth
+https://www.unicef.org.uk/rights-respecting-schools/youth-advisory-board/
+https://www.youngminds.org.uk/about-us/youth-engagement/
+https://www.princes-trust.org.uk/how-we-can-help/programmes
+https://vinspired.com/
+https://www.volunteeringmatters.org.uk/
+https://www.rotarygbi.org/get-involved/interact/
+https://www.scouts.org.uk/
+https://www.girlguiding.org.uk/
+https://www.sea-cadets.org/
+https://www.raf.mod.uk/aircadets/
+https://www.armycadets.com/
+https://www.stjohnambulance.org.uk/young-people/
+https://www.conservationvolunteers.org.uk/
+https://www.rspca.org.uk/getinvolved/volunteer
+https://www.wwf.org.uk/get-involved
+https://www.greenpeace.org.uk/volunteering/
+https://www.mcsuk.org/what-you-can-do/volunteering/
+https://www.zsl.org/what-we-do/education
+https://www.nhm.ac.uk/schools.html
+https://www.sciencemuseum.org.uk/learning
+https://www.rmg.co.uk/schools-communities
+https://www.iwm.org.uk/learning
+https://www.bl.uk/learning
+https://www.shakespeare.org.uk/education/
+https://www.poetrysociety.org.uk/education/
+https://www.youngwriters.co.uk/competitions
+https://www.artscouncil.org.uk/children-and-young-people
+https://www.artsaward.org.uk/
+https://www.trinitycollege.com/qualifications/arts-award
+https://www.bafta.org/programmes/
+https://www.designmuseum.org/learn-and-research
+https://www.riba.org/learn/
+https://www.architecture.com/education-cpd-and-careers
+https://www.ram.ac.uk/study/junior-academy
+https://www.rcm.ac.uk/junior/
+https://www.gsmd.ac.uk/study-with-guildhall/young-artists
+https://www.nationalyouththeatre.org/
+https://www.nyo.org.uk/
+https://www.nationalyouthchoir.org.uk/
+https://www.nationalyouthballet.org/
+https://www.english-speaking-union.org/
+https://www.esu.org/our-work/schools/
+https://www.rotarygbi.org/projects/young-citizen-awards/
+https://www.future-business.org.uk/
+https://www.engineeringuk.com/
+https://www.wes.org.uk/
+https://www.raeng.org.uk/education
+https://www.theiet.org/career/
+https://www.ice.org.uk/what-is-civil-engineering/education-and-careers
+https://www.imeche.org/careers-education
+https://www.rina.org.uk/education-and-careers/
+https://www.rsc.org/careers/
+https://www.rsb.org.uk/careers-and-cpd/careers.html
+https://www.geolsoc.org.uk/education-and-careers
+https://www.rmets.org/education
+https://www.bps.org.uk/career-options-psychology
+https://www.sociology.org.uk/
+https://www.rsph.org.uk/education.html
+https://www.rcn.org.uk/Get-Into-Nursing
+https://www.rcvs.org.uk/lifelong-learning/students/vet-students/
+https://www.bva.co.uk/your-career/
+https://www.healthcareers.nhs.uk/explore-roles/doctors/applying-medical-school/gaining-experience-medical-school
+https://www.stepintothenhs.nhs.uk/
+https://www.nhscareersnw.co.uk/work-experience/
+https://www.bma.org.uk/advice-and-support/studying-medicine
+https://www.rcseng.ac.uk/careers-in-surgery/
+https://www.rcpsych.ac.uk/become-a-psychiatrist
+https://www.rcog.org.uk/careers-and-training/
+https://www.rcophth.ac.uk/training/
+https://www.rpharms.com/development/your-career
+https://www.pharmacyregulation.org/students-and-trainees
+https://targetjobs.co.uk/
+https://www.brightnetwork.co.uk/
+https://www.studentladder.co.uk/
+https://www.successatschool.org/
+https://www.youthemployment.org.uk/
+https://www.notgoingtouni.co.uk/
+https://www.amazingapprenticeships.com/
+https://www.ucas.com/apprenticeships
+https://www.gov.uk/apply-apprenticeship
+https://nationalcareers.service.gov.uk/
+https://www.careerpilot.org.uk/
+https://www.startprofile.com/
+https://www.worldskillsuk.org/
+https://www.worldskillsuk.org/careers-advice/skills-development-hub/
+https://www.coursera.org/
+https://www.edx.org/
+https://www.khanacademy.org/
+https://oyc.yale.edu/
+https://ocw.mit.edu/
+""".split()
+SOURCES.extend(curated_hub(link) for link in CURATED_HUB_LINKS)
 
 
 def record(source):
