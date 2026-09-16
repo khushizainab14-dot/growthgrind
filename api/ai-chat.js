@@ -50,8 +50,10 @@ function cleanOpportunity(value) {
 function cleanStudentContext(value) {
   if (!value || typeof value !== 'object') return null
   const preferences = value.matchPreferences && typeof value.matchPreferences === 'object' ? value.matchPreferences : {}
+  const profile = value.academicProfile && typeof value.academicProfile === 'object' ? value.academicProfile : {}
   return {
     goal: clean(value.goal).slice(0, 120),
+    academicProfile: { subjects: clean(profile.subjects), predictedGrades: clean(profile.predictedGrades), targetCourses: clean(profile.targetCourses), targetUniversities: clean(profile.targetUniversities) },
     matchPreferences: {
       yearGroups: cleanList(preferences.yearGroups, 4).map((item) => item.slice(0, 50)),
       activities: cleanList(preferences.activities, 6).map((item) => item.slice(0, 80)),
@@ -71,6 +73,7 @@ function formatStudentContext(context) {
   const formatOpportunities = (items) => items.map((item) => [item.title, item.category, item.activity, item.subjects.join(', '), item.status, item.hasReflection ? 'reflection saved' : ''].filter(Boolean).join(' — '))
   const lines = [
     context.goal && `Current goal: ${context.goal}`,
+    ...Object.entries(context.academicProfile || {}).filter(([, value]) => value).map(([label, value]) => `${label}: ${value}`),
     preferenceLines.length && `Match preferences: ${preferenceLines.join('; ')}`,
     context.savedOpportunities.length && `Saved opportunities: ${formatOpportunities(context.savedOpportunities).join(' | ')}`,
     context.trackedActivities.length && `Tracked activities: ${formatOpportunities(context.trackedActivities).join(' | ')}`,

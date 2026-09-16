@@ -300,6 +300,7 @@ function App() {
     try { return JSON.parse(localStorage.getItem('growthgrind_career_quiz_data') || '{}') } catch { return {} }
   })
   const [workspaceStateHydrated, setWorkspaceStateHydrated] = useState(false)
+  const [studentIntelligence, setStudentIntelligence] = useState({})
 
   const [isPremium, setIsPremium] = useState(
     localStorage.getItem('growthgrind_demo_premium') === 'true'
@@ -359,6 +360,7 @@ function App() {
     }
     let cancelled = false
     const loadWorkspaceState = async () => {
+      const profileRequest = supabase.from('student_intelligence').select('profile').eq('user_id', user.id).maybeSingle()
       const { data, error } = await supabase
         .from('user_workspace_state')
         .select('workspace_key, data')
@@ -371,6 +373,8 @@ function App() {
         if (state.career_quiz && typeof state.career_quiz === 'object') setCareerQuizData(state.career_quiz)
         if (Array.isArray(state.study_mistakes)) setStudyMistakeBank(state.study_mistakes)
       }
+      const { data: profileRow } = await profileRequest
+      if (!cancelled && profileRow?.profile && typeof profileRow.profile === 'object') setStudentIntelligence(profileRow.profile)
       setWorkspaceStateHydrated(true)
     }
     loadWorkspaceState()
@@ -386,6 +390,12 @@ function App() {
     }, { onConflict: 'user_id,workspace_key' })
     if (error) console.error('Could not save workspace state:', error.message)
   }
+
+  useEffect(() => {
+    if (!user || !workspaceStateHydrated) return
+    const timer = window.setTimeout(() => supabase.from('student_intelligence').upsert({ user_id: user.id, profile: studentIntelligence }, { onConflict: 'user_id' }), 900)
+    return () => window.clearTimeout(timer)
+  }, [user, workspaceStateHydrated, studentIntelligence])
 
   useEffect(() => {
     if (!user || !workspaceStateHydrated) return
@@ -749,6 +759,13 @@ function App() {
     goTo('CourseFinder')
   }
 
+  useEffect(() => {
+    if (page !== 'CourseFinder' || !studentIntelligence.targetCourses) return
+    if (!courseQuery.trim()) setCourseQuery(studentIntelligence.targetCourses.split(',')[0].trim())
+    if (studentIntelligence.predictedGrades && !courseGradeProfile) setCourseGradeProfile(`Predicted profile: ${studentIntelligence.predictedGrades}`)
+    if (studentIntelligence.targetUniversities && !courseProvider.trim()) setCourseProvider(studentIntelligence.targetUniversities.split(',')[0].trim())
+  }, [page, studentIntelligence])
+
   const addCourseToShortlist = (course, level) => {
     setCourseShortlist((current) => {
       const alreadyShortlisted = Boolean(current[course.id])
@@ -910,6 +927,12 @@ function App() {
 
     return {
       goal: aiGoal,
+      academicProfile: {
+        subjects: studentIntelligence.subjects || '',
+        predictedGrades: studentIntelligence.predictedGrades || '',
+        targetCourses: studentIntelligence.targetCourses || '',
+        targetUniversities: studentIntelligence.targetUniversities || '',
+      },
       matchPreferences: {
         yearGroups: matchYearGroups.slice(0, 4),
         activities: matchActivityTypes.slice(0, 6),
@@ -2109,6 +2132,14 @@ function App() {
                 className="closing-card"
                 style={{ marginTop: '35px' }}
               >
+                <h3>Student Intelligence</h3>
+                <p>Used across Premium to personalise course, admissions and test guidance.</p>
+                <input value={studentIntelligence.subjects || ''} onChange={(e) => setStudentIntelligence((p) => ({ ...p, subjects: e.target.value }))} placeholder="Subjects, e.g. Maths, Economics, Physics" />
+                <input value={studentIntelligence.predictedGrades || ''} onChange={(e) => setStudentIntelligence((p) => ({ ...p, predictedGrades: e.target.value }))} placeholder="Predicted grades, e.g. A* A* A" style={{ marginTop: '10px' }} />
+                <input value={studentIntelligence.targetCourses || ''} onChange={(e) => setStudentIntelligence((p) => ({ ...p, targetCourses: e.target.value }))} placeholder="Target courses" style={{ marginTop: '10px' }} />
+                <input value={studentIntelligence.targetUniversities || ''} onChange={(e) => setStudentIntelligence((p) => ({ ...p, targetUniversities: e.target.value }))} placeholder="Target universities" style={{ marginTop: '10px' }} />
+                <p style={{ marginTop: '12px' }}><small>{user ? 'Saved securely to your account.' : 'Sign in to save this securely.'}</small></p>
+
                 <h3>Your interests</h3>
 
                 {selectedInterests.length > 0 ? (
@@ -3905,6 +3936,7 @@ function CourseResultCard({ course, profileGrades, planning, shortlist, shortlis
       <span className="course-result-kicker">{course.qualification || 'UNDERGRADUATE'} · {course.study_mode || 'Study mode not listed'}</span>
       <h3>{course.course_title}</h3><strong>{course.provider_name}</strong>
       <p>{[course.campus_name, course.country, course.duration].filter(Boolean).join(' · ') || 'Details on official course page'}</p>
+      <small>Source: official course page{course.source_updated_at ? ` · catalogue checked ${new Date(course.source_updated_at).toLocaleDateString('en-GB')}` : ''}</small>
       {course.subjects_text && <div className="course-subject-tags">{course.subjects_text.split('|').slice(0, 4).map((subject) => <span key={subject}>{subject}</span>)}</div>}
       <div className="course-admissions-row"><span><b>Entry requirements</b> {requirements?.text || 'Load from official course page'}</span><span><b>Historic acceptance / grade match</b> Check UCAS</span></div>
       {!requirements && <button className="course-requirements-button" onClick={loadRequirements} disabled={loading}>{loading ? 'Checking live requirements…' : 'Show entry requirements'}</button>}
