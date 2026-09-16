@@ -459,6 +459,20 @@ https://ocw.mit.edu/
 """.split()
 SOURCES.extend(curated_hub(link) for link in CURATED_HUB_LINKS)
 SOURCES.extend(curated_hub(link) for link in LATEST_CURATED_HUB_LINKS)
+SOURCES.extend(curated_hub(link) for link in """
+https://www.lucy.cam.ac.uk/outreach
+https://www.sel.cam.ac.uk/access-outreach
+https://www.pet.cam.ac.uk/access-and-outreach
+https://www.emma.cam.ac.uk/admissions/undergraduates/access/
+https://www.magd.cam.ac.uk/undergraduate/access-and-outreach
+https://www.clare.cam.ac.uk/access-and-outreach
+https://www.caths.cam.ac.uk/undergraduate-study/access-and-outreach
+https://www.dow.cam.ac.uk/outreach
+https://www.wolfson.cam.ac.uk/outreach
+https://www.hughes.cam.ac.uk/study-with-us/outreach/
+https://www.merton.ox.ac.uk/access-and-outreach
+https://www.balliol.ox.ac.uk/admissions/outreach
+""".split())
 
 
 # Latest science enrichment sources supplied by the curator.
