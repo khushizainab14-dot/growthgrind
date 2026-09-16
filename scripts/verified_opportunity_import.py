@@ -258,11 +258,14 @@ def curated_hub(link):
     university_hosts = ("ac.uk", "citystgeorges.ac.uk")
     creative_words = ("museum", "gallery", "theatre", "arts", "film", "choir", "ballet", "riba", "architecture", "poetry", "shakespeare")
     volunteer_words = ("volunteer", "scouts", "guiding", "cadets", "amnesty", "unicef", "youngminds", "rotary", "conservation", "rspca", "wwf", "greenpeace")
+    sport_words = ("sport", "athletics", "swim", "tennis", "rugby", "football", "hockey", "gymnastics", "climbing", "surf", "equestrian", "paralympic", "cricket", "cycling")
     academic_words = ("stem", "engineering", "math", "science", "learn", "coursera", "edx", "khanacademy", "ocw", "education")
     if any(word in lower for word in creative_words):
         category, activity, subjects = "Creative", "Course / Programme", "Art, Media, Writing, Creative"
     elif any(word in lower for word in volunteer_words):
         category, activity, subjects = "Volunteering", "Volunteering", "Community, Leadership, Volunteering"
+    elif any(word in lower for word in sport_words):
+        category, activity, subjects = "Sport", "Sport Programme", "Sport, Leadership"
     elif any(word in host for word in university_hosts):
         category, activity, subjects = "Academic", "University Outreach", "University, Higher Education"
     elif any(word in lower for word in academic_words):

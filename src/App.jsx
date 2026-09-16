@@ -153,7 +153,8 @@ function App() {
         return
       }
 
-      const formattedOpportunities = allRows.map((item) => ({
+      const uniqueRows = Array.from(new Map(allRows.map((item) => [item.link || item.id, item])).values())
+      const formattedOpportunities = uniqueRows.map((item) => ({
         id: item.id,
         category: item.category,
         activityType: item.activity_type,
@@ -1084,7 +1085,7 @@ function App() {
       const keywords = categoryMatches[activeCategory.toLowerCase()] || []
 
       results = results.filter((opportunity) => {
-        const searchable = [opportunity.category, opportunity.activityType]
+        const searchable = [opportunity.category, opportunity.activityType, opportunity.title, opportunity.organisation, ...(opportunity.subjects || []), opportunity.description]
           .filter(Boolean)
           .join(' ')
           .toLowerCase()
