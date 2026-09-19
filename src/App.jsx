@@ -118,6 +118,7 @@ const premiumFeatureGroups = [
 ]
 
 function App() {
+    const [theme, setTheme] = useState(() => localStorage.getItem('growthgrind_theme') || 'dark')
     const [opportunities, setOpportunities] = useState([])
 
   useEffect(() => {
@@ -1315,7 +1316,7 @@ function App() {
   }
 
   return (
-    <div className="app">
+    <div className={`app theme-${theme}`}>
       <Navbar
         page={page}
         setPage={goTo}
@@ -1327,6 +1328,8 @@ function App() {
         user={user}
         onAuth={() => openAuth()}
         onSignOut={() => supabase.auth.signOut()}
+        theme={theme}
+        onToggleTheme={() => setTheme((current) => { const next = current === 'dark' ? 'light' : 'dark'; localStorage.setItem('growthgrind_theme', next); return next })}
       />
 
       {/* MATCH SETUP */}
@@ -3705,6 +3708,8 @@ function Navbar({
   user,
   onAuth,
   onSignOut,
+  theme,
+  onToggleTheme,
 }) {
   return (
     <header className="navbar">
@@ -3847,6 +3852,7 @@ function Navbar({
       >
         {user ? 'Sign out' : 'Sign in'}
       </button>
+      <button className="theme-toggle" onClick={onToggleTheme} aria-label="Toggle colour mode"><span className={theme === 'light' ? 'toggle-knob light' : 'toggle-knob'}>{theme === 'light' ? '☀' : '☾'}</span></button>
     </header>
   )
 }

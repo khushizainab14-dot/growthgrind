@@ -1109,6 +1109,16 @@ input::placeholder, textarea::placeholder { color: #b6b1d1; opacity: 1; }
 .app .premium-confetti i { background: #9da8ff !important; }
 .app p { color: #c9c5ff !important; }
 .app .eyebrow, .app .days-left { color: #9da8ff !important; }
+.theme-toggle { width: 48px; height: 27px; padding: 3px; border: 1px solid #665a8e; border-radius: 999px; background: #302744; margin-left: 10px; }
+.toggle-knob { width: 19px; height: 19px; display: grid; place-items: center; border-radius: 50%; background: #9da8ff; color: #15101f; font-size: 12px; transition: transform .2s ease; }
+.toggle-knob.light { transform: translateX(19px); }
+.theme-light { background: #fff !important; color: #15101f !important; }
+.theme-light .navbar { background: rgba(255,255,255,.96) !important; border-color: #ded8ef; }
+.theme-light .hero-section, .theme-light .opportunities-section, .theme-light .premium-studio, .theme-light .course-result-card, .theme-light .closing-card, .theme-light .modal, .theme-light .statement-workspace, .theme-light .career-quiz-studio { background: #f8f6ff !important; border-color: #ded8ef !important; }
+.theme-light h1, .theme-light h2, .theme-light h3, .theme-light h4, .theme-light strong, .theme-light label { color: #15101f !important; }
+.theme-light p, .theme-light .nav-link, .theme-light .more-button { color: #50466d !important; }
+.theme-light input, .theme-light textarea, .theme-light select { background: #fff !important; color: #15101f !important; border-color: #c9c1e4 !important; }
+.theme-light .theme-toggle { background: #e9e5f8; }
 @media (max-width: 560px) {
   .grade-picker { grid-template-columns: 1fr; }
   .tariff-entry { grid-template-columns: 1fr; }
