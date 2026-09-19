@@ -3919,6 +3919,11 @@ function CourseResultCard({ course, profileGrades, planning, shortlist, shortlis
     if (loading || requirements) return
     setLoading(true)
     try {
+      const { data: verified } = await supabase.from('admissions_intelligence').select('*').eq('university', course.provider_name).eq('course', course.course_title).maybeSingle()
+      if (verified) {
+        setRequirements({ text: verified.a_level_offer || 'Check official source', suggestion: '', reason: [verified.required_subjects, verified.admissions_tests, verified.contextual_offer].filter(Boolean).join(' · '), verified: true, checked: verified.last_checked_at })
+        return
+      }
       const response = await fetch('/api/course-requirements', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: course.course_url, title: course.course_title, provider: course.provider_name, grades: profileGrades }) })
       const result = await response.json()
       if (!response.ok) throw new Error(result.error || 'Could not read the official course page.')
@@ -4189,8 +4194,9 @@ function PremiumWorkspacePage({
               </button>
               <button className="multi-course-link" onClick={onOpenMultiCourse}>Applying to more than one course? Try the Multi-course Statement Analyser →</button>
             </div>
-            <aside className="statement-feedback-panel">
+            <aside className={`statement-feedback-panel ${statementFeedbackLoading ? 'statement-feedback-loading' : ''}`}>
               <div className="days-left">DRAFT FEEDBACK</div>
+              {statementFeedbackLoading && <div className="statement-dot-loader" aria-label="GrowthGrind is reviewing your draft"><div className="statement-dot-field" /> <p>Mapping your ideas, evidence and academic connections…</p></div>}
               {!statementFeedback ? (
                 <>
                   <h3 style={{ marginTop: '13px' }}>Feedback that keeps your voice</h3>

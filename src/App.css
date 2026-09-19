@@ -1074,6 +1074,9 @@ footer p {
   .course-planner-bar { align-items: flex-start; flex-direction: column; }
 }
 
+.statement-dot-loader { min-height: 260px; display: grid; place-items: center; align-content: center; gap: 20px; color: #315b3d; font-weight: 700; text-align: center; }
+.statement-dot-field { width: min(100%, 330px); height: 150px; background-image: radial-gradient(circle, #315b3d 1.5px, transparent 1.8px); background-size: 12px 12px; mask-image: radial-gradient(ellipse at center, #000 22%, transparent 72%); animation: statement-dot-drift 3.2s ease-in-out infinite alternate; opacity: .8; }
+@keyframes statement-dot-drift { from { transform: perspective(300px) rotateX(18deg) scale(.88); background-position: 0 0; opacity: .45; } to { transform: perspective(300px) rotateX(-10deg) scale(1.08); background-position: 22px 15px; opacity: .95; } }
 @media (max-width: 560px) {
   .grade-picker { grid-template-columns: 1fr; }
   .tariff-entry { grid-template-columns: 1fr; }
