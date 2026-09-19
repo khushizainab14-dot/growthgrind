@@ -658,9 +658,9 @@ function App() {
       .eq('opportunity_id', opportunityId)
     const opportunity = opportunities.find((item) => item.id === opportunityId)
     const reflection = trackedActivities[opportunityId].reflection || ''
-    if (opportunity && reflection.trim()) {
+    if (opportunity && (reflection.trim() || trackedActivities[opportunityId].evidence?.trim() || trackedActivities[opportunityId].outcome?.trim())) {
       const { data: existing } = await supabase.from('experience_intelligence').select('id').eq('user_id', user.id).eq('opportunity_id', opportunityId).limit(1)
-      const record = { user_id: user.id, opportunity_id: opportunityId, title: opportunity.title, subjects: opportunity.subjects || [], reflection, updated_at: new Date().toISOString() }
+      const record = { user_id: user.id, opportunity_id: opportunityId, title: opportunity.title, subjects: opportunity.subjects || [], reflection, evidence: trackedActivities[opportunityId].evidence || '', outcome: trackedActivities[opportunityId].outcome || '', updated_at: new Date().toISOString() }
       if (existing?.[0]) await supabase.from('experience_intelligence').update(record).eq('id', existing[0].id)
       else await supabase.from('experience_intelligence').insert(record)
     }
@@ -2485,6 +2485,8 @@ function App() {
                                   resize: 'vertical',
                                 }}
                               />
+                              <textarea value={trackedActivities[opportunity.id]?.evidence || ''} onChange={(event) => setTrackedActivities((current) => ({ ...current, [opportunity.id]: { ...current[opportunity.id], evidence: event.target.value } }))} onBlur={() => saveReflection(opportunity.id)} placeholder="What did you actually do? Add a specific task, project, result or example." style={{ width: '100%', minHeight: '68px', marginTop: '10px', padding: '11px', borderRadius: '9px', border: '1px solid #d0c4b0', background: '#f5efe5', color: '#315b3d', font: 'inherit', resize: 'vertical' }} />
+                              <textarea value={trackedActivities[opportunity.id]?.outcome || ''} onChange={(event) => setTrackedActivities((current) => ({ ...current, [opportunity.id]: { ...current[opportunity.id], outcome: event.target.value } }))} onBlur={() => saveReflection(opportunity.id)} placeholder="What happened next? Add an outcome, award, insight or next step." style={{ width: '100%', minHeight: '68px', marginTop: '10px', padding: '11px', borderRadius: '9px', border: '1px solid #d0c4b0', background: '#f5efe5', color: '#315b3d', font: 'inherit', resize: 'vertical' }} />
                             </div>
                           </div>
                         ))}
