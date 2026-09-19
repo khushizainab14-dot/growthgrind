@@ -1102,6 +1102,11 @@ input, textarea, select { background: #20264a !important; color: #f8f8ff !import
 input, textarea, select { background: #302744 !important; border-color: #665a8e !important; color: #f8f8ff !important; }
 input::placeholder, textarea::placeholder { color: #b6b1d1; opacity: 1; }
 .statement-dot-field { background-image: radial-gradient(circle, #9da8ff 1.5px, transparent 1.8px); }
+/* Force legacy green UI tokens into the temporary violet palette. */
+.app h1, .app h2, .app h3, .app h4, .app strong, .app label, .app .premium-source-banner strong { color: #f8f8ff !important; }
+.app a:not(.nav-link), .app .multi-course-link, .app .source-link { color: #c9c5ff !important; }
+.app .source-link, .app .save-button, .app .track-button, .app .premium-button, .app .primary-button, .app .view-button { background: #7c5cfc !important; border-color: #7c5cfc !important; color: #fff !important; }
+.app .premium-confetti i { background: #9da8ff !important; }
 @media (max-width: 560px) {
   .grade-picker { grid-template-columns: 1fr; }
   .tariff-entry { grid-template-columns: 1fr; }
