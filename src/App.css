@@ -1091,6 +1091,8 @@ footer p {
 .theme-dark .category-tag *, .theme-dark .days-left *, .theme-dark .saved-count *, .theme-dark .course-grade-panel *, .theme-dark .premium-source-banner *, .theme-dark .deadline *, .theme-dark .match-score * { color: #17251b !important; }
 .theme-dark .opportunity-card { background: #f5efe5; border-color: #d8cdbb; }
 .theme-dark .opportunity-card h3, .theme-dark .opportunity-card p, .theme-dark .opportunity-card strong, .theme-dark .opportunity-card span, .theme-dark .opportunity-card .organisation { color: #28352b !important; }
+.theme-dark [style*="background"] { color: #17251b; }
+.theme-dark [style*="background"] h1, .theme-dark [style*="background"] h2, .theme-dark [style*="background"] h3, .theme-dark [style*="background"] h4, .theme-dark [style*="background"] p, .theme-dark [style*="background"] strong, .theme-dark [style*="background"] span, .theme-dark [style*="background"] li { color: #17251b !important; }
 
 @media (max-width: 560px) {
   .grade-picker { grid-template-columns: 1fr; }
