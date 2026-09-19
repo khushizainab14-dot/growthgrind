@@ -1107,6 +1107,8 @@ input::placeholder, textarea::placeholder { color: #b6b1d1; opacity: 1; }
 .app a:not(.nav-link), .app .multi-course-link, .app .source-link { color: #c9c5ff !important; }
 .app .source-link, .app .save-button, .app .track-button, .app .premium-button, .app .primary-button, .app .view-button { background: #7c5cfc !important; border-color: #7c5cfc !important; color: #fff !important; }
 .app .premium-confetti i { background: #9da8ff !important; }
+.app p { color: #c9c5ff !important; }
+.app .eyebrow, .app .days-left { color: #9da8ff !important; }
 @media (max-width: 560px) {
   .grade-picker { grid-template-columns: 1fr; }
   .tariff-entry { grid-template-columns: 1fr; }
