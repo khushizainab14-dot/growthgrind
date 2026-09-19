@@ -1079,14 +1079,14 @@ footer p {
 @keyframes statement-dot-drift { from { transform: perspective(300px) rotateX(18deg) scale(.88); background-position: 0 0; opacity: .45; } to { transform: perspective(300px) rotateX(-10deg) scale(1.08); background-position: 22px 15px; opacity: .95; } }
 
 /* Temporary teen-focused midnight / lavender theme preview. */
-:root { color: #f8f8ff; background: #101328; }
-.app { background: #101328; color: #f8f8ff; }
-.navbar { background: rgba(16, 19, 40, .96); border-color: #30365d; }
+.app { background: #15101f; color: #f8f8ff; }
+:root { color: #f8f8ff; background: #15101f; }
+.navbar { background: rgba(21, 16, 31, .96); border-color: #403252; }
 .brand, .hero-content h1, h1, h2, h3, h4, strong { color: #f8f8ff; }
-.brand-mark, .view-button, .primary-button { background: #a78bfa; color: #101328; }
+.brand-mark, .view-button, .primary-button { background: #a78bfa; color: #15101f; }
 .nav-link, .more-button, p, .hero-content p { color: #c9c5ff; }
 .nav-link:hover, .more-button:hover, .nav-link.active { background: #262b52; color: #f8f8ff; }
-.hero-section, .opportunities-section, .premium-studio, .course-result-card, .closing-card, .modal, .statement-workspace, .career-quiz-studio { background: #171b35; border-color: #30365d; }
+.hero-section, .opportunities-section, .premium-studio, .course-result-card, .closing-card, .modal, .statement-workspace, .career-quiz-studio { background: #21192d; border-color: #403252; }
 input, textarea, select { background: #20264a !important; color: #f8f8ff !important; border-color: #4a5283 !important; }
 .category-tag, .days-left { background: #262b52; color: #c9c5ff; }
 .filter-button { border-color: #a78bfa; color: #c9c5ff; background: transparent; }
