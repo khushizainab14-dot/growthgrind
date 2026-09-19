@@ -1077,6 +1077,22 @@ footer p {
 .statement-dot-loader { min-height: 260px; display: grid; place-items: center; align-content: center; gap: 20px; color: #315b3d; font-weight: 700; text-align: center; }
 .statement-dot-field { width: min(100%, 330px); height: 150px; background-image: radial-gradient(circle, #315b3d 1.5px, transparent 1.8px); background-size: 12px 12px; mask-image: radial-gradient(ellipse at center, #000 22%, transparent 72%); animation: statement-dot-drift 3.2s ease-in-out infinite alternate; opacity: .8; }
 @keyframes statement-dot-drift { from { transform: perspective(300px) rotateX(18deg) scale(.88); background-position: 0 0; opacity: .45; } to { transform: perspective(300px) rotateX(-10deg) scale(1.08); background-position: 22px 15px; opacity: .95; } }
+
+/* Temporary teen-focused midnight / lavender theme preview. */
+:root { color: #f8f8ff; background: #101328; }
+.app { background: #101328; color: #f8f8ff; }
+.navbar { background: rgba(16, 19, 40, .96); border-color: #30365d; }
+.brand, .hero-content h1, h1, h2, h3, h4, strong { color: #f8f8ff; }
+.brand-mark, .view-button, .primary-button { background: #a78bfa; color: #101328; }
+.nav-link, .more-button, p, .hero-content p { color: #c9c5ff; }
+.nav-link:hover, .more-button:hover, .nav-link.active { background: #262b52; color: #f8f8ff; }
+.hero-section, .opportunities-section, .premium-studio, .course-result-card, .closing-card, .modal, .statement-workspace, .career-quiz-studio { background: #171b35; border-color: #30365d; }
+input, textarea, select { background: #20264a !important; color: #f8f8ff !important; border-color: #4a5283 !important; }
+.category-tag, .days-left { background: #262b52; color: #c9c5ff; }
+.filter-button { border-color: #a78bfa; color: #c9c5ff; background: transparent; }
+.deadline, .success, .match-score { color: #52e3c2; }
+.statement-dot-loader { color: #c9c5ff; }
+.statement-dot-field { background-image: radial-gradient(circle, #a78bfa 1.5px, transparent 1.8px); }
 @media (max-width: 560px) {
   .grade-picker { grid-template-columns: 1fr; }
   .tariff-entry { grid-template-columns: 1fr; }
