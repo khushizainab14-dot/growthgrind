@@ -1078,47 +1078,6 @@ footer p {
 .statement-dot-field { width: min(100%, 330px); height: 150px; background-image: radial-gradient(circle, #315b3d 1.5px, transparent 1.8px); background-size: 12px 12px; mask-image: radial-gradient(ellipse at center, #000 22%, transparent 72%); animation: statement-dot-drift 3.2s ease-in-out infinite alternate; opacity: .8; }
 @keyframes statement-dot-drift { from { transform: perspective(300px) rotateX(18deg) scale(.88); background-position: 0 0; opacity: .45; } to { transform: perspective(300px) rotateX(-10deg) scale(1.08); background-position: 22px 15px; opacity: .95; } }
 
-/* Temporary teen-focused midnight / lavender theme preview. */
-.app { background: #15101f; color: #f8f8ff; }
-:root { color: #f8f8ff; background: #15101f; }
-.navbar { background: rgba(21, 16, 31, .96); border-color: #403252; }
-.brand, .hero-content h1, h1, h2, h3, h4, strong { color: #f8f8ff; }
-.brand-mark, .view-button, .primary-button { background: #a78bfa; color: #15101f; }
-.nav-link, .more-button, p, .hero-content p { color: #c9c5ff; }
-.nav-link:hover, .more-button:hover, .nav-link.active { background: #262b52; color: #f8f8ff; }
-.hero-section, .opportunities-section, .premium-studio, .course-result-card, .closing-card, .modal, .statement-workspace, .career-quiz-studio { background: #21192d; border-color: #403252; }
-input, textarea, select { background: #20264a !important; color: #f8f8ff !important; border-color: #4a5283 !important; }
-.category-tag, .days-left { background: #262b52; color: #c9c5ff; }
-.filter-button { border-color: #a78bfa; color: #c9c5ff; background: transparent; }
-.deadline, .success, .match-score { color: #52e3c2; }
-.statement-dot-loader { color: #c9c5ff; }
-.statement-dot-field { background-image: radial-gradient(circle, #a78bfa 1.5px, transparent 1.8px); }
-
-/* Grape-black refinement: violet replaces the remaining green brand accents. */
-.brand { color: #9da8ff; }
-.brand-mark, .view-button, .primary-button { background: #7c5cfc; color: #fff; }
-.filter-button { border-color: #9da8ff; color: #c9c5ff; }
-.category-tag, .days-left { background: #312657; color: #c9c5ff; }
-input, textarea, select { background: #35323e !important; border-color: #716b80 !important; color: #f8f8ff !important; }
-input::placeholder, textarea::placeholder { color: #b6b1d1; opacity: 1; }
-.statement-dot-field { background-image: radial-gradient(circle, #9da8ff 1.5px, transparent 1.8px); }
-/* Force legacy green UI tokens into the temporary violet palette. */
-.app h1, .app h2, .app h3, .app h4, .app strong, .app label, .app .premium-source-banner strong { color: #f8f8ff !important; }
-.app a:not(.nav-link), .app .multi-course-link, .app .source-link { color: #c9c5ff !important; }
-.app .source-link, .app .save-button, .app .track-button, .app .premium-button, .app .primary-button, .app .view-button { background: #7c5cfc !important; border-color: #7c5cfc !important; color: #fff !important; }
-.app .premium-confetti i { background: #9da8ff !important; }
-.app p { color: #c9c5ff !important; }
-.app .eyebrow, .app .days-left { color: #9da8ff !important; }
-.theme-toggle { width: 48px; height: 27px; padding: 3px; border: 1px solid #665a8e; border-radius: 999px; background: #302744; margin-left: 10px; }
-.toggle-knob { width: 19px; height: 19px; display: grid; place-items: center; border-radius: 50%; background: #9da8ff; color: #15101f; font-size: 12px; transition: transform .2s ease; }
-.toggle-knob.light { transform: translateX(19px); }
-.theme-light { background: #fff !important; color: #15101f !important; }
-.theme-light .navbar { background: rgba(255,255,255,.96) !important; border-color: #ded8ef; }
-.theme-light .hero-section, .theme-light .opportunities-section, .theme-light .premium-studio, .theme-light .course-result-card, .theme-light .closing-card, .theme-light .modal, .theme-light .statement-workspace, .theme-light .career-quiz-studio { background: #f8f6ff !important; border-color: #ded8ef !important; }
-.theme-light h1, .theme-light h2, .theme-light h3, .theme-light h4, .theme-light strong, .theme-light label { color: #15101f !important; }
-.theme-light p, .theme-light .nav-link, .theme-light .more-button { color: #50466d !important; }
-.theme-light input, .theme-light textarea, .theme-light select { background: #fff !important; color: #15101f !important; border-color: #c9c1e4 !important; }
-.theme-light .theme-toggle { background: #e9e5f8; }
 @media (max-width: 560px) {
   .grade-picker { grid-template-columns: 1fr; }
   .tariff-entry { grid-template-columns: 1fr; }
