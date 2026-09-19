@@ -767,6 +767,12 @@ function App() {
     if (studentIntelligence.targetUniversities && !courseProvider.trim()) setCourseProvider(studentIntelligence.targetUniversities.split(',')[0].trim())
   }, [page, studentIntelligence])
 
+  useEffect(() => {
+    if (!statementCourse && studentIntelligence.targetCourses) {
+      setStatementCourse(studentIntelligence.targetCourses)
+    }
+  }, [statementCourse, studentIntelligence.targetCourses])
+
   const addCourseToShortlist = (course, level) => {
     setCourseShortlist((current) => {
       const alreadyShortlisted = Boolean(current[course.id])
