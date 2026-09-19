@@ -656,6 +656,14 @@ function App() {
       .update({ reflection: trackedActivities[opportunityId].reflection })
       .eq('user_id', user.id)
       .eq('opportunity_id', opportunityId)
+    const opportunity = opportunities.find((item) => item.id === opportunityId)
+    const reflection = trackedActivities[opportunityId].reflection || ''
+    if (opportunity && reflection.trim()) {
+      const { data: existing } = await supabase.from('experience_intelligence').select('id').eq('user_id', user.id).eq('opportunity_id', opportunityId).limit(1)
+      const record = { user_id: user.id, opportunity_id: opportunityId, title: opportunity.title, subjects: opportunity.subjects || [], reflection, updated_at: new Date().toISOString() }
+      if (existing?.[0]) await supabase.from('experience_intelligence').update(record).eq('id', existing[0].id)
+      else await supabase.from('experience_intelligence').insert(record)
+    }
   }
 
   const explainJourneyConnection = async (opportunity, linkedActivities) => {
