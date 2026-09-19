@@ -1093,6 +1093,9 @@ footer p {
 .theme-dark .opportunity-card h3, .theme-dark .opportunity-card p, .theme-dark .opportunity-card strong, .theme-dark .opportunity-card span, .theme-dark .opportunity-card .organisation { color: #28352b !important; }
 .theme-dark [style*="background"] { color: #17251b; }
 .theme-dark [style*="background"] h1, .theme-dark [style*="background"] h2, .theme-dark [style*="background"] h3, .theme-dark [style*="background"] h4, .theme-dark [style*="background"] p, .theme-dark [style*="background"] strong, .theme-dark [style*="background"] span, .theme-dark [style*="background"] li { color: #17251b !important; }
+.opportunity-search { flex: 1; max-width: 420px; display: flex; align-items: center; gap: 8px; padding: 0 12px; border: 1px solid #d0c4b0; border-radius: 10px; background: #fffaf2; color: #315b3d; }
+.opportunity-search input { width: 100%; border: 0; outline: 0; background: transparent; padding: 11px 0; color: #315b3d; }
+.theme-dark .opportunity-search { background: #2a302a; border-color: #657867; color: #e5d8c3; }
 
 @media (max-width: 560px) {
   .grade-picker { grid-template-columns: 1fr; }

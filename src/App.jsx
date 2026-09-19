@@ -272,6 +272,7 @@ function App() {
   const [costFilter, setCostFilter] = useState('All opportunities')
   const [activityTypeFilter, setActivityTypeFilter] = useState('Any')
   const [subjectFilter, setSubjectFilter] = useState('Any')
+  const [opportunitySearch, setOpportunitySearch] = useState('')
   const [matchYearGroups, setMatchYearGroups] = useState([])
   const [matchActivityTypes, setMatchActivityTypes] = useState([])
   const [matchSubjects, setMatchSubjects] = useState([])
@@ -1119,6 +1120,14 @@ function App() {
   const getFilteredOpportunities = () => {
     let results = [...opportunities]
 
+    if (opportunitySearch.trim()) {
+      const terms = opportunitySearch.toLowerCase().trim().split(/\s+/).filter(Boolean)
+      results = results.filter((opportunity) => {
+        const searchable = [opportunity.title, opportunity.organisation, opportunity.description, opportunity.category, opportunity.activityType, ...(opportunity.subjects || [])].filter(Boolean).join(' ').toLowerCase()
+        return terms.every((term) => searchable.includes(term))
+      })
+    }
+
     if (activeCategory !== 'All') {
       const categoryMatches = {
         academic: ['academic', 'competition', 'olympiad', 'research', 'course', 'summer school', 'scholarship'],
@@ -1896,6 +1905,7 @@ function App() {
 
             <section className="opportunities-section">
               <div className="toolbar">
+                <label className="opportunity-search"><span>⌕</span><input value={opportunitySearch} onChange={(event) => setOpportunitySearch(event.target.value)} placeholder="Search opportunities, providers or subjects" /></label>
                 <div>
                   <strong>{filteredOpportunities.length}</strong>{' '}
                   opportunities found
