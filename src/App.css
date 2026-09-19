@@ -1087,6 +1087,8 @@ footer p {
 .theme-dark p, .theme-dark .nav-link, .theme-dark .more-button { color: #e5d8c3 !important; }
 .theme-dark input, .theme-dark textarea, .theme-dark select { background: #2a302a !important; color: #fffaf2 !important; border-color: #657867 !important; }
 .theme-dark .theme-toggle { background: #2a302a; border-color: #657867; }
+.theme-dark .category-tag, .theme-dark .days-left, .theme-dark .saved-count, .theme-dark .course-grade-panel, .theme-dark .premium-source-banner, .theme-dark .deadline, .theme-dark .match-score { color: #17251b !important; }
+.theme-dark .category-tag *, .theme-dark .days-left *, .theme-dark .saved-count *, .theme-dark .course-grade-panel *, .theme-dark .premium-source-banner *, .theme-dark .deadline *, .theme-dark .match-score * { color: #17251b !important; }
 
 @media (max-width: 560px) {
   .grade-picker { grid-template-columns: 1fr; }
