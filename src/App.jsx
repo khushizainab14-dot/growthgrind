@@ -4255,6 +4255,8 @@ function PremiumWorkspacePage({
             <MultiCourseStatementWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} />
           ) : feature.id === 'timeline' ? (
             <TimelineWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} />
+          ) : feature.id === 'test-planner' ? (
+            <AdmissionsTestPlannerWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} />
           ) : ['progress', 'balance', 'firm-insurance'].includes(feature.id) ? (
             <ApplicationChoicesWorkspace mode={feature.id} choices={applicationChoices} setChoices={setApplicationChoices} />
           ) : (
@@ -4264,6 +4266,14 @@ function PremiumWorkspacePage({
       </section>
     </main>
   )
+}
+
+function AdmissionsTestPlannerWorkspace({ workspaceData, setWorkspaceData }) {
+  const [tests, setTests] = useState([])
+  useEffect(() => { supabase.from('admissions_test_intelligence').select('*').order('test_name').then(({ data }) => setTests(data || [])) }, [])
+  const selected = workspaceData.selectedTests || []
+  const toggle = (test) => setWorkspaceData({ ...workspaceData, selectedTests: selected.some((item) => item.id === test.id) ? selected.filter((item) => item.id !== test.id) : [...selected, test] })
+  return <div className="test-planner-studio premium-studio"><section><span className="days-left">OFFICIAL TEST INTELLIGENCE</span><h2>Plan every admissions test.</h2><p>Select tests relevant to your courses. GrowthGrind keeps their official resource, topic map and recorded dates together.</p><div className="test-intelligence-grid">{tests.map((test) => <article key={test.id}><strong>{test.test_name}</strong><p>{test.course_area}</p><small>{test.university}</small><p>{test.registration_deadline && `Register by ${test.registration_deadline}`} {test.test_date && ` · Test from ${test.test_date}`}</p><div>{(test.topics || []).map((topic) => <span className="category-tag" key={topic}>{topic}</span>)}</div><a className="filter-button" href={test.official_resource_url} target="_blank" rel="noreferrer">Official preparation ↗</a><button className="view-button" onClick={() => toggle(test)}>{selected.some((item) => item.id === test.id) ? 'Added to plan ✓' : 'Add to test plan'}</button></article>)}</div></section><aside><span className="days-left">YOUR TEST PLAN</span><h3>{selected.length ? `${selected.length} test${selected.length === 1 ? '' : 's'} selected` : 'Select a test to begin'}</h3>{selected.map((test) => <p key={test.id}><strong>{test.test_name}</strong> · {test.course_area}</p>)}</aside></div>
 }
 
 function MultiCourseStatementWorkspace({ workspaceData, setWorkspaceData }) {
