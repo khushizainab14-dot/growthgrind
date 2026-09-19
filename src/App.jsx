@@ -302,6 +302,7 @@ function App() {
   })
   const [workspaceStateHydrated, setWorkspaceStateHydrated] = useState(false)
   const [studentIntelligence, setStudentIntelligence] = useState({})
+  const [experienceIntelligence, setExperienceIntelligence] = useState([])
 
   const [isPremium, setIsPremium] = useState(
     localStorage.getItem('growthgrind_demo_premium') === 'true'
@@ -381,6 +382,11 @@ function App() {
     loadWorkspaceState()
     return () => { cancelled = true }
   }, [user])
+
+  useEffect(() => {
+    if (!user) { setExperienceIntelligence([]); return }
+    supabase.from('experience_intelligence').select('title, subjects, evidence, reflection, outcome').eq('user_id', user.id).then(({ data }) => setExperienceIntelligence(data || []))
+  }, [user, trackedActivities])
 
   const saveWorkspaceState = async (workspaceKey, data) => {
     if (!user || !workspaceStateHydrated) return
@@ -864,7 +870,7 @@ function App() {
       const response = await fetch('/api/statement-feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ answers: statementAnswers, course: statementCourse }),
+        body: JSON.stringify({ answers: statementAnswers, course: statementCourse, experiences: experienceIntelligence }),
       })
       const result = await response.json()
       if (!response.ok) throw new Error(result.error || 'We could not review this right now.')
