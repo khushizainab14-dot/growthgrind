@@ -835,7 +835,10 @@ function App() {
   }
 
   const saveStudyMistake = (question, response) => {
-    const entry = { id: `${Date.now()}-${Math.random()}`, question: question.slice(0, 900), response: response.slice(0, 1400), savedAt: new Date().toISOString(), reviews: 0, nextReview: new Date().toISOString() }
+    const text = question.toLowerCase()
+    const subject = /integrat|algebra|equation|trigon|calculus|math/.test(text) ? 'Mathematics' : /biology|cell|genetic/.test(text) ? 'Biology' : /chemistry|mole|reaction/.test(text) ? 'Chemistry' : /physics|force|energy/.test(text) ? 'Physics' : 'Uncategorised'
+    const topic = /integrat/.test(text) ? 'Integration' : /algebra|equation/.test(text) ? 'Algebra' : /trigon/.test(text) ? 'Trigonometry' : /calculus/.test(text) ? 'Calculus' : 'Review and tag later'
+    const entry = { id: `${Date.now()}-${Math.random()}`, question: question.slice(0, 900), response: response.slice(0, 1400), subject, topic, mistakeType: 'Concept or method', savedAt: new Date().toISOString(), reviews: 0, nextReview: new Date().toISOString() }
     setStudyMistakeBank((current) => [entry, ...current.filter((item) => item.question !== entry.question)].slice(0, 25))
   }
 
@@ -4562,7 +4565,7 @@ function StudyWorkspace({ workspaceData, setWorkspaceData, onOpenAi, mistakeBank
         <h3>Save an error to revisit</h3>
         <textarea value={mistake} onChange={(event) => setWorkspaceData({ ...workspaceData, mistake: event.target.value })} placeholder="Example: A-level Maths — integration — I forgot to adjust the limits after substitution. What will I do differently?" style={{ width: '100%', minHeight: '140px', boxSizing: 'border-box', padding: '12px', borderRadius: '9px', border: '1px solid #d0c4b0', background: '#f5efe5', color: '#315b3d', font: 'inherit' }} />
         <p style={{ fontSize: '12px' }}>Saved on this device. Use the button beneath any GrowthGrind Study reply to add a question and its guidance here.</p>
-        {mistakeBank.length > 0 && <div className="saved-mistakes"><strong>{dueMistakes.length ? `${dueMistakes.length} review now` : 'You are up to date'} · {mistakeBank.length} saved question{mistakeBank.length === 1 ? '' : 's'}</strong>{(dueMistakes.length ? dueMistakes : mistakeBank).slice(0, 3).map((entry) => <div key={entry.id}><span>{entry.question}</span><small>{entry.reviews ? `Reviewed ${entry.reviews} time${entry.reviews === 1 ? '' : 's'}` : 'First review'}</small>{onReviewMistake && <button className="filter-button" onClick={() => onReviewMistake(entry.id)}>I reviewed this →</button>}</div>)}</div>}
+        {mistakeBank.length > 0 && <div className="saved-mistakes"><strong>{dueMistakes.length ? `${dueMistakes.length} review now` : 'You are up to date'} · {mistakeBank.length} saved question{mistakeBank.length === 1 ? '' : 's'}</strong>{(dueMistakes.length ? dueMistakes : mistakeBank).slice(0, 3).map((entry) => <div key={entry.id}><span>{entry.question}</span><small>{entry.subject || 'Uncategorised'} · {entry.topic || 'Review and tag later'} · {entry.reviews ? `Reviewed ${entry.reviews} time${entry.reviews === 1 ? '' : 's'}` : 'First review'}</small>{onReviewMistake && <button className="filter-button" onClick={() => onReviewMistake(entry.id)}>I reviewed this →</button>}</div>)}</div>}
       </section>
     </div>
   )

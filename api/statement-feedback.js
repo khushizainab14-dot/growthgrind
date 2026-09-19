@@ -24,7 +24,7 @@ export default async function handler(request, response) {
 Return valid JSON only:
 {"summary":"","strengths":[""],"flags":[{"question":1,"type":"Grammar & expression|Clarity|Cliche or generic writing|Evidence|Reflection|Specificity|Show, don’t tell|Repetition|Relevance|Academic depth|Supercurricular focus|Connection|Weak sentence|Conciseness|Opening or ending|Course alignment|Formulaic voice warning","excerpt":"short exact excerpt only","advice":"specific question or improvement direction without rewriting it","priority":"high|medium|low"}],"connections":[""],"nextSteps":[""]}
 Give 2-3 genuine strengths, at most 9 flags, up to 3 connections, and 3 next steps. Set question to 1, 2 or 3 for the answer containing the issue. Grammar flags must be real. Flag cliches only if genuinely generic. For evidence/reflection, ask what the student did, thought, learned or changed. For academic depth, ask them to engage with an idea rather than name-drop a source. Formulaic voice is a warning about generic or over-polished phrasing, never an AI verdict. The intended course${multiCourse ? 's' : ''} ${multiCourse ? 'are' : 'is'}: ${course || 'not provided'}.
-Student answers:\n${answers.map((answer, index) => `Question ${index + 1}: ${answer}`).join('\n\n')}`
+Student answers:\n${answers.map((answer, index) => `Question ${index + 1}: ${answer}`).join('\n\n')}
 ${experiences.length ? `\nApproved Tracker evidence (use only to identify possible authentic connections; never invent an achievement):\n${experiences.map((item) => `${item.title}: ${item.evidence} ${item.reflection} ${item.outcome}`).join('\n')}` : ''}`
 
   try {
