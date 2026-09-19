@@ -2569,6 +2569,7 @@ function App() {
           setApplicationChoices={(choices) => setPremiumWorkspaceData((current) => ({ ...current, application_choices: choices }))}
           workspaceData={premiumWorkspaceData[activePremiumWorkspace.id] || {}}
           setWorkspaceData={(value) => setPremiumWorkspaceData((current) => ({ ...current, [activePremiumWorkspace.id]: value }))}
+          onScheduleTest={(test) => setPremiumWorkspaceData((current) => { const timeline = current.timeline || {}; const items = Array.isArray(timeline.items) ? timeline.items : []; const date = test.registration_deadline || test.test_date; if (!date || items.some((item) => item.title === `${test.test_name} deadline`)) return current; return { ...current, timeline: { ...timeline, items: [...items, { id: `test-${test.id}`, title: `${test.test_name} deadline`, date, type: 'Admissions test', note: `Check official requirements and prepare: ${test.official_resource_url}`, complete: false }] } } })}
           onBack={() => goTo('Premium')}
           onOpenAi={() => {
             const specialist = activePremiumWorkspace.id.includes('statement') ? 'statement'
@@ -4153,6 +4154,7 @@ function PremiumWorkspacePage({
   setWorkspaceData,
   onBack,
   onOpenAi,
+  onScheduleTest,
 }) {
   const characterTotal = statementAnswers.reduce((total, answer) => total + answer.length, 0)
   const officialSources = {
@@ -4268,7 +4270,7 @@ function PremiumWorkspacePage({
           ) : feature.id === 'timeline' ? (
             <TimelineWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} />
           ) : feature.id === 'test-planner' ? (
-            <AdmissionsTestPlannerWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} courseShortlist={courseShortlist} />
+            <AdmissionsTestPlannerWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} courseShortlist={courseShortlist} onScheduleTest={onScheduleTest} />
           ) : ['progress', 'balance', 'firm-insurance'].includes(feature.id) ? (
             <ApplicationChoicesWorkspace mode={feature.id} choices={applicationChoices} setChoices={setApplicationChoices} />
           ) : (
@@ -4280,13 +4282,13 @@ function PremiumWorkspacePage({
   )
 }
 
-function AdmissionsTestPlannerWorkspace({ workspaceData, setWorkspaceData, courseShortlist }) {
+function AdmissionsTestPlannerWorkspace({ workspaceData, setWorkspaceData, courseShortlist, onScheduleTest }) {
   const [tests, setTests] = useState([])
   useEffect(() => { supabase.from('admissions_test_intelligence').select('*').order('test_name').then(({ data }) => setTests(data || [])) }, [])
   const selected = workspaceData.selectedTests || []
   const courseText = Object.values(courseShortlist || {}).map((item) => item.title).join(' ').toLowerCase()
   const suggestedNames = tests.filter((test) => (test.test_name === 'UCAT' && /medicine|dentistry/.test(courseText)) || (test.test_name === 'LNAT' && /law/.test(courseText)) || (test.test_name === 'TMUA' && /math|economics|computer science/.test(courseText)) || (test.test_name === 'ESAT' && /engineering|natural science|physics|chemistry/.test(courseText)) || (test.test_name === 'STEP' && /mathematics/.test(courseText))).map((test) => test.test_name)
-  const toggle = (test) => setWorkspaceData({ ...workspaceData, selectedTests: selected.some((item) => item.id === test.id) ? selected.filter((item) => item.id !== test.id) : [...selected, test] })
+  const toggle = (test) => { const adding = !selected.some((item) => item.id === test.id); setWorkspaceData({ ...workspaceData, selectedTests: adding ? [...selected, test] : selected.filter((item) => item.id !== test.id) }); if (adding) onScheduleTest?.(test) }
   return <div className="test-planner-studio premium-studio"><section><span className="days-left">OFFICIAL TEST INTELLIGENCE</span><h2>Plan every admissions test.</h2><p>{suggestedNames.length ? `Suggested from your shortlist: ${suggestedNames.join(', ')}.` : 'Select tests relevant to your courses.'} GrowthGrind keeps official resources, topics and dates together.</p><div className="test-intelligence-grid">{tests.map((test) => <article key={test.id}><strong>{test.test_name}{suggestedNames.includes(test.test_name) ? ' · Suggested' : ''}</strong><p>{test.course_area}</p><small>{test.university}</small><p>{test.registration_deadline && `Register by ${test.registration_deadline}`} {test.test_date && ` · Test from ${test.test_date}`}</p><div>{(test.topics || []).map((topic) => <span className="category-tag" key={topic}>{topic}</span>)}</div><a className="filter-button" href={test.official_resource_url} target="_blank" rel="noreferrer">Official preparation ↗</a><button className="view-button" onClick={() => toggle(test)}>{selected.some((item) => item.id === test.id) ? 'Added to plan ✓' : 'Add to test plan'}</button></article>)}</div></section><aside><span className="days-left">YOUR TEST PLAN</span><h3>{selected.length ? `${selected.length} test${selected.length === 1 ? '' : 's'} selected` : 'Select a test to begin'}</h3>{selected.map((test) => <p key={test.id}><strong>{test.test_name}</strong> · {test.course_area}</p>)}</aside></div>
 }
 
