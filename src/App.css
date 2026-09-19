@@ -1077,6 +1077,16 @@ footer p {
 .statement-dot-loader { min-height: 260px; display: grid; place-items: center; align-content: center; gap: 20px; color: #315b3d; font-weight: 700; text-align: center; }
 .statement-dot-field { width: min(100%, 330px); height: 150px; background-image: radial-gradient(circle, #315b3d 1.5px, transparent 1.8px); background-size: 12px 12px; mask-image: radial-gradient(ellipse at center, #000 22%, transparent 72%); animation: statement-dot-drift 3.2s ease-in-out infinite alternate; opacity: .8; }
 @keyframes statement-dot-drift { from { transform: perspective(300px) rotateX(18deg) scale(.88); background-position: 0 0; opacity: .45; } to { transform: perspective(300px) rotateX(-10deg) scale(1.08); background-position: 22px 15px; opacity: .95; } }
+.theme-toggle { width: 48px; height: 27px; padding: 3px; margin-left: 10px; border: 1px solid #b8cbb8; border-radius: 999px; background: #f5efe5; }
+.toggle-knob { width: 19px; height: 19px; display: grid; place-items: center; border-radius: 50%; background: #315b3d; color: #fffaf2; font-size: 12px; transition: transform .2s ease; }
+.toggle-knob.dark { transform: translateX(19px); background: #e5d8c3; color: #315b3d; }
+.theme-dark { background: #10110f; color: #e5d8c3; }
+.theme-dark .navbar { background: rgba(16,17,15,.96); border-color: #58715b; }
+.theme-dark .hero-section, .theme-dark .opportunities-section, .theme-dark .premium-studio, .theme-dark .course-result-card, .theme-dark .closing-card, .theme-dark .modal, .theme-dark .statement-workspace, .theme-dark .career-quiz-studio { background: #1b211c; border-color: #58715b; }
+.theme-dark h1, .theme-dark h2, .theme-dark h3, .theme-dark h4, .theme-dark strong, .theme-dark label, .theme-dark .brand { color: #fffaf2 !important; }
+.theme-dark p, .theme-dark .nav-link, .theme-dark .more-button { color: #e5d8c3 !important; }
+.theme-dark input, .theme-dark textarea, .theme-dark select { background: #2a302a !important; color: #fffaf2 !important; border-color: #657867 !important; }
+.theme-dark .theme-toggle { background: #2a302a; border-color: #657867; }
 
 @media (max-width: 560px) {
   .grade-picker { grid-template-columns: 1fr; }
