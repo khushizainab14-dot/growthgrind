@@ -1093,6 +1093,15 @@ input, textarea, select { background: #20264a !important; color: #f8f8ff !import
 .deadline, .success, .match-score { color: #52e3c2; }
 .statement-dot-loader { color: #c9c5ff; }
 .statement-dot-field { background-image: radial-gradient(circle, #a78bfa 1.5px, transparent 1.8px); }
+
+/* Grape-black refinement: violet replaces the remaining green brand accents. */
+.brand { color: #9da8ff; }
+.brand-mark, .view-button, .primary-button { background: #7c5cfc; color: #fff; }
+.filter-button { border-color: #9da8ff; color: #c9c5ff; }
+.category-tag, .days-left { background: #312657; color: #c9c5ff; }
+input, textarea, select { background: #302744 !important; border-color: #665a8e !important; color: #f8f8ff !important; }
+input::placeholder, textarea::placeholder { color: #b6b1d1; opacity: 1; }
+.statement-dot-field { background-image: radial-gradient(circle, #9da8ff 1.5px, transparent 1.8px); }
 @media (max-width: 560px) {
   .grade-picker { grid-template-columns: 1fr; }
   .tariff-entry { grid-template-columns: 1fr; }
