@@ -1170,7 +1170,7 @@ function App() {
       : [...current, choice])
   }
 
-  const closingSoonOpportunities = [...opportunities]
+  const closingSoonOpportunities = page === 'Discover' ? [...opportunities]
     .filter((opportunity) => opportunity.deadlineRaw)
     .filter((opportunity) => {
       const deadline = new Date(opportunity.deadlineRaw)
@@ -1180,7 +1180,7 @@ function App() {
       return !Number.isNaN(deadline.getTime()) && deadline >= today
     })
     .sort((a, b) => new Date(a.deadlineRaw) - new Date(b.deadlineRaw))
-    .slice(0, 3)
+    .slice(0, 3) : []
 
   const getFilteredOpportunities = () => {
     let results = [...opportunities]
@@ -1322,11 +1322,11 @@ function App() {
     return results
   }
 
-  const filteredOpportunities = getFilteredOpportunities()
+  const filteredOpportunities = page === 'Discover' ? getFilteredOpportunities() : []
 
   useEffect(() => { setDiscoverVisibleCount(60) }, [activeCategory, opportunitySearch, ageFilter, yearGroupFilter, locationFilter, formatFilter, costFilter, activityTypeFilter, subjectFilter, sort])
 
-  const matchedOpportunities = [...opportunities]
+  const matchedOpportunities = page === 'Results' ? [...opportunities]
     .filter((opportunity) => {
     if (matchActivityTypes.length && !matchActivityTypes.includes(opportunity.activityType)) {
       return false
@@ -1371,9 +1371,9 @@ function App() {
       ...opportunity,
       matchScore: getMatchScore(opportunity),
     }))
-    .sort((a, b) => b.matchScore - a.matchScore)
+    .sort((a, b) => b.matchScore - a.matchScore) : []
 
-  const journeySuggestions = opportunities
+  const journeySuggestions = page === 'Track' ? opportunities
     .filter((opportunity) => !tracked.includes(opportunity.id))
     .map((opportunity) => {
       const opportunityTerms = [
@@ -1405,7 +1405,7 @@ function App() {
     })
     .filter((item) => item.score > 0)
     .sort((first, second) => second.score - first.score)
-    .slice(0, 6)
+    .slice(0, 6) : []
 
   const clearFilters = () => {
     setActiveCategory('All')
