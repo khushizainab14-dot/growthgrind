@@ -26,6 +26,18 @@ while True:
     if not rows:
         break
 
+    # The public catalogue can contain the same university/course combination
+    # more than once. PostgreSQL rejects duplicate conflict keys in one upsert,
+    # so retain one current official URL per combination.
+    unique_rows = {}
+    for row in rows:
+        if not (row.get('provider_name') and row.get('course_title') and row.get('course_url')):
+            continue
+        key = (row['provider_name'].strip().casefold(), row['course_title'].strip().casefold())
+        current = unique_rows.get(key)
+        if not current or (row.get('source_updated_at') or '') >= (current.get('source_updated_at') or ''):
+            unique_rows[key] = row
+
     payload = [
         {
             'university': row['provider_name'],
@@ -33,8 +45,7 @@ while True:
             'official_source_url': row['course_url'],
             'last_checked_at': row.get('source_updated_at'),
         }
-        for row in rows
-        if row.get('provider_name') and row.get('course_title') and row.get('course_url')
+        for row in unique_rows.values()
     ]
     if payload:
         client.table('admissions_intelligence').upsert(
