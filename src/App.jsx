@@ -3983,9 +3983,28 @@ function AuthModal({
   )
 }
 
+const aLevelScore = { 'A*': 6, A: 5, B: 4, C: 3, D: 2, E: 1 }
+
+function suggestionFromVerifiedOffer(profileGrades, offer) {
+  if (!Array.isArray(profileGrades) || profileGrades.length !== 3 || !offer) return null
+  const required = String(offer).match(/A\*|[A-E]/g)
+  if (!required || required.length !== 3 || required.some((grade) => !aLevelScore[grade])) return null
+  const predictedScore = profileGrades.reduce((total, grade) => total + (aLevelScore[String(grade).toUpperCase()] || 0), 0)
+  if (!predictedScore) return null
+  const requiredScore = required.reduce((total, grade) => total + aLevelScore[grade], 0)
+  const suggestion = predictedScore >= requiredScore + 2 ? 'Safety' : predictedScore >= requiredScore ? 'Target' : 'Dream'
+  return {
+    suggestion,
+    reason: `Compared with the verified typical offer ${required.join('')}. This is a planning aid only: required subjects, contextual offers and selection factors still matter.`,
+  }
+}
+
 function CourseResultCard({ course, verified, profileGrades, planning, shortlist, shortlistFull, onShortlist, onRemoveShortlist }) {
   const [requirements, setRequirements] = useState(null)
   const [loading, setLoading] = useState(false)
+  const gradeSuggestion = requirements?.suggestion
+    ? { suggestion: requirements.suggestion, reason: requirements.reason }
+    : suggestionFromVerifiedOffer(profileGrades, verified?.a_level_offer)
 
   const loadRequirements = async () => {
     if (loading || requirements) return
@@ -4019,11 +4038,11 @@ function CourseResultCard({ course, verified, profileGrades, planning, shortlist
       {course.subjects_text && <div className="course-subject-tags">{course.subjects_text.split('|').slice(0, 4).map((subject) => <span key={subject}>{subject}</span>)}</div>}
       <div className="course-admissions-row"><span><b>Entry requirements</b> {requirements?.text || verified?.a_level_offer || 'Load from official course page'}</span><span><b>Historic acceptance / grade match</b> Check UCAS</span></div>
       {verified && <p className="course-verified-note">Verified source record · {verified.last_checked_at ? `checked ${new Date(verified.last_checked_at).toLocaleDateString('en-GB')}` : 'official course page linked'}{[verified.required_subjects, verified.admissions_tests].filter(Boolean).length ? ` · ${[verified.required_subjects, verified.admissions_tests].filter(Boolean).join(' · ')}` : ''}</p>}
-      {!requirements && <button className="course-requirements-button" onClick={loadRequirements} disabled={loading}>{loading ? 'Checking live requirements…' : 'Show entry requirements'}</button>}
+      {!requirements && <button className="course-requirements-button" onClick={loadRequirements} disabled={loading}>{loading ? 'Checking live requirements…' : verified ? 'Show verification detail' : 'Show entry requirements'}</button>}
       {requirements?.error && <p className="course-requirements-error">{requirements.error} Use the official link to check directly.</p>}
       {planning && <div className="course-choice-actions">{['Safety', 'Target', 'Dream'].map((level) => <button disabled={shortlistFull && !shortlist[course.id]} className={shortlist[course.id]?.level === level ? 'selected' : ''} key={level} onClick={() => onShortlist(course, level)}>{level}</button>)}{shortlist[course.id] && <button className="remove-choice" onClick={() => onRemoveShortlist(course.id)}>Remove</button>}</div>}
     </div>
-    <div className="course-card-links"><div className="course-grade-panel"><span>GRADE-BASED SUGGESTION</span>{requirements?.suggestion ? <><strong className={requirements.suggestion.toLowerCase().replace(' ', '-')}>Suggested: {requirements.suggestion}</strong><p>{requirements.reason}</p></> : <p>{profileGrades.length === 3 ? 'Check live official requirements to receive a suggested Safety, Target or Dream category.' : 'Add three predicted A-level grades in the Tariff Calculator first.'}</p>}</div><a className="view-button" href={course.course_url} target="_blank" rel="noreferrer">Official requirements ↗</a><a className="filter-button" href={`https://www.ucas.com/explore/search/courses?query=${encodeURIComponent(`${course.course_title} ${course.provider_name}`)}`} target="_blank" rel="noreferrer">UCAS historic data ↗</a></div>
+    <div className="course-card-links"><div className="course-grade-panel"><span>GRADE-BASED SUGGESTION</span>{gradeSuggestion ? <><strong className={gradeSuggestion.suggestion.toLowerCase().replace(' ', '-')}>Suggested: {gradeSuggestion.suggestion}</strong><p>{gradeSuggestion.reason}</p></> : <p>{profileGrades.length === 3 ? 'This will appear when a comparable official entry offer is verified.' : 'Add three predicted A-level grades in the Tariff Calculator first.'}</p>}</div><a className="view-button" href={course.course_url} target="_blank" rel="noreferrer">Official requirements ↗</a><a className="filter-button" href={`https://www.ucas.com/explore/search/courses?query=${encodeURIComponent(`${course.course_title} ${course.provider_name}`)}`} target="_blank" rel="noreferrer">UCAS historic data ↗</a></div>
   </article>
 }
 
