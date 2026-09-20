@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from './supabaseClient'
 
 import './App.css'
@@ -120,6 +120,7 @@ const premiumFeatureGroups = [
 function App() {
     const [theme, setTheme] = useState(() => localStorage.getItem('growthgrind_theme') || 'light')
     const [opportunities, setOpportunities] = useState([])
+    const courseSuggestionCache = useRef(new Map())
 
   useEffect(() => {
     const loadOpportunities = async () => {
@@ -773,21 +774,36 @@ function App() {
   }
 
   useEffect(() => {
+    let active = true
     const searchCatalogue = async () => {
       const courseTerm = courseQuery.trim().replace(/[(),]/g, ' ')
       const providerTerm = courseProvider.trim().replace(/[(),]/g, ' ')
       if (courseTerm.length < 2 && providerTerm.length < 2) { setCourseSuggestions([]); setProviderSuggestions([]); return }
+      const cacheKey = `${courseTerm.toLowerCase()}::${providerTerm.toLowerCase()}`
+      const cached = courseSuggestionCache.current.get(cacheKey)
+      if (cached) {
+        if (active) {
+          setCourseSuggestions(cached.courses)
+          setProviderSuggestions(cached.providers)
+        }
+        return
+      }
       const requests = []
       if (courseTerm.length >= 2) requests.push(supabase.from('university_courses').select('course_title').ilike('course_title', `%${courseTerm}%`).order('course_title').limit(12))
       else requests.push(Promise.resolve({ data: [] }))
       if (providerTerm.length >= 2) requests.push(supabase.from('university_courses').select('provider_name').ilike('provider_name', `%${providerTerm}%`).order('provider_name').limit(30))
       else requests.push(Promise.resolve({ data: [] }))
       const [courseResponse, providerResponse] = await Promise.all(requests)
-      setCourseSuggestions([...new Set((courseResponse.data || []).map((item) => item.course_title))])
-      setProviderSuggestions([...new Set((providerResponse.data || []).map((item) => item.provider_name))])
+      const courses = [...new Set((courseResponse.data || []).map((item) => item.course_title))]
+      const providers = [...new Set((providerResponse.data || []).map((item) => item.provider_name))]
+      courseSuggestionCache.current.set(cacheKey, { courses, providers })
+      if (active) {
+        setCourseSuggestions(courses)
+        setProviderSuggestions(providers)
+      }
     }
-    const timer = setTimeout(searchCatalogue, 180)
-    return () => clearTimeout(timer)
+    const timer = setTimeout(searchCatalogue, 320)
+    return () => { active = false; clearTimeout(timer) }
   }, [courseQuery, courseProvider])
 
   const openGradeCourseFinder = (entries) => {
