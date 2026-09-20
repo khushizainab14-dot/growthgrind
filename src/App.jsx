@@ -3,6 +3,16 @@ import { supabase } from './supabaseClient'
 
 import './App.css'
 
+async function readApiJson(response, fallback = 'The service returned an unexpected response. Please try again.') {
+  const body = await response.text()
+  if (!body) return {}
+  try {
+    return JSON.parse(body)
+  } catch {
+    return { error: fallback }
+  }
+}
+
 const categories = [
   'All',
   'Academic',
@@ -350,7 +360,7 @@ function App() {
       const headers = session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}
       const response = await fetch('/api/premium-status', { headers })
       if (!response.ok) return
-      const status = await response.json()
+      const status = await readApiJson(response)
       setFoundingMembersClaimed(status.foundingMembersClaimed || 0)
       if (status.active) {
         setIsPremium(true)
@@ -716,7 +726,7 @@ function App() {
           nextOpportunity: { title: opportunity.title, category: opportunity.category, type: opportunity.activityType, subjects: opportunity.subjects },
         }),
       })
-      const result = await response.json()
+      const result = await readApiJson(response)
       if (!response.ok) throw new Error(result.error || 'Could not explain this connection.')
       setJourneyExplanations((current) => ({ ...current, [opportunity.id]: result.explanation }))
     } catch (error) {
@@ -874,7 +884,7 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tool, details: aiDetails[tool] || {} }),
       })
-      const result = await response.json()
+      const result = await readApiJson(response)
       if (!response.ok) throw new Error(result.error || 'Something went wrong.')
       setAiResults((current) => ({ ...current, [tool]: result }))
     } catch (error) {
@@ -941,7 +951,7 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ answers: statementAnswers, course: statementCourse, experiences: experienceIntelligence }),
       })
-      const result = await response.json()
+      const result = await readApiJson(response)
       if (!response.ok) throw new Error(result.error || 'We could not review this right now.')
       setStatementFeedback(result)
     } catch (error) {
@@ -1063,7 +1073,7 @@ function App() {
         body: JSON.stringify({ specialist: chatId, messages: currentMessages, message: message || 'Please analyse this attachment.', attachment, studentContext: getAiStudentContext(), stream: true }),
       })
       if (!response.ok) {
-        const result = await response.json()
+        const result = await readApiJson(response)
         throw new Error(result.error || 'Something went wrong.')
       }
       if (!response.body) throw new Error('Streaming is unavailable. Please try again.')
@@ -1135,7 +1145,7 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ plan, userId: user.id }),
       })
-      const result = await response.json()
+      const result = await readApiJson(response)
       if (!response.ok) throw new Error(result.error || 'Checkout could not be opened.')
       window.location.assign(result.url)
     } catch (error) {
@@ -4444,7 +4454,7 @@ function MultiCourseStatementWorkspace({ workspaceData, setWorkspaceData }) {
     setLoading(true); setError('')
     try {
       const response = await fetch('/api/statement-feedback', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ answers, course: courses, multiCourse: true }) })
-      const result = await response.json()
+      const result = await readApiJson(response)
       if (!response.ok) throw new Error(result.error || 'We could not review this right now.')
       setFeedback(result)
     } catch (requestError) { setError(requestError.message || 'We could not review this right now.') } finally { setLoading(false) }
@@ -4521,7 +4531,7 @@ function InternationalQualificationsWorkspace({ workspaceData, setWorkspaceData 
     setError('')
     try {
       const response = await fetch('/api/ai-chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ specialist: 'international', message: `The student is applying with ${country} qualifications. ${text}`, messages }) })
-      const result = await response.json()
+      const result = await readApiJson(response)
       if (!response.ok) throw new Error(result.error || 'Could not search right now.')
       setMessages((current) => [...current, userMessage, { role: 'assistant', content: result.reply }])
     } catch (requestError) {
@@ -4565,7 +4575,7 @@ function ContextualEligibilityWorkspace({ workspaceData, setWorkspaceData }) {
     setPolicyLoading(true); setPolicyError('')
     try {
       const response = await fetch('/api/ai-chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ specialist: 'contextual-research', message: `Find the current official contextual admissions guidance for ${university}.` }) })
-      const result = await response.json()
+      const result = await readApiJson(response)
       if (!response.ok) throw new Error(result.error || 'Could not find the policy.')
       setPolicy(result.reply)
     } catch (error) { setPolicyError(error.message || 'Could not find the policy.') } finally { setPolicyLoading(false) }
@@ -4583,7 +4593,7 @@ function ContextualSupportWorkspace({ workspaceData, setWorkspaceData }) {
     setLoading(true); setError('')
     try {
       const response = await fetch('/api/ai-chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ specialist: 'contextual', message: details }) })
-      const result = await response.json()
+      const result = await readApiJson(response)
       if (!response.ok) throw new Error(result.error || 'Could not review this right now.')
       setFeedback(result.reply)
     } catch (requestError) { setError(requestError.message || 'Could not review this right now.') } finally { setLoading(false) }
@@ -4616,7 +4626,7 @@ function InterviewPracticeWorkspace({ workspaceData, setWorkspaceData }) {
     setLoading(true); setError('')
     try {
       const response = await fetch('/api/ai-chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ specialist: 'interview', message }) })
-      const result = await response.json()
+      const result = await readApiJson(response)
       if (!response.ok) throw new Error(result.error || 'Could not continue the interview.')
       setFeedback(savingAnswer ? result.reply : '')
       setQuestion(result.reply)
@@ -4663,7 +4673,7 @@ function PortfolioHubWorkspace({ workspaceData, setWorkspaceData }) {
     try {
       const context = [workspaceData.course, workspaceData.university, workspaceData.medium].filter(Boolean).join(' · ')
       const response = await fetch('/api/ai-chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ specialist: 'portfolio', message: `${context ? `Portfolio context: ${context}. ` : ''}${text}`, messages }) })
-      const result = await response.json()
+      const result = await readApiJson(response)
       if (!response.ok) throw new Error(result.error || 'Could not continue the portfolio plan.')
       setMessages((current) => {
         const next = [...current, userMessage, { role: 'assistant', content: result.reply }]
