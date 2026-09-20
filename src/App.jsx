@@ -1164,7 +1164,17 @@ function App() {
       const keywords = categoryMatches[activeCategory.toLowerCase()] || []
 
       results = results.filter((opportunity) => {
-        const searchable = [opportunity.category, opportunity.activityType, opportunity.title, opportunity.organisation, ...(opportunity.subjects || []), opportunity.description]
+        const targetCategory = activeCategory.toLowerCase()
+        // The importer assigns every new record a category. Treat that as the
+        // source of truth so, for example, an academic outreach page that
+        // mentions sport does not appear in the Sport tab merely because sport
+        // is one of many subjects it references.
+        if ((opportunity.category || '').trim().toLowerCase() === targetCategory) return true
+
+        // Keep a narrow fallback for older/legacy records whose category was
+        // absent or overly broad. Subjects and descriptions are intentionally
+        // excluded here because those fields are too broad for a category tab.
+        const searchable = [opportunity.activityType, opportunity.title, opportunity.organisation]
           .filter(Boolean)
           .join(' ')
           .toLowerCase()
