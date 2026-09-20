@@ -2608,6 +2608,7 @@ function App() {
           statementFeedbackError={statementFeedbackError}
           onReviewStatement={reviewStatementAnswers}
           studyMistakeBank={studyMistakeBank}
+          onReviewStudyMistake={reviewStudyMistake}
           onOpenInternational={() => { setActivePremiumWorkspace(premiumRoadmap.find((feature) => feature.id === 'international-quals')); goTo('PremiumWorkspace') }}
           onOpenCourseFinder={openGradeCourseFinder}
           onOpenMultiCourse={() => { setActivePremiumWorkspace(premiumRoadmap.find((feature) => feature.id === 'multi-course')); goTo('PremiumWorkspace') }}
@@ -4194,6 +4195,7 @@ function PremiumWorkspacePage({
   statementFeedbackError,
   onReviewStatement,
   studyMistakeBank,
+  onReviewStudyMistake,
   onOpenInternational,
   onOpenCourseFinder,
   onOpenMultiCourse,
@@ -4304,7 +4306,7 @@ function PremiumWorkspacePage({
           ) : feature.id === 'international-quals' ? (
             <InternationalQualificationsWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} />
           ) : feature.id === 'study' ? (
-            <StudyWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} onOpenAi={onOpenAi} mistakeBank={studyMistakeBank} onReviewMistake={reviewStudyMistake} />
+            <StudyWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} onOpenAi={onOpenAi} mistakeBank={studyMistakeBank} onReviewMistake={onReviewStudyMistake} />
           ) : feature.id === 'career-quiz' ? (
             <CareerQuizWorkspace workspaceData={workspaceData} setWorkspaceData={setWorkspaceData} />
           ) : feature.id === 'contextual' ? (
