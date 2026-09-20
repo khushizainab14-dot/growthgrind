@@ -239,6 +239,7 @@ function App() {
     try { return JSON.parse(localStorage.getItem('growthgrind_course_shortlist') || '{}') } catch { return {} }
   })
   const [courseResults, setCourseResults] = useState([])
+  const [courseIntelligence, setCourseIntelligence] = useState({})
   const [courseLoading, setCourseLoading] = useState(false)
   const [courseError, setCourseError] = useState('')
   const [courseSearched, setCourseSearched] = useState(false)
@@ -742,7 +743,26 @@ function App() {
       if (courseAbroad === 'Study abroad option') request = request.ilike('course_title', '%study abroad%')
       const { data, error } = await request
       if (error) throw error
-      setCourseResults(data || [])
+      const results = data || []
+      setCourseResults(results)
+      setCourseIntelligence({})
+
+      // Fetch any saved, official-source requirement data once for the whole
+      // result set rather than asking each course card to make its own request.
+      if (results.length) {
+        const universities = [...new Set(results.map((course) => course.provider_name).filter(Boolean))]
+        const courses = [...new Set(results.map((course) => course.course_title).filter(Boolean))]
+        const { data: intelligence } = await supabase
+          .from('admissions_intelligence')
+          .select('*')
+          .in('university', universities)
+          .in('course', courses)
+
+        const byCourse = Object.fromEntries(
+          (intelligence || []).map((item) => [`${item.university}::${item.course}`, item])
+        )
+        setCourseIntelligence(byCourse)
+      }
     } catch (error) {
       setCourseError('The course catalogue is being updated. Please try again shortly.')
     } finally {
@@ -3261,7 +3281,7 @@ function App() {
             <div className="course-data-notice"><strong>Requirements and historic grade data</strong><span>are shown on the current university and UCAS course pages. UCAS does not provide its course-level acceptance and matching-grade dataset for reuse in this public catalogue, so GrowthGrind will never invent those figures.</span><a href="https://www.ucas.com/applying/before-you-apply/what-and-where-to-study/entry-requirements/understanding-historical-entry" target="_blank" rel="noreferrer">How UCAS historical grades work ↗</a></div>
             <div className="course-planner-bar"><div><strong>Build a five-choice shortlist <em>{shortlistEntries.length}/5 selected</em></strong><span>{shortlistEntries.length ? `${shortlistCounts.Safety} safety · ${shortlistCounts.Target} target · ${shortlistCounts.Dream} dream` : 'Mark courses after checking their current published requirements.'}</span></div><button className="view-button" onClick={() => setCoursePlanning((current) => !current)}>{coursePlanning ? 'Hide shortlist' : 'Organise safety / target / dream →'}</button></div>
             {coursePlanning && <><p className="course-shortlist-guidance">A balanced list often includes a mix of realistic and ambitious choices. GrowthGrind’s labels are planning aids, not admission predictions — check each current official requirement.</p><div className="course-shortlist-grid">{['Safety', 'Target', 'Dream'].map((level) => <section key={level}><span>{level.toUpperCase()} · {shortlistCounts[level]}</span>{shortlistEntries.filter((item) => item.level === level).length ? shortlistEntries.filter((item) => item.level === level).map((item) => <div key={item.id}>{item.title}<small>{item.provider}</small><button type="button" onClick={() => setCourseShortlist((current) => Object.fromEntries(Object.entries(current).filter(([id]) => id !== item.id)))}>Remove</button></div>) : <p>No courses marked yet.</p>}</section>)}</div></>}
-            {courseResults.map((course) => <CourseResultCard key={course.id} course={course} profileGrades={courseProfileGrades} planning={coursePlanning} shortlist={courseShortlist} shortlistFull={shortlistEntries.length >= 5} onShortlist={addCourseToShortlist} onRemoveShortlist={(id) => setCourseShortlist((current) => Object.fromEntries(Object.entries(current).filter(([entryId]) => entryId !== id)))} />)}
+            {courseResults.map((course) => <CourseResultCard key={course.id} course={course} verified={courseIntelligence[`${course.provider_name}::${course.course_title}`]} profileGrades={courseProfileGrades} planning={coursePlanning} shortlist={courseShortlist} shortlistFull={shortlistEntries.length >= 5} onShortlist={addCourseToShortlist} onRemoveShortlist={(id) => setCourseShortlist((current) => Object.fromEntries(Object.entries(current).filter(([entryId]) => entryId !== id)))} />)}
             {!courseResults.length && <p>Try a broader course title, a subject such as “Economics”, or remove a filter.</p>}
           </section>}
         </PremiumToolPage>
@@ -3960,7 +3980,7 @@ function AuthModal({
   )
 }
 
-function CourseResultCard({ course, profileGrades, planning, shortlist, shortlistFull, onShortlist, onRemoveShortlist }) {
+function CourseResultCard({ course, verified, profileGrades, planning, shortlist, shortlistFull, onShortlist, onRemoveShortlist }) {
   const [requirements, setRequirements] = useState(null)
   const [loading, setLoading] = useState(false)
 
@@ -3968,9 +3988,8 @@ function CourseResultCard({ course, profileGrades, planning, shortlist, shortlis
     if (loading || requirements) return
     setLoading(true)
     try {
-      const { data: verified } = await supabase.from('admissions_intelligence').select('*').eq('university', course.provider_name).eq('course', course.course_title).maybeSingle()
-      if (verified) {
-        setRequirements({ text: verified.a_level_offer || 'Check official source', suggestion: '', reason: [verified.required_subjects, verified.admissions_tests, verified.contextual_offer].filter(Boolean).join(' · '), verified: true, checked: verified.last_checked_at })
+      if (verified?.a_level_offer || verified?.required_subjects || verified?.admissions_tests) {
+        setRequirements({ text: verified.a_level_offer || 'See listed subject or test requirements', suggestion: '', reason: [verified.required_subjects, verified.admissions_tests, verified.contextual_offer].filter(Boolean).join(' · '), verified: true, checked: verified.last_checked_at })
         return
       }
       const response = await fetch('/api/course-requirements', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: course.course_url, title: course.course_title, provider: course.provider_name, grades: profileGrades }) })
@@ -3992,7 +4011,8 @@ function CourseResultCard({ course, profileGrades, planning, shortlist, shortlis
       <p>{[course.campus_name, course.country, course.duration].filter(Boolean).join(' · ') || 'Details on official course page'}</p>
       <small>Source: official course page{course.source_updated_at ? ` · catalogue checked ${new Date(course.source_updated_at).toLocaleDateString('en-GB')}` : ''}</small>
       {course.subjects_text && <div className="course-subject-tags">{course.subjects_text.split('|').slice(0, 4).map((subject) => <span key={subject}>{subject}</span>)}</div>}
-      <div className="course-admissions-row"><span><b>Entry requirements</b> {requirements?.text || 'Load from official course page'}</span><span><b>Historic acceptance / grade match</b> Check UCAS</span></div>
+      <div className="course-admissions-row"><span><b>Entry requirements</b> {requirements?.text || verified?.a_level_offer || 'Load from official course page'}</span><span><b>Historic acceptance / grade match</b> Check UCAS</span></div>
+      {verified && <p className="course-verified-note">Verified source record · {verified.last_checked_at ? `checked ${new Date(verified.last_checked_at).toLocaleDateString('en-GB')}` : 'official course page linked'}{[verified.required_subjects, verified.admissions_tests].filter(Boolean).length ? ` · ${[verified.required_subjects, verified.admissions_tests].filter(Boolean).join(' · ')}` : ''}</p>}
       {!requirements && <button className="course-requirements-button" onClick={loadRequirements} disabled={loading}>{loading ? 'Checking live requirements…' : 'Show entry requirements'}</button>}
       {requirements?.error && <p className="course-requirements-error">{requirements.error} Use the official link to check directly.</p>}
       {planning && <div className="course-choice-actions">{['Safety', 'Target', 'Dream'].map((level) => <button disabled={shortlistFull && !shortlist[course.id]} className={shortlist[course.id]?.level === level ? 'selected' : ''} key={level} onClick={() => onShortlist(course, level)}>{level}</button>)}{shortlist[course.id] && <button className="remove-choice" onClick={() => onRemoveShortlist(course.id)}>Remove</button>}</div>}
