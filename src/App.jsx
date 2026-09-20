@@ -120,10 +120,24 @@ const premiumFeatureGroups = [
 function App() {
     const [theme, setTheme] = useState(() => localStorage.getItem('growthgrind_theme') || 'light')
     const [opportunities, setOpportunities] = useState([])
+    const [opportunitiesLoading, setOpportunitiesLoading] = useState(true)
     const courseSuggestionCache = useRef(new Map())
 
   useEffect(() => {
     const loadOpportunities = async () => {
+      const catalogueCacheKey = 'growthgrind_opportunity_catalogue_v1'
+      const cacheMaxAge = 10 * 60 * 1000
+      try {
+        const cached = JSON.parse(sessionStorage.getItem(catalogueCacheKey) || 'null')
+        if (cached?.savedAt && Array.isArray(cached.rows) && Date.now() - cached.savedAt < cacheMaxAge) {
+          setOpportunities(cached.rows)
+          setOpportunitiesLoading(false)
+          return
+        }
+      } catch {
+        // A missing or full browser storage area should never block Discover.
+      }
+
       const pageSize = 1000
       let from = 0
       let allRows = []
@@ -154,6 +168,7 @@ function App() {
 
       if (error) {
         console.error('Error loading opportunities:', error)
+        setOpportunitiesLoading(false)
         return
       }
 
@@ -205,6 +220,12 @@ function App() {
       }))
 
       setOpportunities(formattedOpportunities)
+      setOpportunitiesLoading(false)
+      try {
+        sessionStorage.setItem(catalogueCacheKey, JSON.stringify({ savedAt: Date.now(), rows: formattedOpportunities }))
+      } catch {
+        // Some private browsers restrict storage. The live catalogue still works.
+      }
     }
 
     loadOpportunities()
@@ -1935,7 +1956,9 @@ function App() {
               </div>
 
               <div className="closing-grid">
-                {closingSoonOpportunities.map((opportunity) => (
+                {opportunitiesLoading ? [1, 2, 3].map((item) => (
+                  <div className="catalogue-skeleton closing-card" key={item} aria-label="Loading closing opportunities" />
+                )) : closingSoonOpportunities.map((opportunity) => (
                   <button
                     className="closing-card"
                     key={opportunity.id}
@@ -1958,8 +1981,8 @@ function App() {
               <div className="toolbar">
                 <label className="opportunity-search"><span>⌕</span><input value={opportunitySearch} onChange={(event) => setOpportunitySearch(event.target.value)} placeholder="Search opportunities, providers or subjects" /></label>
                 <div>
-                  <strong>{filteredOpportunities.length}</strong>{' '}
-                  opportunities found
+                  <strong>{opportunitiesLoading ? 'Updating' : filteredOpportunities.length}</strong>{' '}
+                  {opportunitiesLoading ? 'opportunity catalogue…' : 'opportunities found'}
                 </div>
 
                 <div className="toolbar-right">
@@ -2075,7 +2098,11 @@ function App() {
                 </div>
               )}
 
-              {filteredOpportunities.length === 0 ? (
+              {opportunitiesLoading ? (
+                <div className="opportunity-grid" aria-live="polite" aria-label="Loading opportunities">
+                  {[1, 2, 3, 4, 5, 6].map((item) => <div className="catalogue-skeleton opportunity-card" key={item} />)}
+                </div>
+              ) : filteredOpportunities.length === 0 ? (
                 <NoResultsCard
                   onChangeFilters={clearFilters}
                   onPremium={() =>

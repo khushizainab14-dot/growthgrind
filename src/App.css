@@ -1096,6 +1096,10 @@ footer p {
 .opportunity-search { flex: 1; max-width: 420px; display: flex; align-items: center; gap: 8px; padding: 0 12px; border: 1px solid #d0c4b0; border-radius: 10px; background: #fffaf2; color: #315b3d; }
 .opportunity-search input { width: 100%; border: 0; outline: 0; background: transparent; padding: 11px 0; color: #315b3d; }
 .theme-dark .opportunity-search { background: #2a302a; border-color: #657867; color: #e5d8c3; }
+.catalogue-skeleton { min-height: 178px; pointer-events: none; overflow: hidden; position: relative; border: 1px solid #d8cdbb; background: #f5efe5; }
+.catalogue-skeleton::after { content: ''; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, rgba(255,255,255,.58), transparent); animation: catalogue-shimmer 1.25s infinite; }
+.theme-dark .catalogue-skeleton { background: #1b211c; border-color: #58715b; }
+@keyframes catalogue-shimmer { 100% { transform: translateX(100%); } }
 
 @media (max-width: 560px) {
   .grade-picker { grid-template-columns: 1fr; }
