@@ -3993,8 +3993,11 @@ function CourseResultCard({ course, verified, profileGrades, planning, shortlist
         return
       }
       const response = await fetch('/api/course-requirements', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: course.course_url, title: course.course_title, provider: course.provider_name, grades: profileGrades }) })
-      const result = await response.json()
-      if (!response.ok) throw new Error(result.error || 'Could not read the official course page.')
+      const rawResult = await response.text()
+      let result = {}
+      try { result = rawResult ? JSON.parse(rawResult) : {} } catch { /* A hosting error can be HTML/plain text rather than JSON. */ }
+      if (!response.ok) throw new Error(result.error || 'We could not check this official course page right now. Please use the official link and try again later.')
+      if (!result.text) throw new Error('No readable entry requirement was returned. Use the official course link to check directly.')
       setRequirements(result)
     } catch (error) {
       setRequirements({ error: error.message || 'Could not read the official course page.' })
