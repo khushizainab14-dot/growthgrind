@@ -13,6 +13,25 @@ async function readApiJson(response, fallback = 'The service returned an unexpec
   }
 }
 
+const courseSearchAliases = {
+  maths: ['mathematics', 'mathematical'],
+  math: ['mathematics', 'mathematical'],
+  cs: ['computer science'],
+  econ: ['economics'],
+  lse: ['london school of economics'],
+  ucl: ['university college london'],
+  kcl: ["king's college london"],
+  imperial: ['imperial college london'],
+  warwick: ['university of warwick'],
+  oxford: ['university of oxford'],
+  cambridge: ['university of cambridge'],
+}
+
+function expandCourseSearchTerms(value) {
+  const cleaned = value.trim().replace(/[(),]/g, ' ')
+  return [...new Set([cleaned, ...(courseSearchAliases[cleaned.toLowerCase()] || [])].filter(Boolean))]
+}
+
 const categories = [
   'All',
   'Academic',
@@ -763,11 +782,8 @@ function App() {
     setCourseSearched(true)
 
     try {
-      const safeQuery = courseQuery.trim().replace(/[(),]/g, ' ')
-      const aliases = {
-        maths: ['mathematics', 'mathematical'], math: ['mathematics', 'mathematical'], cs: ['computer science'], econ: ['economics'], lse: ['london school of economics'], ucl: ['university college london'], kcl: ["king's college london"], imperial: ['imperial college london'], warwick: ['university of warwick'], oxford: ['university of oxford'], cambridge: ['university of cambridge'],
-      }
-      const terms = [...new Set([safeQuery].filter(Boolean).flatMap((term) => [term, ...(aliases[term.toLowerCase()] || [])]))]
+      const terms = expandCourseSearchTerms(courseQuery)
+      const providerTerms = expandCourseSearchTerms(courseProvider)
       let request = supabase
         .from('university_courses')
         .select('id, course_title, provider_name, campus_name, country, qualification, study_mode, duration, subjects_text, course_url, source_updated_at')
@@ -776,7 +792,7 @@ function App() {
       if (selectedCourseTitles.length) request = request.in('course_title', selectedCourseTitles)
       else if (terms.length) request = request.or(terms.flatMap((term) => [`course_title.ilike.%${term}%,subjects_text.ilike.%${term}%`]).join(','))
       if (selectedProviders.length) request = request.in('provider_name', selectedProviders)
-      else if (courseProvider.trim()) request = request.ilike('provider_name', `%${courseProvider.trim().replace(/[(),]/g, ' ')}%`)
+      else if (providerTerms.length) request = request.or(providerTerms.map((term) => `provider_name.ilike.%${term}%`).join(','))
       if (courseRegion !== 'All UK') request = request.eq('country', courseRegion)
       if (courseMode !== 'All study modes') request = request.eq('study_mode', courseMode)
       if (courseAbroad === 'Study abroad option') request = request.ilike('course_title', '%study abroad%')
@@ -812,10 +828,12 @@ function App() {
   useEffect(() => {
     let active = true
     const searchCatalogue = async () => {
-      const courseTerm = courseQuery.trim().replace(/[(),]/g, ' ')
-      const providerTerm = courseProvider.trim().replace(/[(),]/g, ' ')
+      const courseTerms = expandCourseSearchTerms(courseQuery)
+      const providerTerms = expandCourseSearchTerms(courseProvider)
+      const courseTerm = courseTerms[0] || ''
+      const providerTerm = providerTerms[0] || ''
       if (courseTerm.length < 2 && providerTerm.length < 2) { setCourseSuggestions([]); setProviderSuggestions([]); return }
-      const cacheKey = `${courseTerm.toLowerCase()}::${providerTerm.toLowerCase()}`
+      const cacheKey = `${courseTerms.join('|').toLowerCase()}::${providerTerms.join('|').toLowerCase()}`
       const cached = courseSuggestionCache.current.get(cacheKey)
       if (cached) {
         if (active) {
@@ -825,9 +843,9 @@ function App() {
         return
       }
       const requests = []
-      if (courseTerm.length >= 2) requests.push(supabase.from('university_courses').select('course_title').ilike('course_title', `%${courseTerm}%`).order('course_title').limit(12))
+      if (courseTerm.length >= 2) requests.push(supabase.from('university_courses').select('course_title').or(courseTerms.map((term) => `course_title.ilike.%${term}%`).join(',')).order('course_title').limit(12))
       else requests.push(Promise.resolve({ data: [] }))
-      if (providerTerm.length >= 2) requests.push(supabase.from('university_courses').select('provider_name').ilike('provider_name', `%${providerTerm}%`).order('provider_name').limit(30))
+      if (providerTerm.length >= 2) requests.push(supabase.from('university_courses').select('provider_name').or(providerTerms.map((term) => `provider_name.ilike.%${term}%`).join(',')).order('provider_name').limit(30))
       else requests.push(Promise.resolve({ data: [] }))
       const [courseResponse, providerResponse] = await Promise.all(requests)
       const courses = [...new Set((courseResponse.data || []).map((item) => item.course_title))]
