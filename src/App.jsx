@@ -134,7 +134,9 @@ function App() {
       while (true) {
         const response = await supabase
           .from('opportunities')
-          .select('*')
+          // Keep the public catalogue payload lean: Discover only receives
+          // fields it actually renders or filters, not every database column.
+          .select('id,category,activity_type,title,provider,description,location,format,age_range,year_groups,deadline,cost,interests,subjects,link')
           .order('id', { ascending: true })
           .range(from, from + pageSize - 1)
 
