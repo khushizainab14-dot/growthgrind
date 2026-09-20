@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from './supabaseClient'
 
 import './App.css'
@@ -1145,7 +1145,7 @@ function App() {
     }
   }
 
-  const getMatchScore = (opportunity) => {
+  const getMatchScore = useCallback((opportunity) => {
     if (selectedInterests.length === 0) return 100
 
     const matches = (opportunity.interests || []).filter((interest) =>
@@ -1158,7 +1158,7 @@ function App() {
       99,
       Math.round((matches.length / selectedInterests.length) * 100)
     )
-  }
+  }, [selectedInterests])
 
   const toggleMatchChoice = (setChoices, choice, resetChoice = 'Any') => {
     if (choice === resetChoice || choice === 'All opportunities') {
@@ -1170,7 +1170,7 @@ function App() {
       : [...current, choice])
   }
 
-  const closingSoonOpportunities = page === 'Discover' ? [...opportunities]
+  const closingSoonOpportunities = useMemo(() => (page === 'Discover' ? [...opportunities]
     .filter((opportunity) => opportunity.deadlineRaw)
     .filter((opportunity) => {
       const deadline = new Date(opportunity.deadlineRaw)
@@ -1180,9 +1180,9 @@ function App() {
       return !Number.isNaN(deadline.getTime()) && deadline >= today
     })
     .sort((a, b) => new Date(a.deadlineRaw) - new Date(b.deadlineRaw))
-    .slice(0, 3) : []
+    .slice(0, 3) : []), [page, opportunities])
 
-  const getFilteredOpportunities = () => {
+  const getFilteredOpportunities = useCallback(() => {
     let results = [...opportunities]
 
     if (opportunitySearch.trim()) {
@@ -1320,13 +1320,16 @@ function App() {
     }
 
     return results
-  }
+  }, [opportunities, opportunitySearch, activeCategory, ageFilter, yearGroupFilter, locationFilter, formatFilter, costFilter, activityTypeFilter, subjectFilter, sort, selectedInterests, getMatchScore])
 
-  const filteredOpportunities = page === 'Discover' ? getFilteredOpportunities() : []
+  const filteredOpportunities = useMemo(
+    () => (page === 'Discover' ? getFilteredOpportunities() : []),
+    [page, getFilteredOpportunities]
+  )
 
   useEffect(() => { setDiscoverVisibleCount(60) }, [activeCategory, opportunitySearch, ageFilter, yearGroupFilter, locationFilter, formatFilter, costFilter, activityTypeFilter, subjectFilter, sort])
 
-  const matchedOpportunities = page === 'Results' ? [...opportunities]
+  const matchedOpportunities = useMemo(() => (page === 'Results' ? [...opportunities]
     .filter((opportunity) => {
     if (matchActivityTypes.length && !matchActivityTypes.includes(opportunity.activityType)) {
       return false
@@ -1371,9 +1374,9 @@ function App() {
       ...opportunity,
       matchScore: getMatchScore(opportunity),
     }))
-    .sort((a, b) => b.matchScore - a.matchScore) : []
+    .sort((a, b) => b.matchScore - a.matchScore) : []), [page, opportunities, matchActivityTypes, matchSubjects, matchYearGroups, matchLocations, matchFormats, matchCosts, getMatchScore])
 
-  const journeySuggestions = page === 'Track' ? opportunities
+  const journeySuggestions = useMemo(() => (page === 'Track' ? opportunities
     .filter((opportunity) => !tracked.includes(opportunity.id))
     .map((opportunity) => {
       const opportunityTerms = [
@@ -1405,7 +1408,7 @@ function App() {
     })
     .filter((item) => item.score > 0)
     .sort((first, second) => second.score - first.score)
-    .slice(0, 6) : []
+    .slice(0, 6) : []), [page, opportunities, tracked])
 
   const clearFilters = () => {
     setActiveCategory('All')
