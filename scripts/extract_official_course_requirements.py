@@ -17,7 +17,10 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 from supabase import create_client
 
 
-BATCH_SIZE = int(os.environ.get('COURSE_REQUIREMENTS_BATCH_SIZE', '25'))
+# One read-only request per course page. At 100 rotating pages per day the
+# catalogue gains coverage materially faster without repeatedly requesting the
+# same provider page or accepting unverified content.
+BATCH_SIZE = int(os.environ.get('COURSE_REQUIREMENTS_BATCH_SIZE', '100'))
 OFFER_PATTERN = re.compile(r'(?<![A-Z*])(?:A\*|[A-E])\s*(?:A\*|[A-E])\s*(?:A\*|[A-E])(?![A-Z*])')
 
 
