@@ -121,15 +121,19 @@ function App() {
     const [theme, setTheme] = useState(() => localStorage.getItem('growthgrind_theme') || 'light')
     const [opportunities, setOpportunities] = useState([])
     const [opportunitiesLoading, setOpportunitiesLoading] = useState(true)
+    const [opportunitiesError, setOpportunitiesError] = useState('')
+    const [catalogueRefresh, setCatalogueRefresh] = useState(0)
     const courseSuggestionCache = useRef(new Map())
 
   useEffect(() => {
     const loadOpportunities = async () => {
       const catalogueCacheKey = 'growthgrind_opportunity_catalogue_v1'
       const cacheMaxAge = 10 * 60 * 1000
+      setOpportunitiesLoading(true)
+      setOpportunitiesError('')
       try {
         const cached = JSON.parse(sessionStorage.getItem(catalogueCacheKey) || 'null')
-        if (cached?.savedAt && Array.isArray(cached.rows) && Date.now() - cached.savedAt < cacheMaxAge) {
+        if (catalogueRefresh === 0 && cached?.savedAt && Array.isArray(cached.rows) && Date.now() - cached.savedAt < cacheMaxAge) {
           setOpportunities(cached.rows)
           setOpportunitiesLoading(false)
           return
@@ -168,6 +172,7 @@ function App() {
 
       if (error) {
         console.error('Error loading opportunities:', error)
+        setOpportunitiesError('We could not refresh the opportunity catalogue right now. Your connection may be temporary — try again in a moment.')
         setOpportunitiesLoading(false)
         return
       }
@@ -229,7 +234,7 @@ function App() {
     }
 
     loadOpportunities()
-  }, [])
+  }, [catalogueRefresh])
   const [page, setPage] = useState('Discover')
 
   const [selectedInterests, setSelectedInterests] = useState([])
@@ -2098,7 +2103,14 @@ function App() {
                 </div>
               )}
 
-              {opportunitiesLoading ? (
+              {opportunitiesError ? (
+                <div className="catalogue-retry-card" role="alert">
+                  <span className="eyebrow">CATALOGUE TEMPORARILY UNAVAILABLE</span>
+                  <h3>Your opportunities are still there.</h3>
+                  <p>{opportunitiesError}</p>
+                  <button className="view-button" onClick={() => setCatalogueRefresh((count) => count + 1)}>Try again →</button>
+                </div>
+              ) : opportunitiesLoading ? (
                 <div className="opportunity-grid" aria-live="polite" aria-label="Loading opportunities">
                   {[1, 2, 3, 4, 5, 6].map((item) => <div className="catalogue-skeleton opportunity-card" key={item} />)}
                 </div>
