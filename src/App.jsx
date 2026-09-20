@@ -273,6 +273,7 @@ function App() {
   const [activityTypeFilter, setActivityTypeFilter] = useState('Any')
   const [subjectFilter, setSubjectFilter] = useState('Any')
   const [opportunitySearch, setOpportunitySearch] = useState('')
+  const [discoverVisibleCount, setDiscoverVisibleCount] = useState(60)
   const [matchYearGroups, setMatchYearGroups] = useState([])
   const [matchActivityTypes, setMatchActivityTypes] = useState([])
   const [matchSubjects, setMatchSubjects] = useState([])
@@ -1249,6 +1250,8 @@ function App() {
 
   const filteredOpportunities = getFilteredOpportunities()
 
+  useEffect(() => { setDiscoverVisibleCount(60) }, [activeCategory, opportunitySearch, ageFilter, yearGroupFilter, locationFilter, formatFilter, costFilter, activityTypeFilter, subjectFilter, sort])
+
   const matchedOpportunities = [...opportunities]
     .filter((opportunity) => {
     if (matchActivityTypes.length && !matchActivityTypes.includes(opportunity.activityType)) {
@@ -2032,8 +2035,9 @@ function App() {
                   }
                 />
               ) : (
+                <>
                 <div className="opportunity-grid">
-                  {filteredOpportunities.map((opportunity) => (
+                  {filteredOpportunities.slice(0, discoverVisibleCount).map((opportunity) => (
                     <OpportunityCard
                       key={opportunity.title}
                       opportunity={opportunity}
@@ -2049,6 +2053,8 @@ function App() {
                     />
                   ))}
                 </div>
+                {filteredOpportunities.length > discoverVisibleCount && <button className="view-button" style={{ display: 'block', margin: '28px auto 0' }} onClick={() => setDiscoverVisibleCount((count) => count + 60)}>Show 60 more opportunities</button>}
+                </>
               )}
             </section>
 
