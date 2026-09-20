@@ -345,6 +345,8 @@ function App() {
   const [showWeeklyPopup, setShowWeeklyPopup] = useState(false)
   const [weeklyEmail, setWeeklyEmail] = useState('')
   const [weeklySubscribed, setWeeklySubscribed] = useState(false)
+  const [weeklySignupLoading, setWeeklySignupLoading] = useState(false)
+  const [weeklySignupError, setWeeklySignupError] = useState('')
 
   const [premiumModal, setPremiumModal] = useState(null)
   const [showPremiumWelcome, setShowPremiumWelcome] = useState(false)
@@ -622,15 +624,28 @@ function App() {
     setShowWeeklyPopup(false)
   }
 
-  const subscribeWeekly = () => {
-    if (!weeklyEmail.trim()) return
-
-    localStorage.setItem('growthgrind_weekly_seen', 'true')
-    localStorage.setItem('growthgrind_weekly_subscribed', 'true')
-
-    setWeeklySubscribed(true)
-    setShowWeeklyPopup(false)
-    setWeeklyEmail('')
+  const subscribeWeekly = async () => {
+    if (!weeklyEmail.trim() || weeklySignupLoading) return
+    setWeeklySignupLoading(true)
+    setWeeklySignupError('')
+    try {
+      const response = await fetch('/api/subscribe-weekly', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: weeklyEmail }),
+      })
+      const result = await readApiJson(response)
+      if (!response.ok) throw new Error(result.error || 'We could not save your Weekly sign-up right now.')
+      localStorage.setItem('growthgrind_weekly_seen', 'true')
+      localStorage.setItem('growthgrind_weekly_subscribed', 'true')
+      setWeeklySubscribed(true)
+      setShowWeeklyPopup(false)
+      setWeeklyEmail('')
+    } catch (error) {
+      setWeeklySignupError(error.message || 'We could not save your Weekly sign-up right now.')
+    } finally {
+      setWeeklySignupLoading(false)
+    }
   }
 
   const toggleInterest = (interest) => {
@@ -2182,6 +2197,8 @@ function App() {
                   email={weeklyEmail}
                   setEmail={setWeeklyEmail}
                   onSubscribe={subscribeWeekly}
+                  loading={weeklySignupLoading}
+                  error={weeklySignupError}
                 />
               </section>
             )}
@@ -2263,6 +2280,8 @@ function App() {
                   email={weeklyEmail}
                   setEmail={setWeeklyEmail}
                   onSubscribe={subscribeWeekly}
+                  loading={weeklySignupLoading}
+                  error={weeklySignupError}
                 />
               </div>
             )}
@@ -3092,9 +3111,11 @@ function App() {
           {!weeklySubscribed && (
             <section className="closing-section">
               <WeeklyPromotion
-                email={weeklyEmail}
-                setEmail={setWeeklyEmail}
-                onSubscribe={subscribeWeekly}
+                  email={weeklyEmail}
+                  setEmail={setWeeklyEmail}
+                  onSubscribe={subscribeWeekly}
+                  loading={weeklySignupLoading}
+                  error={weeklySignupError}
               />
             </section>
           )}
@@ -3796,13 +3817,14 @@ function App() {
             <button
               className="primary-button"
               onClick={subscribeWeekly}
-              disabled={!weeklyEmail.trim()}
+              disabled={!weeklyEmail.trim() || weeklySignupLoading}
               style={{
-                opacity: weeklyEmail.trim() ? 1 : 0.5,
+                opacity: weeklyEmail.trim() && !weeklySignupLoading ? 1 : 0.5,
               }}
             >
-              Get GrowthGrind Weekly →
+              {weeklySignupLoading ? 'Saving your sign-up…' : 'Get GrowthGrind Weekly →'}
             </button>
+            {weeklySignupError && <p style={{ color: '#9d3c2e', fontWeight: '700', marginTop: '12px' }}>{weeklySignupError}</p>}
 
             <button
               className="filter-button"
@@ -5381,6 +5403,8 @@ function WeeklyPromotion({
   email,
   setEmail,
   onSubscribe,
+  loading,
+  error,
 }) {
   return (
     <div className="closing-card">
@@ -5427,11 +5451,12 @@ function WeeklyPromotion({
         <button
           className="filter-button"
           onClick={onSubscribe}
-          disabled={!email.trim()}
+          disabled={!email.trim() || loading}
         >
-          Sign me up
+          {loading ? 'Saving…' : 'Sign me up'}
         </button>
       </div>
+      {error && <p style={{ color: '#9d3c2e', fontWeight: '700', marginTop: '12px' }}>{error}</p>}
     </div>
   )
 }
