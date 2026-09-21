@@ -1213,6 +1213,23 @@ function App() {
       : [...current, choice])
   }
 
+  // Match filters are stored as arrays because students can select more than
+  // one option in a row. An empty array is deliberately the "Any" state.
+  // Keeping that state explicit here prevents Any from looking unclickable.
+  const isMatchOptionSelected = (choices, option, resetChoice = 'Any') =>
+    option === resetChoice || option === 'All opportunities'
+      ? choices.length === 0
+      : choices.includes(option)
+
+  const clearMatchFilters = () => {
+    setMatchYearGroups([])
+    setMatchActivityTypes([])
+    setMatchSubjects([])
+    setMatchLocations([])
+    setMatchFormats([])
+    setMatchCosts([])
+  }
+
   const closingSoonOpportunities = useMemo(() => (page === 'Discover' ? [...opportunities]
     .filter((opportunity) => opportunity.deadlineRaw)
     .filter((opportunity) => {
@@ -1374,17 +1391,39 @@ function App() {
 
   const matchedOpportunities = useMemo(() => (page === 'Results' ? [...opportunities]
     .filter((opportunity) => {
-    if (matchActivityTypes.length && !matchActivityTypes.includes(opportunity.activityType)) {
-      return false
+    if (matchActivityTypes.length) {
+      const activity = (opportunity.activityType || '').toLowerCase()
+      const matchesActivity = matchActivityTypes.some((choice) => {
+        const selectedActivity = choice.toLowerCase()
+        if (activity === selectedActivity) return true
+        if (choice === 'Sport') return activity.includes('sport')
+        if (choice === 'Creative') return /creative|art|film|theatre|music|writing|design/.test(activity)
+        if (choice === 'Work Experience') return activity.includes('work experience')
+        if (choice === 'Internship') return activity.includes('intern')
+        if (choice === 'Competition') return /competition|olympiad|essay/.test(activity)
+        if (choice === 'Course / Programme') return /course|programme|outreach|event|workshop/.test(activity)
+        return activity.includes(selectedActivity)
+      })
+      if (!matchesActivity) return false
     }
 
-    if (matchSubjects.length && !matchSubjects.some((subject) => (opportunity.subjects || []).includes(subject))) {
-      return false
+    if (matchSubjects.length) {
+      const opportunitySubjects = (opportunity.subjects || []).map((subject) => subject.toLowerCase())
+      const matchesSubject = matchSubjects.some((subject) => {
+        const selectedSubject = subject.toLowerCase()
+        if (opportunitySubjects.some((item) => item === selectedSubject || item.includes(selectedSubject))) return true
+        if (subject === 'Science') return opportunitySubjects.some((item) => /stem|physics|chemistry|biology|biochem|genetics|medicine|science/.test(item))
+        if (subject === 'Mathematics') return opportunitySubjects.some((item) => /math|quantitative|statistics/.test(item))
+        if (subject === 'Computer Science') return opportunitySubjects.some((item) => /computer|coding|technology|cyber/.test(item))
+        return false
+      })
+      if (!matchesSubject) return false
     }
 
-    if (matchYearGroups.length && !matchYearGroups.some((year) => (opportunity.yearGroups || []).includes(year))) {
-      return false
-    }
+    // A missing year group means the provider asks students to check eligibility;
+    // do not hide a potentially suitable opportunity solely because a source did
+    // not publish a standard school-year label.
+    if (matchYearGroups.length && opportunity.yearGroups?.length && !matchYearGroups.some((year) => (opportunity.yearGroups || []).includes(year))) return false
 
       if (matchLocations.length) {
         const location = (opportunity.location || '').toLowerCase()
@@ -1401,13 +1440,26 @@ function App() {
         if (!matchesLocation) return false
       }
 
-    if (matchFormats.length && !matchFormats.includes(opportunity.format)) {
-      return false
+    if (matchFormats.length) {
+      const format = (opportunity.format || '').toLowerCase()
+      const matchesFormat = matchFormats.some((choice) => {
+        if (choice === 'Online') return format.includes('online') || format.includes('remote')
+        if (choice === 'In-person') return /in-person|in person|school-based|on campus/.test(format)
+        if (choice === 'Hybrid') return format.includes('hybrid') || (format.includes('online') && /in-person|in person/.test(format))
+        return format.includes(choice.toLowerCase())
+      })
+      if (!matchesFormat) return false
     }
 
-    if (matchCosts.length && !matchCosts.some((cost) =>
-      cost === 'Free' ? opportunity.cost === 'Free' : cost === 'Financial support' ? opportunity.support : true
-    )) {
+    if (matchCosts.length && !matchCosts.some((cost) => {
+      if (cost === 'Free') return (opportunity.cost || '').toLowerCase().includes('free')
+      if (cost === 'Financial support') {
+        return Boolean(opportunity.support) || /scholarship|bursar|grant|funding|financial support/.test(
+          [opportunity.title, opportunity.description, opportunity.cost].filter(Boolean).join(' ').toLowerCase()
+        )
+      }
+      return true
+    })) {
       return false
     }
 
@@ -1542,7 +1594,7 @@ function App() {
                 }}
               >
                 {yearGroups.map((option) => {
-                  const selected = matchYearGroups.includes(option)
+                  const selected = isMatchOptionSelected(matchYearGroups, option)
 
                   return (
                     <button
@@ -1598,7 +1650,7 @@ function App() {
                 }}
               >
                 {activityTypes.map((option) => {
-                  const selected = matchActivityTypes.includes(option)
+                  const selected = isMatchOptionSelected(matchActivityTypes, option)
 
                   return (
                     <button
@@ -1654,7 +1706,7 @@ function App() {
                 }}
               >
                 {subjects.map((option) => {
-                  const selected = matchSubjects.includes(option)
+                  const selected = isMatchOptionSelected(matchSubjects, option)
 
                   return (
                     <button
@@ -1711,7 +1763,7 @@ function App() {
               >
                 {['Any', 'UK', 'England', 'Online'].map(
                   (option) => {
-                    const selected = matchLocations.includes(option)
+                    const selected = isMatchOptionSelected(matchLocations, option)
 
                     return (
                       <button
@@ -1769,7 +1821,7 @@ function App() {
               >
                 {['Any', 'Online', 'In-person', 'Hybrid'].map(
                   (option) => {
-                    const selected = matchFormats.includes(option)
+                    const selected = isMatchOptionSelected(matchFormats, option)
 
                     return (
                       <button
@@ -1830,7 +1882,7 @@ function App() {
                   'Free',
                   'Financial support',
                 ].map((option) => {
-                  const selected = matchCosts.includes(option)
+                  const selected = isMatchOptionSelected(matchCosts, option, 'All opportunities')
 
                   return (
                     <button
@@ -1868,7 +1920,7 @@ function App() {
 
           <button
             className="filter-button"
-            onClick={clearFilters}
+            onClick={clearMatchFilters}
             style={{ marginTop: '15px' }}
           >
             Clear all filters
