@@ -58,6 +58,20 @@ async function updateSubscriptionMembership(subscriptionId, status) {
   if (!updateResponse.ok) throw new Error(await updateResponse.text())
 }
 
+async function claimFoundingReservation(reservationId, sessionId) {
+  const claimResponse = await fetch(`${supabaseUrl}/rest/v1/rpc/claim_founding_reservation`, {
+    method: 'POST',
+    headers: {
+      apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ p_reservation_id: reservationId, p_session_id: sessionId }),
+  })
+  if (!claimResponse.ok) throw new Error(await claimResponse.text())
+  return claimResponse.json()
+}
+
 export default async function handler(request, response) {
   if (request.method !== 'POST') return response.status(405).send('Method not allowed')
   if (!process.env.STRIPE_WEBHOOK_SECRET || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -87,6 +101,10 @@ export default async function handler(request, response) {
     const session = event.data?.object
     const userId = session?.client_reference_id
     if (!userId || session.payment_status !== 'paid') return response.status(200).json({ received: true })
+    if (session.metadata?.plan === 'founding' && session.metadata?.founding_reservation_id) {
+      const claimed = await claimFoundingReservation(session.metadata.founding_reservation_id, session.id)
+      if (!claimed) throw new Error('Founding reservation could not be claimed.')
+    }
     const payload = {
       user_id: userId,
       stripe_customer_id: session.customer || null,
