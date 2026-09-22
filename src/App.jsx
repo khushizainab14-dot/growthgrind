@@ -2902,7 +2902,7 @@ function App() {
                 </div>
 
                 <h3>
-                  First 30 students get Premium for £2.99/month.
+                  First 30 students get Premium for a one-off £2.99.
                 </h3>
 
                 <p>
@@ -3136,7 +3136,7 @@ function App() {
 
                 <div style={{ display: 'grid', gap: '8px', marginTop: '15px' }}>
                   {[
-                    ['founding', 'Founding Member — £2.99/month'],
+                    ['founding', 'Founding Member — £2.99 one-off'],
                     ['monthly', 'Monthly — £8.99/month'],
                     ['annual', 'One Year — £89.99'],
                     ['twoYear', 'Two Years — £169.99'],

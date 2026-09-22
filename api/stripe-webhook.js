@@ -37,8 +37,8 @@ function membershipDetails(session) {
   return {
     plan: plan === 'founding' ? 'founding' : plan,
     purchased_at: startedAt.toISOString(),
-    // One-off passes receive a fixed term. Monthly and founding plans are
-    // governed by their Stripe subscription instead.
+    // Annual and two-year passes receive a fixed term. The founding offer is
+    // a one-off, lifetime founding membership; only monthly is subscription-led.
     expires_at: plan === 'annual' || plan === 'twoYear' ? expiresAt.toISOString() : null,
   }
 }

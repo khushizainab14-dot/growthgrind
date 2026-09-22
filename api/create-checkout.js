@@ -1,5 +1,5 @@
 const plans = {
-  founding: { priceEnv: 'STRIPE_PRICE_FOUNDING', mode: 'subscription' },
+  founding: { priceEnv: 'STRIPE_PRICE_FOUNDING', mode: 'payment' },
   monthly: { priceEnv: 'STRIPE_PRICE_MONTHLY', mode: 'subscription' },
   annual: { priceEnv: 'STRIPE_PRICE_ANNUAL', mode: 'payment' },
   twoYear: { priceEnv: 'STRIPE_PRICE_BIANNUAL', mode: 'payment' },
