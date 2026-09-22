@@ -1230,6 +1230,17 @@ function App() {
     setMatchCosts([])
   }
 
+  // Directory cards are useful fallbacks, but they should not crowd out a
+  // named programme, placement or competition when students first open
+  // Discover. They remain searchable and available in every relevant category.
+  const isOpportunityDirectory = (opportunity) =>
+    (opportunity.activityType || '').toLowerCase() === 'opportunity directory'
+
+  const hasFinancialSupport = (opportunity) =>
+    Boolean(opportunity.support) || /scholarship|bursar|grant|funding|financial support/.test(
+      [opportunity.title, opportunity.description, opportunity.cost].filter(Boolean).join(' ').toLowerCase()
+    )
+
   const closingSoonOpportunities = useMemo(() => (page === 'Discover' ? [...opportunities]
     .filter((opportunity) => opportunity.deadlineRaw)
     .filter((opportunity) => {
@@ -1333,7 +1344,7 @@ function App() {
         }
 
         if (locationFilter === 'Online' || locationFilter === 'Remote') {
-          return opportunity.format === 'Online' || location.includes('remote')
+          return (opportunity.format || '').toLowerCase().includes('online') || location.includes('remote')
         }
 
         return location.includes(locationFilter.toLowerCase())
@@ -1341,30 +1352,47 @@ function App() {
     }
 
     if (formatFilter !== 'Any') {
-      results = results.filter(
-        (opportunity) => opportunity.format === formatFilter
-      )
+      results = results.filter((opportunity) => {
+        const format = (opportunity.format || '').toLowerCase()
+        if (formatFilter === 'Online') return format.includes('online') || format.includes('remote')
+        if (formatFilter === 'In-person') return /in-person|in person|school-based|on campus/.test(format)
+        if (formatFilter === 'Hybrid') return format.includes('hybrid') || (format.includes('online') && /in-person|in person/.test(format))
+        return format.includes(formatFilter.toLowerCase())
+      })
     }
 
     if (activityTypeFilter !== 'Any') {
-      results = results.filter(
-        (opportunity) =>
-          opportunity.activityType === activityTypeFilter
-      )
+      results = results.filter((opportunity) => {
+        const activity = (opportunity.activityType || '').toLowerCase()
+        if (activity === activityTypeFilter.toLowerCase()) return true
+        if (activityTypeFilter === 'Sport') return activity.includes('sport')
+        if (activityTypeFilter === 'Creative') return /creative|art|film|theatre|music|writing|design/.test(activity)
+        if (activityTypeFilter === 'Work Experience') return activity.includes('work experience')
+        if (activityTypeFilter === 'Internship') return activity.includes('intern')
+        if (activityTypeFilter === 'Competition') return /competition|olympiad|essay/.test(activity)
+        if (activityTypeFilter === 'Course / Programme') return /course|programme|outreach|event|workshop/.test(activity)
+        return activity.includes(activityTypeFilter.toLowerCase())
+      })
     }
 
     if (subjectFilter !== 'Any') {
-      results = results.filter((opportunity) =>
-        opportunity.subjects?.includes(subjectFilter)
-      )
+      results = results.filter((opportunity) => {
+        const opportunitySubjects = (opportunity.subjects || []).map((subject) => subject.toLowerCase())
+        const selectedSubject = subjectFilter.toLowerCase()
+        if (opportunitySubjects.some((item) => item === selectedSubject || item.includes(selectedSubject))) return true
+        if (subjectFilter === 'Science') return opportunitySubjects.some((item) => /stem|physics|chemistry|biology|biochem|genetics|medicine|science/.test(item))
+        if (subjectFilter === 'Mathematics') return opportunitySubjects.some((item) => /math|quantitative|statistics/.test(item))
+        if (subjectFilter === 'Computer Science') return opportunitySubjects.some((item) => /computer|coding|technology|cyber/.test(item))
+        return false
+      })
     }
 
     if (costFilter === 'Free') {
-      results = results.filter((opportunity) => opportunity.cost === 'Free')
+      results = results.filter((opportunity) => (opportunity.cost || '').toLowerCase().includes('free'))
     }
 
     if (costFilter === 'Financial support') {
-      results = results.filter((opportunity) => opportunity.support)
+      results = results.filter(hasFinancialSupport)
     }
 
     if (sort === 'Deadline soonest') {
@@ -1375,8 +1403,16 @@ function App() {
       })
     }
 
-    if (sort === 'Most relevant' && selectedInterests.length > 0) {
-      results.sort((a, b) => getMatchScore(b) - getMatchScore(a))
+    if (sort === 'Newest' || sort === 'Recently updated') {
+      results.sort((a, b) => Number(b.id || 0) - Number(a.id || 0))
+    }
+
+    if (sort === 'Most relevant') {
+      results.sort((a, b) => {
+        const scoreDifference = selectedInterests.length > 0 ? getMatchScore(b) - getMatchScore(a) : 0
+        if (scoreDifference !== 0) return scoreDifference
+        return Number(isOpportunityDirectory(a)) - Number(isOpportunityDirectory(b))
+      })
     }
 
     return results

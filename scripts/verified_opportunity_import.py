@@ -276,7 +276,18 @@ def curated_hub(link):
         category, activity, subjects = "Academic", "Course / Programme", "STEM, Academic Enrichment"
     else:
         category, activity, subjects = "Careers", "Careers Programme", "Careers, Work Experience"
-    return additional_source(f"{label} student opportunities", label, category, activity, subjects, link, f"Official {label} page for student opportunities, outreach, programmes or early-career guidance.")
+    # These links are provider landing pages rather than a single dated place,
+    # programme or competition. Preserve them as useful, verified fallbacks but
+    # label them accurately so the app can show named opportunities first.
+    return additional_source(
+        f"Browse {label} student opportunities",
+        label,
+        category,
+        "Opportunity Directory",
+        subjects,
+        link,
+        f"Verified {label} directory for current student opportunities, outreach, programmes or early-career guidance. Open it to browse the provider’s live listings and eligibility details."
+    )
 
 
 CURATED_HUB_LINKS = """
