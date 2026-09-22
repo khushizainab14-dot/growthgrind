@@ -15,7 +15,8 @@ export default async function handler(request, response) {
       const userResponse = await fetch(`${supabaseUrl}/auth/v1/user`, { headers: { apikey: process.env.SUPABASE_SERVICE_ROLE_KEY, Authorization: authorization } })
       const user = userResponse.ok ? await userResponse.json() : null
       if (user?.id) {
-        const membershipResponse = await fetch(`${supabaseUrl}/rest/v1/premium_memberships?user_id=eq.${user.id}&status=eq.active&select=id&limit=1`, {
+        const now = encodeURIComponent(new Date().toISOString())
+        const membershipResponse = await fetch(`${supabaseUrl}/rest/v1/premium_memberships?user_id=eq.${user.id}&status=eq.active&or=(expires_at.is.null,expires_at.gt.${now})&select=id&limit=1`, {
           headers: { apikey: process.env.SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}` },
         })
         active = membershipResponse.ok && (await membershipResponse.json()).length > 0

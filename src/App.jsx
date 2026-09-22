@@ -1175,8 +1175,11 @@ function App() {
     try {
       const response = await fetch('/api/create-checkout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan, userId: user.id }),
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token || ''}`,
+        },
+        body: JSON.stringify({ plan }),
       })
       const result = await readApiJson(response)
       if (!response.ok) throw new Error(result.error || 'Checkout could not be opened.')
