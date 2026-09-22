@@ -10,19 +10,22 @@ export default async function handler(request, response) {
     })
     const count = Number(foundingResponse.headers.get('content-range')?.split('/')[1] || 0)
     let active = false
+    let billingPortalAvailable = false
     const authorization = request.headers.authorization
     if (authorization) {
       const userResponse = await fetch(`${supabaseUrl}/auth/v1/user`, { headers: { apikey: process.env.SUPABASE_SERVICE_ROLE_KEY, Authorization: authorization } })
       const user = userResponse.ok ? await userResponse.json() : null
       if (user?.id) {
         const now = encodeURIComponent(new Date().toISOString())
-        const membershipResponse = await fetch(`${supabaseUrl}/rest/v1/premium_memberships?user_id=eq.${user.id}&status=eq.active&or=(expires_at.is.null,expires_at.gt.${now})&select=id&limit=1`, {
+        const membershipResponse = await fetch(`${supabaseUrl}/rest/v1/premium_memberships?user_id=eq.${user.id}&status=eq.active&or=(expires_at.is.null,expires_at.gt.${now})&select=id,stripe_subscription_id&limit=1`, {
           headers: { apikey: process.env.SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}` },
         })
-        active = membershipResponse.ok && (await membershipResponse.json()).length > 0
+        const memberships = membershipResponse.ok ? await membershipResponse.json() : []
+        active = memberships.length > 0
+        billingPortalAvailable = memberships.some((membership) => Boolean(membership.stripe_subscription_id))
       }
     }
-    return response.status(200).json({ foundingMembersClaimed: count, active })
+    return response.status(200).json({ foundingMembersClaimed: count, active, billingPortalAvailable })
   } catch (error) {
     console.error('Premium status error:', error)
     return response.status(502).json({ error: 'Premium status could not be loaded.' })

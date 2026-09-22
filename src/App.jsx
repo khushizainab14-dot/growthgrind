@@ -371,6 +371,9 @@ function App() {
     localStorage.getItem('growthgrind_demo_premium') === 'true'
   )
   const [foundingMembersClaimed, setFoundingMembersClaimed] = useState(0)
+  const [billingPortalAvailable, setBillingPortalAvailable] = useState(false)
+  const [billingPortalLoading, setBillingPortalLoading] = useState(false)
+  const [billingPortalError, setBillingPortalError] = useState('')
 
   const user = session?.user || null
   const shortlistEntries = Object.values(courseShortlist)
@@ -383,6 +386,7 @@ function App() {
       if (!response.ok) return
       const status = await readApiJson(response)
       setFoundingMembersClaimed(status.foundingMembersClaimed || 0)
+      setBillingPortalAvailable(Boolean(status.billingPortalAvailable))
       if (status.active) {
         setIsPremium(true)
         if (new URLSearchParams(window.location.search).get('premium') === 'success') {
@@ -1188,6 +1192,24 @@ function App() {
       setAuthMessage(error.message || 'Checkout could not be opened.')
     } finally {
       setCheckoutLoading('')
+    }
+  }
+
+  const openBillingPortal = async () => {
+    setBillingPortalLoading(true)
+    setBillingPortalError('')
+    try {
+      const response = await fetch('/api/create-billing-portal', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session?.access_token || ''}` },
+      })
+      const result = await readApiJson(response)
+      if (!response.ok) throw new Error(result.error || 'Billing management could not be opened.')
+      window.location.assign(result.url)
+    } catch (error) {
+      setBillingPortalError(error.message || 'Billing management could not be opened.')
+    } finally {
+      setBillingPortalLoading(false)
     }
   }
 
@@ -2475,6 +2497,17 @@ function App() {
                     Explore Premium →
                   </button>
                 )}
+                {isPremium && billingPortalAvailable && (
+                  <button
+                    className="filter-button"
+                    onClick={openBillingPortal}
+                    disabled={billingPortalLoading}
+                    style={{ marginTop: '12px' }}
+                  >
+                    {billingPortalLoading ? 'Opening billing…' : 'Manage subscription →'}
+                  </button>
+                )}
+                {billingPortalError && <p style={{ marginTop: '10px', color: '#9d3c2e', fontSize: '12px', fontWeight: '700' }}>{billingPortalError}</p>}
               </div>
             </div>
           </section>
