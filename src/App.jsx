@@ -4816,10 +4816,58 @@ function InterviewPracticeWorkspace({ workspaceData, setWorkspaceData }) {
   const [loading, setLoading] = useState(false)
   const [listening, setListening] = useState(false)
   const [error, setError] = useState('')
+  const [cameraReady, setCameraReady] = useState(false)
+  const [cameraError, setCameraError] = useState('')
+  const [isRecording, setIsRecording] = useState(false)
+  const [thinkingSeconds, setThinkingSeconds] = useState(0)
+  const [isThinking, setIsThinking] = useState(Boolean(workspaceData.currentQuestion))
+  const [videoUrl, setVideoUrl] = useState('')
+  const videoRef = useRef(null)
+  const mediaStreamRef = useRef(null)
+  const mediaRecorderRef = useRef(null)
+  const mediaChunksRef = useRef([])
   const course = workspaceData.course || ''
   const university = workspaceData.university || ''
   const tone = workspaceData.tone || 'Friendly'
   const voice = workspaceData.voice || ''
+  const savedFeedback = workspaceData.savedFeedback || []
+  const questionNumber = Math.min(savedFeedback.length + 1, 4)
+  const timerState = thinkingSeconds >= 15 ? 'red' : thinkingSeconds >= 8 ? 'orange' : 'green'
+
+  useEffect(() => {
+    if (!isThinking || !question) return undefined
+    const timer = window.setInterval(() => setThinkingSeconds((seconds) => seconds + 1), 1000)
+    return () => window.clearInterval(timer)
+  }, [isThinking, question])
+
+  useEffect(() => {
+    if (videoRef.current && mediaStreamRef.current) videoRef.current.srcObject = mediaStreamRef.current
+  }, [cameraReady, question])
+
+  useEffect(() => () => {
+    mediaRecorderRef.current?.state === 'recording' && mediaRecorderRef.current.stop()
+    mediaStreamRef.current?.getTracks().forEach((track) => track.stop())
+  }, [])
+
+  useEffect(() => () => {
+    if (videoUrl) URL.revokeObjectURL(videoUrl)
+  }, [videoUrl])
+
+  const connectCamera = async () => {
+    if (mediaStreamRef.current) return true
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+      mediaStreamRef.current = stream
+      if (videoRef.current) videoRef.current.srcObject = stream
+      setCameraReady(true)
+      setCameraError('')
+      return true
+    } catch {
+      setCameraError('Camera access is unavailable. You can still practise by voice or typed answer.')
+      return false
+    }
+  }
+
   const parseInterviewReply = (reply, hasAnswer) => {
     const questionMatch = reply.match(/(?:^|\n)QUESTION:\s*([\s\S]*)/i)
     const feedbackMatch = reply.match(/(?:^|\n)FEEDBACK:\s*([\s\S]*?)(?=\nQUESTION:|$)/i)
@@ -4838,6 +4886,7 @@ function InterviewPracticeWorkspace({ workspaceData, setWorkspaceData }) {
     utterance.rate = tone === 'Stern' ? 0.96 : tone === 'Friendly' ? 1.03 : 1
     window.speechSynthesis.speak(utterance)
   }
+
   const askAi = async (message, savingAnswer = '') => {
     setLoading(true); setError('')
     try {
@@ -4848,20 +4897,20 @@ function InterviewPracticeWorkspace({ workspaceData, setWorkspaceData }) {
       if (!parsed.question) throw new Error('The interviewer did not return a next question. Please try again.')
       setFeedback(savingAnswer ? parsed.feedback : '')
       setQuestion(parsed.question)
+      setThinkingSeconds(0)
+      setIsThinking(true)
       setWorkspaceData({ ...workspaceData, currentQuestion: parsed.question, savedFeedback: savingAnswer ? [...(workspaceData.savedFeedback || []), { id: Date.now(), question, answer: savingAnswer, feedback: parsed.feedback }] : (workspaceData.savedFeedback || []) })
       speak(parsed.question)
     } catch (requestError) { setError(requestError.message || 'Could not continue the interview.') } finally { setLoading(false) }
   }
-  const start = () => {
+
+  const start = async () => {
     if (!course.trim() || !university.trim()) { setError('Add both a course and university before starting.'); return }
+    setQuestion(''); setAnswer(''); setFeedback(''); setThinkingSeconds(0); setIsThinking(false); setVideoUrl('')
+    await connectCamera()
     askAi(`Research the current official interview/course guidance for ${course} at ${university}, then start a ${tone.toLowerCase()} mock interview. Return exactly one line in this format: QUESTION: [one realistic open question]. Do not include research notes, feedback, links or anything else.`)
   }
-  const submitAnswer = () => {
-    if (!answer.trim() || !question) return
-    const spokenAnswer = answer
-    setAnswer('')
-    askAi(`Continue this ${tone.toLowerCase()} mock interview for ${course} at ${university}. Use live official guidance if you need to verify an interview-specific detail. Previous question: ${question}\nStudent answer: ${spokenAnswer}\nReturn exactly two labels: FEEDBACK: [two or three specific sentences] then QUESTION: [one next realistic open question].`, spokenAnswer)
-  }
+
   const startListening = () => {
     const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition
     if (!Recognition) { setError('Voice input is not supported in this browser. You can type your answer instead.'); return }
@@ -4872,8 +4921,44 @@ function InterviewPracticeWorkspace({ workspaceData, setWorkspaceData }) {
     recognition.onend = () => setListening(false)
     recognition.start()
   }
-  const savedFeedback = workspaceData.savedFeedback || []
-  return <div className="interview-studio"><section className="interview-setup"><span className="days-left">LIVE MOCK INTERVIEW</span><h2>Set your interview context.</h2><div className="interview-fields"><input value={course} onChange={(event) => setWorkspaceData({ ...workspaceData, course: event.target.value })} placeholder="Course, e.g. Medicine" /><input value={university} onChange={(event) => setWorkspaceData({ ...workspaceData, university: event.target.value })} placeholder="University, e.g. Bristol" /><label>Tone<select value={tone} onChange={(event) => setWorkspaceData({ ...workspaceData, tone: event.target.value })}><option>Friendly</option><option>Serious</option><option>Stern</option></select></label><label>AI voice<select value={voice} onChange={(event) => setWorkspaceData({ ...workspaceData, voice: event.target.value })}><option value="">Default device voice</option>{typeof window !== 'undefined' && window.speechSynthesis?.getVoices().filter((item) => item.lang.startsWith('en')).slice(0, 12).map((item) => <option value={item.name} key={item.name}>{item.name}</option>)}</select></label></div><button className="view-button" onClick={start} disabled={loading}>{loading ? 'Checking official guidance…' : question ? 'Start a new interview' : 'Start mock interview →'}</button><p className="interview-disclaimer">GrowthGrind checks official university guidance where it is available, then creates original practice questions. Voice input uses your browser’s microphone permission; you can always type instead.</p></section><section className="interview-stage"><span className="days-left">INTERVIEW ROOM</span>{question ? <><div className="interviewer-question"><b>Interviewer</b><p>{question}</p></div><textarea value={answer} onChange={(event) => setAnswer(event.target.value)} placeholder="Answer by voice or type here…" /><div className="interview-actions"><button className="filter-button" onClick={startListening} disabled={listening}>{listening ? 'Listening…' : '🎙 Answer by voice'}</button><button className="view-button" onClick={submitAnswer} disabled={loading || !answer.trim()}>{loading ? 'Reviewing…' : 'Submit answer →'}</button></div>{feedback && <div className="interview-feedback"><b>Instant feedback</b><p>{feedback}</p></div>}</> : <p className="interview-empty">Choose your course, university, tone and voice, then begin. The interviewer will ask one question at a time.</p>}{error && <p className="contextual-error">{error}</p>}</section><aside className="interview-saves"><span className="days-left">SAVED FEEDBACK</span><h3>{savedFeedback.length ? `${savedFeedback.length} response${savedFeedback.length === 1 ? '' : 's'} to review` : 'Review your practice'}</h3>{savedFeedback.length ? savedFeedback.slice(-5).reverse().map((item) => <details key={item.id}><summary>{item.question}</summary><p><b>Your answer:</b> {item.answer}</p><p><b>Feedback:</b> {item.feedback}</p></details>) : <p>Completed answers and feedback are saved to your signed-in GrowthGrind account.</p>}</aside></div>
+
+  const startRecording = async () => {
+    if (isRecording) return
+    const hasCamera = await connectCamera()
+    if (!hasCamera) return
+    try {
+      const recorder = new MediaRecorder(mediaStreamRef.current)
+      mediaChunksRef.current = []
+      recorder.ondataavailable = (event) => { if (event.data.size) mediaChunksRef.current.push(event.data) }
+      recorder.onstop = () => {
+        const blob = new Blob(mediaChunksRef.current, { type: recorder.mimeType || 'video/webm' })
+        if (blob.size) setVideoUrl(URL.createObjectURL(blob))
+      }
+      recorder.start()
+      mediaRecorderRef.current = recorder
+      setIsRecording(true)
+      setIsThinking(false)
+      startListening()
+    } catch {
+      setError('Recording could not start. You can still use the voice or typed answer controls.')
+    }
+  }
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current?.state === 'recording') mediaRecorderRef.current.stop()
+    setIsRecording(false)
+  }
+
+  const submitAnswer = () => {
+    if (!answer.trim() || !question) return
+    const spokenAnswer = answer
+    setAnswer('')
+    askAi(`Continue this ${tone.toLowerCase()} mock interview for ${course} at ${university}. Use live official guidance if you need to verify an interview-specific detail. Previous question: ${question}\nStudent answer: ${spokenAnswer}\nReturn exactly two labels: FEEDBACK: [two or three specific sentences] then QUESTION: [one next realistic open question].`, spokenAnswer)
+  }
+
+  if (!question) return <div className="interview-launch"><section><span className="days-left">LIVE VIDEO INTERVIEW</span><h2>Practise in an interview room.</h2><p>Set the course and university context, choose the interviewer tone, then record your response with your camera if you wish.</p><div className="interview-fields"><input value={course} onChange={(event) => setWorkspaceData({ ...workspaceData, course: event.target.value })} placeholder="Course, e.g. Medicine" /><input value={university} onChange={(event) => setWorkspaceData({ ...workspaceData, university: event.target.value })} placeholder="University, e.g. Bristol" /><label>Tone<select value={tone} onChange={(event) => setWorkspaceData({ ...workspaceData, tone: event.target.value })}><option>Friendly</option><option>Serious</option><option>Stern</option></select></label><label>AI voice<select value={voice} onChange={(event) => setWorkspaceData({ ...workspaceData, voice: event.target.value })}><option value="">Default device voice</option>{typeof window !== 'undefined' && window.speechSynthesis?.getVoices().filter((item) => item.lang.startsWith('en')).slice(0, 12).map((item) => <option value={item.name} key={item.name}>{item.name}</option>)}</select></label></div><button className="view-button" onClick={start} disabled={loading}>{loading ? 'Checking official guidance…' : 'Start mock interview →'}</button>{cameraError && <p className="contextual-error">{cameraError}</p>}<p className="interview-disclaimer">Camera recordings stay in this browser during your practice. GrowthGrind does not upload or analyse the video; use the voice transcript or typed answer for AI feedback.</p></section><aside><span>WHAT YOU’LL PRACTISE</span><ul><li>A question at a time</li><li>Thinking pace before you speak</li><li>Video, voice or typed responses</li><li>Specific written feedback</li></ul></aside></div>
+
+  return <div className="video-interview-room"><header className="video-interview-header"><div><span>AI INTERVIEW</span><strong>{questionNumber}/4</strong><small>{isRecording ? 'Recording response' : isThinking ? 'Thinking time' : 'Review your answer'}</small></div><div className={`thinking-timer ${timerState}`}><i>◷</i><b>{String(thinkingSeconds).padStart(2, '0')}s</b><small>{isRecording ? 'Speaking' : 'Before you speak'}</small></div></header><div className="video-interview-layout"><section className="video-stage"><div className="video-frame">{cameraReady ? <video ref={videoRef} autoPlay muted playsInline /> : <div className="camera-placeholder"><span>◉</span><b>Camera preview</b><p>Allow camera access to record a practice response.</p></div>}<div className="video-stage-label">{isRecording ? <><i /> RECORDING</> : 'YOUR CAMERA'}</div><div className="video-controls">{isRecording ? <button className="finish-recording" onClick={stopRecording}>■ Finish recording</button> : <button onClick={startRecording}>{videoUrl ? '↻ Record again' : '● Start answer'}</button>}<button className="voice-control" onClick={startListening} disabled={listening}>{listening ? 'Listening…' : '🎙 Voice transcript'}</button></div></div>{videoUrl && <details className="video-preview"><summary>Review this response recording</summary><video controls src={videoUrl} /></details>}<label className="video-answer-input"><span>Answer transcript</span><textarea value={answer} onChange={(event) => setAnswer(event.target.value)} placeholder="Speak using the microphone or type your answer here…" /></label></section><aside className="video-interview-sidebar"><div className="interview-sidebar-title"><span>QUESTION {questionNumber}</span><b>{course} · {university}</b></div><div className="interview-progress"><div><span>Progress</span><strong>{savedFeedback.length}/4 answered</strong></div><i><b style={{ width: `${Math.min(savedFeedback.length * 25, 100)}%` }} /></i></div><article className="current-question"><small>AI INTERVIEWER</small><p>{question}</p></article><article className={`thinking-guide ${timerState}`}><span>Thinking pace</span><strong>{isRecording ? 'You’re answering now' : thinkingSeconds < 8 ? 'Good — take a moment' : thinkingSeconds < 15 ? 'Start shaping your answer' : 'Practise getting to your opening point'}</strong><p>Green 0–7s · orange 8–14s · red 15s+. This is practice feedback, not a university scoring rule.</p></article>{feedback && <article className="video-feedback"><small>INSTANT FEEDBACK</small><p>{feedback}</p></article>}<button className="view-button" onClick={submitAnswer} disabled={loading || !answer.trim() || isRecording}>{loading ? 'Reviewing your answer…' : 'Get feedback & next question →'}</button>{error && <p className="contextual-error">{error}</p>}</aside></div></div>
 }
 
 function PortfolioHubWorkspace({ workspaceData, setWorkspaceData }) {
