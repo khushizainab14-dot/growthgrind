@@ -4890,7 +4890,7 @@ function InterviewPracticeWorkspace({ workspaceData, setWorkspaceData }) {
   const askAi = async (message, savingAnswer = '') => {
     setLoading(true); setError('')
     try {
-      const response = await fetch('/api/ai-chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ specialist: 'interview', message }) })
+      const response = await fetch('/api/ai-chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ specialist: 'interview', message, interviewContext: { course, university, tone, previousQuestion: savingAnswer ? question : '', studentAnswer: savingAnswer } }) })
       const result = await readApiJson(response)
       if (!response.ok) throw new Error(result.error || 'Could not continue the interview.')
       const parsed = parseInterviewReply(result.reply, Boolean(savingAnswer))
