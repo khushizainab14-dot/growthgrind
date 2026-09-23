@@ -185,6 +185,9 @@ function App() {
           // Keep the public catalogue payload lean: Discover only receives
           // fields it actually renders or filters, not every database column.
           .select('id,category,activity_type,title,provider,description,location,format,age_range,year_groups,deadline,cost,interests,subjects,link')
+          // Source collectors retire listings when their official deadline
+          // passes. Never show a retired listing in Discover or Match.
+          .eq('is_active', true)
           .order('id', { ascending: true })
           .range(from, from + pageSize - 1)
 
