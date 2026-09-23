@@ -13,6 +13,10 @@ function checkoutOrigin(request) {
   // Do not reflect an arbitrary Origin header into Stripe's return URLs.
   // Localhost remains convenient for intentional local test purchases.
   if (/^http:\/\/localhost:\d+$/.test(origin)) return origin
+  // Each Vercel Preview deployment has its own URL. Permit only this project's
+  // generated Preview host so Checkout returns to the deployment the student
+  // is actually using, without turning this into an open redirect.
+  if (/^https:\/\/growthgrind-[a-z0-9-]+-growth-grind\.vercel\.app$/.test(origin)) return origin
   return productionOrigin
 }
 
