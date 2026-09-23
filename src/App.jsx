@@ -5194,6 +5194,7 @@ function OpportunityCard({
 }) {
   const isTracked = tracked.includes(opportunity.id)
   const [expanded, setExpanded] = useState(false)
+  const [logoUnavailable, setLogoUnavailable] = useState(false)
 
   const description = opportunity.description || 'No description available.'
   const isLongDescription = description.length > 220
@@ -5202,6 +5203,23 @@ function OpportunityCard({
     !isLongDescription || expanded
       ? description
       : `${description.slice(0, 220).trim()}...`
+
+  const providerName = opportunity.organisation || 'Opportunity provider'
+  const providerInitials = providerName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0])
+    .join('')
+    .toUpperCase()
+  let providerIcon = ''
+  try {
+    const hostname = new URL(opportunity.link).hostname.replace(/^www\./, '')
+    providerIcon = `https://${hostname}/favicon.ico`
+  } catch {
+    // Some legacy records have no usable official URL; their initials badge is
+    // intentionally used instead of sending a request to a third party.
+  }
 
   return (
     <article className="opportunity-card">
@@ -5235,10 +5253,22 @@ function OpportunityCard({
         </div>
       )}
 
-      <h3>{opportunity.title}</h3>
-
-      <div className="organisation">
-        {opportunity.organisation}
+      <div className="opportunity-provider">
+        <span className="provider-logo" aria-hidden="true">
+          {providerIcon && !logoUnavailable ? (
+            <img
+              src={providerIcon}
+              alt=""
+              onError={() => setLogoUnavailable(true)}
+            />
+          ) : (
+            providerInitials || 'GG'
+          )}
+        </span>
+        <div>
+          <h3>{opportunity.title}</h3>
+          <div className="organisation">{providerName}</div>
+        </div>
       </div>
 
       <div className="opportunity-description">

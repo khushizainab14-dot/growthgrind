@@ -440,11 +440,41 @@ button {
 }
 
 .opportunity-card h3 {
-  margin: 19px 0 5px;
+  margin: 0 0 5px;
   color: #294b35;
   font-size: 21px;
   line-height: 1.2;
   letter-spacing: -0.7px;
+}
+
+.opportunity-provider {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  margin-top: 19px;
+}
+
+.provider-logo {
+  display: grid;
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid #d5c9b6;
+  border-radius: 11px;
+  background: #e8dcc8;
+  color: #315b3d;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .4px;
+}
+
+.provider-logo img {
+  display: block;
+  width: 23px;
+  height: 23px;
+  object-fit: contain;
 }
 
 .organisation {
