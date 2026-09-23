@@ -4889,14 +4889,16 @@ function InterviewPracticeWorkspace({ workspaceData, setWorkspaceData }) {
       feedback: (feedbackMatch?.[1] || (hasAnswer ? reply : '')).trim(),
     }
   }
-  const speak = (text) => {
-    if (!window.speechSynthesis) return
+  const speak = (text, onDone = () => {}) => {
+    if (!window.speechSynthesis) { onDone(); return }
     window.speechSynthesis.cancel()
     const utterance = new SpeechSynthesisUtterance(text.replace(/https?:\/\/\S+/g, ''))
     const voices = window.speechSynthesis.getVoices()
     const selected = voices.find((item) => item.name === voice)
     if (selected) utterance.voice = selected
     utterance.rate = tone === 'Stern' ? 0.96 : tone === 'Friendly' ? 1.03 : 1
+    utterance.onend = onDone
+    utterance.onerror = onDone
     window.speechSynthesis.speak(utterance)
   }
 
@@ -4911,9 +4913,9 @@ function InterviewPracticeWorkspace({ workspaceData, setWorkspaceData }) {
       setFeedback(savingAnswer ? parsed.feedback : '')
       setQuestion(parsed.question)
       setThinkingSeconds(0)
-      setIsThinking(true)
+      setIsThinking(false)
       setWorkspaceData({ ...workspaceData, currentQuestion: parsed.question, savedFeedback: savingAnswer ? [...(workspaceData.savedFeedback || []), { id: Date.now(), question, answer: savingAnswer, feedback: parsed.feedback }] : (workspaceData.savedFeedback || []) })
-      speak(parsed.question)
+      speak(parsed.question, () => setIsThinking(true))
     } catch (requestError) { setError(requestError.message || 'Could not continue the interview.') } finally { setLoading(false) }
   }
 
