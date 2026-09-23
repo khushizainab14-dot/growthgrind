@@ -4820,6 +4820,14 @@ function InterviewPracticeWorkspace({ workspaceData, setWorkspaceData }) {
   const university = workspaceData.university || ''
   const tone = workspaceData.tone || 'Friendly'
   const voice = workspaceData.voice || ''
+  const parseInterviewReply = (reply, hasAnswer) => {
+    const questionMatch = reply.match(/(?:^|\n)QUESTION:\s*([\s\S]*)/i)
+    const feedbackMatch = reply.match(/(?:^|\n)FEEDBACK:\s*([\s\S]*?)(?=\nQUESTION:|$)/i)
+    return {
+      question: (questionMatch?.[1] || (hasAnswer ? '' : reply)).trim(),
+      feedback: (feedbackMatch?.[1] || (hasAnswer ? reply : '')).trim(),
+    }
+  }
   const speak = (text) => {
     if (!window.speechSynthesis) return
     window.speechSynthesis.cancel()
@@ -4836,21 +4844,23 @@ function InterviewPracticeWorkspace({ workspaceData, setWorkspaceData }) {
       const response = await fetch('/api/ai-chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ specialist: 'interview', message }) })
       const result = await readApiJson(response)
       if (!response.ok) throw new Error(result.error || 'Could not continue the interview.')
-      setFeedback(savingAnswer ? result.reply : '')
-      setQuestion(result.reply)
-      setWorkspaceData({ ...workspaceData, currentQuestion: result.reply, savedFeedback: savingAnswer ? [...(workspaceData.savedFeedback || []), { id: Date.now(), question, answer: savingAnswer, feedback: result.reply }] : (workspaceData.savedFeedback || []) })
-      speak(result.reply)
+      const parsed = parseInterviewReply(result.reply, Boolean(savingAnswer))
+      if (!parsed.question) throw new Error('The interviewer did not return a next question. Please try again.')
+      setFeedback(savingAnswer ? parsed.feedback : '')
+      setQuestion(parsed.question)
+      setWorkspaceData({ ...workspaceData, currentQuestion: parsed.question, savedFeedback: savingAnswer ? [...(workspaceData.savedFeedback || []), { id: Date.now(), question, answer: savingAnswer, feedback: parsed.feedback }] : (workspaceData.savedFeedback || []) })
+      speak(parsed.question)
     } catch (requestError) { setError(requestError.message || 'Could not continue the interview.') } finally { setLoading(false) }
   }
   const start = () => {
     if (!course.trim() || !university.trim()) { setError('Add both a course and university before starting.'); return }
-    askAi(`Start a ${tone.toLowerCase()} mock interview for ${course} at ${university}. Ask the first realistic open question only, then wait for the student’s answer.`)
+    askAi(`Research the current official interview/course guidance for ${course} at ${university}, then start a ${tone.toLowerCase()} mock interview. Return exactly one line in this format: QUESTION: [one realistic open question]. Do not include research notes, feedback, links or anything else.`)
   }
   const submitAnswer = () => {
     if (!answer.trim() || !question) return
     const spokenAnswer = answer
     setAnswer('')
-    askAi(`Continue this ${tone.toLowerCase()} mock interview for ${course} at ${university}. Previous question: ${question}\nStudent answer: ${spokenAnswer}\nGive brief, specific feedback first, then ask exactly one next question.`, spokenAnswer)
+    askAi(`Continue this ${tone.toLowerCase()} mock interview for ${course} at ${university}. Use live official guidance if you need to verify an interview-specific detail. Previous question: ${question}\nStudent answer: ${spokenAnswer}\nReturn exactly two labels: FEEDBACK: [two or three specific sentences] then QUESTION: [one next realistic open question].`, spokenAnswer)
   }
   const startListening = () => {
     const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition
@@ -4863,7 +4873,7 @@ function InterviewPracticeWorkspace({ workspaceData, setWorkspaceData }) {
     recognition.start()
   }
   const savedFeedback = workspaceData.savedFeedback || []
-  return <div className="interview-studio"><section className="interview-setup"><span className="days-left">LIVE MOCK INTERVIEW</span><h2>Set your interview context.</h2><div className="interview-fields"><input value={course} onChange={(event) => setWorkspaceData({ ...workspaceData, course: event.target.value })} placeholder="Course, e.g. Medicine" /><input value={university} onChange={(event) => setWorkspaceData({ ...workspaceData, university: event.target.value })} placeholder="University, e.g. Bristol" /><label>Tone<select value={tone} onChange={(event) => setWorkspaceData({ ...workspaceData, tone: event.target.value })}><option>Friendly</option><option>Serious</option><option>Stern</option></select></label><label>AI voice<select value={voice} onChange={(event) => setWorkspaceData({ ...workspaceData, voice: event.target.value })}><option value="">Default device voice</option>{typeof window !== 'undefined' && window.speechSynthesis?.getVoices().filter((item) => item.lang.startsWith('en')).slice(0, 12).map((item) => <option value={item.name} key={item.name}>{item.name}</option>)}</select></label></div><button className="view-button" onClick={start} disabled={loading}>{loading ? 'Preparing interview…' : question ? 'Start a new interview' : 'Start mock interview →'}</button><p className="interview-disclaimer">Voice input uses your browser’s microphone permission. You can always type instead.</p></section><section className="interview-stage"><span className="days-left">INTERVIEW ROOM</span>{question ? <><div className="interviewer-question"><b>Interviewer</b><p>{question}</p></div><textarea value={answer} onChange={(event) => setAnswer(event.target.value)} placeholder="Answer by voice or type here…" /><div className="interview-actions"><button className="filter-button" onClick={startListening} disabled={listening}>{listening ? 'Listening…' : '🎙 Answer by voice'}</button><button className="view-button" onClick={submitAnswer} disabled={loading || !answer.trim()}>{loading ? 'Reviewing…' : 'Submit answer →'}</button></div>{feedback && <div className="interview-feedback"><b>Instant feedback</b><p>{feedback}</p></div>}</> : <p className="interview-empty">Choose your course, university, tone and voice, then begin. The interviewer will ask one question at a time.</p>}{error && <p className="contextual-error">{error}</p>}</section><aside className="interview-saves"><span className="days-left">SAVED FEEDBACK</span><h3>{savedFeedback.length ? `${savedFeedback.length} response${savedFeedback.length === 1 ? '' : 's'} to review` : 'Review your practice'}</h3>{savedFeedback.length ? savedFeedback.slice(-5).reverse().map((item) => <details key={item.id}><summary>{item.question}</summary><p><b>Your answer:</b> {item.answer}</p><p><b>Feedback:</b> {item.feedback}</p></details>) : <p>Completed answers and feedback are saved to your signed-in GrowthGrind account.</p>}</aside></div>
+  return <div className="interview-studio"><section className="interview-setup"><span className="days-left">LIVE MOCK INTERVIEW</span><h2>Set your interview context.</h2><div className="interview-fields"><input value={course} onChange={(event) => setWorkspaceData({ ...workspaceData, course: event.target.value })} placeholder="Course, e.g. Medicine" /><input value={university} onChange={(event) => setWorkspaceData({ ...workspaceData, university: event.target.value })} placeholder="University, e.g. Bristol" /><label>Tone<select value={tone} onChange={(event) => setWorkspaceData({ ...workspaceData, tone: event.target.value })}><option>Friendly</option><option>Serious</option><option>Stern</option></select></label><label>AI voice<select value={voice} onChange={(event) => setWorkspaceData({ ...workspaceData, voice: event.target.value })}><option value="">Default device voice</option>{typeof window !== 'undefined' && window.speechSynthesis?.getVoices().filter((item) => item.lang.startsWith('en')).slice(0, 12).map((item) => <option value={item.name} key={item.name}>{item.name}</option>)}</select></label></div><button className="view-button" onClick={start} disabled={loading}>{loading ? 'Checking official guidance…' : question ? 'Start a new interview' : 'Start mock interview →'}</button><p className="interview-disclaimer">GrowthGrind checks official university guidance where it is available, then creates original practice questions. Voice input uses your browser’s microphone permission; you can always type instead.</p></section><section className="interview-stage"><span className="days-left">INTERVIEW ROOM</span>{question ? <><div className="interviewer-question"><b>Interviewer</b><p>{question}</p></div><textarea value={answer} onChange={(event) => setAnswer(event.target.value)} placeholder="Answer by voice or type here…" /><div className="interview-actions"><button className="filter-button" onClick={startListening} disabled={listening}>{listening ? 'Listening…' : '🎙 Answer by voice'}</button><button className="view-button" onClick={submitAnswer} disabled={loading || !answer.trim()}>{loading ? 'Reviewing…' : 'Submit answer →'}</button></div>{feedback && <div className="interview-feedback"><b>Instant feedback</b><p>{feedback}</p></div>}</> : <p className="interview-empty">Choose your course, university, tone and voice, then begin. The interviewer will ask one question at a time.</p>}{error && <p className="contextual-error">{error}</p>}</section><aside className="interview-saves"><span className="days-left">SAVED FEEDBACK</span><h3>{savedFeedback.length ? `${savedFeedback.length} response${savedFeedback.length === 1 ? '' : 's'} to review` : 'Review your practice'}</h3>{savedFeedback.length ? savedFeedback.slice(-5).reverse().map((item) => <details key={item.id}><summary>{item.question}</summary><p><b>Your answer:</b> {item.answer}</p><p><b>Feedback:</b> {item.feedback}</p></details>) : <p>Completed answers and feedback are saved to your signed-in GrowthGrind account.</p>}</aside></div>
 }
 
 function PortfolioHubWorkspace({ workspaceData, setWorkspaceData }) {
