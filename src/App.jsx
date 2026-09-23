@@ -4082,13 +4082,6 @@ function Navbar({
 
       <nav className="nav-links">
         <button
-          className={page === 'Home' ? 'nav-link active' : 'nav-link'}
-          onClick={() => setPage('Home')}
-        >
-          Home
-        </button>
-
-        <button
           className={
             page === 'Discover'
               ? 'nav-link active'
