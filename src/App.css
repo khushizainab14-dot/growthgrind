@@ -1126,7 +1126,7 @@ footer p {
 .theme-dark [style*="background"] h1, .theme-dark [style*="background"] h2, .theme-dark [style*="background"] h3, .theme-dark [style*="background"] h4, .theme-dark [style*="background"] p, .theme-dark [style*="background"] strong, .theme-dark [style*="background"] span, .theme-dark [style*="background"] li { color: #17251b !important; }
 
 /* HOME */
-.brand-button { border: 0; background: transparent; padding: 0; font: inherit; text-align: left; }
+.brand-button { border: 0; background: transparent; padding: 0; color: #294b35; font: inherit; font-weight: 800; text-align: left; }
 .home-page { overflow: hidden; }
 .home-hero, .home-steps-section, .home-opportunities-section, .home-premium-banner { max-width: 1200px; margin: 0 auto; padding-right: 32px; padding-left: 32px; }
 .home-hero { display: grid; grid-template-columns: minmax(0, 1.14fr) minmax(330px, .86fr); gap: clamp(36px, 7vw, 94px); align-items: center; min-height: 610px; padding-top: 84px; padding-bottom: 84px; }
