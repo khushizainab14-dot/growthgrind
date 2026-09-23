@@ -4881,9 +4881,17 @@ function InterviewPracticeWorkspace({ workspaceData, setWorkspaceData }) {
     }
   }
 
+  const normaliseMathText = (text) => text
+    .replace(/\*\*/g, '').replace(/`/g, '').replace(/\$/g, '')
+    .replace(/\\frac\{([^{}]+)\}\{([^{}]+)\}/g, '$1⁄$2')
+    .replace(/\\sqrt\{([^{}]+)\}/g, '√($1)')
+    .replace(/\\(?:left|right)/g, '').replace(/\\(?:times|cdot)/g, '×').replace(/\\div/g, '÷')
+    .replace(/\\(?:leq|le)/g, '≤').replace(/\\(?:geq|ge)/g, '≥').replace(/\\neq/g, '≠').replace(/\\pm/g, '±').replace(/\\infty/g, '∞')
+    .replace(/\\pi/g, 'π').replace(/\\theta/g, 'θ').replace(/\\alpha/g, 'α').replace(/\\beta/g, 'β')
+    .replace(/[{}]/g, '').replace(/\\\(|\\\)|\\\[|\\\]/g, '')
   const parseInterviewReply = (reply, hasAnswer) => {
     const isPlanningText = /\*\*|\bidea\s*\d|\bscaffolded\b|\bone realistic,? open academic question\b|\binterviews focus on\b/i.test(reply)
-    const plainReply = reply.replace(/\*\*/g, '').replace(/`/g, '').replace(/\$/g, '').replace(/\\\(|\\\)|\\\[|\\\]/g, '')
+    const plainReply = normaliseMathText(reply)
     const questionMatch = plainReply.match(/(?:^|\n)QUESTION:\s*([\s\S]*)/i)
     const feedbackMatch = plainReply.match(/(?:^|\n)FEEDBACK:\s*([\s\S]*?)(?=\nQUESTION:|$)/i)
     return {
@@ -4892,15 +4900,16 @@ function InterviewPracticeWorkspace({ workspaceData, setWorkspaceData }) {
     }
   }
   const displayMath = (text) => {
+    const normalisedText = normaliseMathText(text)
     const parts = []
     let cursor = 0
     const pattern = /([A-Za-z0-9)])\^(\d+)/g
     let match
-    while ((match = pattern.exec(text))) {
-      parts.push(text.slice(cursor, match.index), <span key={`${match.index}-power`}>{match[1]}<sup>{match[2]}</sup></span>)
+    while ((match = pattern.exec(normalisedText))) {
+      parts.push(normalisedText.slice(cursor, match.index), <span key={`${match.index}-power`}>{match[1]}<sup>{match[2]}</sup></span>)
       cursor = match.index + match[0].length
     }
-    parts.push(text.slice(cursor))
+    parts.push(normalisedText.slice(cursor))
     return parts
   }
   const speak = (text, onDone = () => {}) => {
