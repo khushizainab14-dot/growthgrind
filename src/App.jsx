@@ -351,6 +351,7 @@ function App() {
   const [premiumModal, setPremiumModal] = useState(null)
   const [showPremiumWelcome, setShowPremiumWelcome] = useState(false)
   const [checkoutLoading, setCheckoutLoading] = useState('')
+  const [checkoutError, setCheckoutError] = useState('')
   const [activePremiumWorkspace, setActivePremiumWorkspace] = useState(null)
   const [statementAnswers, setStatementAnswers] = useState(['', '', ''])
   const [statementCourse, setStatementCourse] = useState('')
@@ -1175,6 +1176,7 @@ function App() {
       openAuth()
       return
     }
+    setCheckoutError('')
     setCheckoutLoading(plan)
     try {
       const response = await fetch('/api/create-checkout', {
@@ -1189,7 +1191,7 @@ function App() {
       if (!response.ok) throw new Error(result.error || 'Checkout could not be opened.')
       window.location.assign(result.url)
     } catch (error) {
-      setAuthMessage(error.message || 'Checkout could not be opened.')
+      setCheckoutError(error.message || 'Checkout could not be opened.')
     } finally {
       setCheckoutLoading('')
     }
@@ -3151,6 +3153,12 @@ function App() {
                     </button>
                   ))}
                 </div>
+
+                {checkoutError && (
+                  <p role="alert" style={{ color: '#9d3128', fontSize: '13px', lineHeight: 1.45, margin: '12px 0 0' }}>
+                    {checkoutError}
+                  </p>
+                )}
 
                 <button
                   className="view-button"
