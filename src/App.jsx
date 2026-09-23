@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from './supabaseClient'
+import HomePage from './HomePage'
 
 import './App.css'
 
@@ -267,7 +268,7 @@ function App() {
 
     loadOpportunities()
   }, [catalogueRefresh])
-  const [page, setPage] = useState('Discover')
+  const [page, setPage] = useState('Home')
 
   const [selectedInterests, setSelectedInterests] = useState([])
   const [activeCategory, setActiveCategory] = useState('All')
@@ -1271,7 +1272,7 @@ function App() {
       [opportunity.title, opportunity.description, opportunity.cost].filter(Boolean).join(' ').toLowerCase()
     )
 
-  const closingSoonOpportunities = useMemo(() => (page === 'Discover' ? [...opportunities]
+  const closingSoonOpportunities = useMemo(() => ([...opportunities]
     .filter((opportunity) => opportunity.deadlineRaw)
     .filter((opportunity) => {
       const deadline = new Date(opportunity.deadlineRaw)
@@ -1281,7 +1282,7 @@ function App() {
       return !Number.isNaN(deadline.getTime()) && deadline >= today
     })
     .sort((a, b) => new Date(a.deadlineRaw) - new Date(b.deadlineRaw))
-    .slice(0, 3) : []), [page, opportunities])
+    .slice(0, 3)), [opportunities])
 
   const getFilteredOpportunities = useCallback(() => {
     let results = [...opportunities]
@@ -1604,6 +1605,18 @@ function App() {
         theme={theme}
         onToggleTheme={() => setTheme((current) => { const next = current === 'light' ? 'dark' : 'light'; localStorage.setItem('growthgrind_theme', next); return next })}
       />
+
+      {page === 'Home' && (
+        <HomePage
+          opportunities={opportunities}
+          opportunitiesLoading={opportunitiesLoading}
+          closingSoon={closingSoonOpportunities}
+          savedCount={saved.length}
+          trackedCount={tracked.length}
+          isPremium={isPremium}
+          onNavigate={goTo}
+        />
+      )}
 
       {/* MATCH SETUP */}
       {page === 'Match' && (
@@ -4032,7 +4045,7 @@ function Navbar({
 }) {
   return (
     <header className="navbar">
-      <div className="brand">
+      <button className="brand brand-button" onClick={() => setPage('Home')} aria-label="GrowthGrind home">
         <div
           className="brand-mark"
           style={{
@@ -4065,9 +4078,16 @@ function Navbar({
         </div>
 
         <span>GrowthGrind</span>
-      </div>
+      </button>
 
       <nav className="nav-links">
+        <button
+          className={page === 'Home' ? 'nav-link active' : 'nav-link'}
+          onClick={() => setPage('Home')}
+        >
+          Home
+        </button>
+
         <button
           className={
             page === 'Discover'
