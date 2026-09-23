@@ -1,10 +1,11 @@
 import re
 import html
 import json
+import os
 import subprocess
 import sys
 from urllib.parse import urljoin
-from datetime import datetime
+from datetime import datetime, timezone
 
 from supabase import create_client
 
@@ -13,12 +14,11 @@ from supabase import create_client
 # SUPABASE
 # ============================================================
 
-SUPABASE_URL = "https://xqscricumpoiyijottnq.supabase.co"
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://xqscricumpoiyijottnq.supabase.co")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 
-# IMPORTANT:
-# Put the SAME publishable/anon key you already use in
-# src/supabaseClient.js here.
-SUPABASE_KEY = "sb_publishable_KhTtEuZPlvmuheQqK-TlaQ_L_M5EzfO"
+if not SUPABASE_KEY:
+    raise SystemExit("Set SUPABASE_KEY to a GitHub Actions secret before running the importer.")
 
 supabase = create_client(
     SUPABASE_URL,
@@ -1389,6 +1389,58 @@ def save_opportunity(
     return "inserted"
 
 
+def start_source_run():
+    result = (
+        supabase
+        .table("opportunity_source_runs")
+        .insert({"source_key": "jutjut-api"})
+        .execute()
+    )
+    return result.data[0]["id"]
+
+
+def complete_source_run(run_id, status, discovered, inserted, updated, failed, deactivated=0, error_message=None):
+    (
+        supabase
+        .table("opportunity_source_runs")
+        .update({
+            "completed_at": datetime.now(timezone.utc).isoformat(),
+            "status": status,
+            "discovered_count": discovered,
+            "inserted_count": inserted,
+            "updated_count": updated,
+            "deactivated_count": deactivated,
+            "error_message": error_message or (f"{failed} record(s) failed" if failed else None),
+        })
+        .eq("id", run_id)
+        .execute()
+    )
+
+
+def retire_listings_missing_from_successful_refresh(checked_at):
+    """Only hide an API listing after it is absent for three complete refreshes."""
+    missing = (
+        supabase
+        .table("opportunities")
+        .select("id,missing_refreshes")
+        .eq("source_key", "jutjut-api")
+        .eq("is_active", True)
+        .lt("source_seen_at", checked_at)
+        .execute()
+        .data
+        or []
+    )
+    deactivated = 0
+    for record in missing:
+        refreshes = int(record.get("missing_refreshes") or 0) + 1
+        patch = {"missing_refreshes": refreshes, "source_checked_at": checked_at}
+        if refreshes >= 3:
+            patch["is_active"] = False
+            deactivated += 1
+        supabase.table("opportunities").update(patch).eq("id", record["id"]).execute()
+    return deactivated
+
+
 def api_opportunity_to_record(item):
     """Map JutJut's public catalogue API to GrowthGrind's opportunity shape."""
 
@@ -1526,8 +1578,14 @@ def main():
         repair_official_links()
         return
 
+    run_id = start_source_run()
+    checked_at = datetime.now(timezone.utc).isoformat()
     print("Fetching the full JutJut catalogue API...")
-    api_opportunities = fetch_all_api_opportunities()
+    try:
+        api_opportunities = fetch_all_api_opportunities()
+    except Exception as error:
+        complete_source_run(run_id, "failed", 0, 0, 0, 0, error_message=str(error))
+        raise
     print(f"Found {len(api_opportunities)} opportunities across all available pages")
 
     inserted = 0
@@ -1541,6 +1599,14 @@ def main():
 
         try:
             opportunity = api_opportunity_to_record(item)
+            opportunity.update({
+                "source_key": "jutjut-api",
+                "source_kind": "public_api",
+                "source_checked_at": checked_at,
+                "source_seen_at": checked_at,
+                "is_active": True,
+                "missing_refreshes": 0,
+            })
             source_url = opportunity.get("link") or f"{BASE_URL}/opportunities/{item.get('id')}"
             if not opportunity.get("title"):
                 raise RuntimeError("JutJut API record has no title")
@@ -1592,6 +1658,16 @@ def main():
         f"Failed:   {failed}"
     )
     print("=" * 60)
+    deactivated = retire_listings_missing_from_successful_refresh(checked_at) if failed == 0 else 0
+    complete_source_run(
+        run_id,
+        "success" if failed == 0 else "partial",
+        len(api_opportunities),
+        inserted,
+        updated,
+        failed,
+        deactivated,
+    )
 
 
 # ============================================================
