@@ -327,6 +327,7 @@ function App() {
   const [showFilters, setShowFilters] = useState(false)
   const [sort, setSort] = useState('Most relevant')
   const [showMore, setShowMore] = useState(false)
+  const closingSoonScroller = useRef(null)
 
   const [ageFilter, setAgeFilter] = useState('Any')
   const [yearGroupFilter, setYearGroupFilter] = useState('Any')
@@ -1281,8 +1282,7 @@ function App() {
 
       return !Number.isNaN(deadline.getTime()) && deadline >= today
     })
-    .sort((a, b) => new Date(a.deadlineRaw) - new Date(b.deadlineRaw))
-    .slice(0, 3)), [opportunities])
+    .sort((a, b) => new Date(a.deadlineRaw) - new Date(b.deadlineRaw))), [opportunities])
 
   const getFilteredOpportunities = useCallback(() => {
     let results = [...opportunities]
@@ -2135,8 +2135,27 @@ function App() {
                   </span>
                   <h2>Closing soon</h2>
                 </div>
+                {!opportunitiesLoading && closingSoonOpportunities.length > 3 && (
+                  <div className="closing-carousel-controls">
+                    <button
+                      type="button"
+                      aria-label="Show earlier closing opportunities"
+                      onClick={() => closingSoonScroller.current?.scrollBy({ left: -(closingSoonScroller.current.clientWidth * 0.86), behavior: 'smooth' })}
+                    >
+                      ←
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Show more closing opportunities"
+                      onClick={() => closingSoonScroller.current?.scrollBy({ left: closingSoonScroller.current.clientWidth * 0.86, behavior: 'smooth' })}
+                    >
+                      →
+                    </button>
+                  </div>
+                )}
               </div>
 
+              <div className="closing-carousel" ref={closingSoonScroller}>
               <div className="closing-grid">
                 {opportunitiesLoading ? [1, 2, 3].map((item) => (
                   <div className="catalogue-skeleton closing-card" key={item} aria-label="Loading closing opportunities" />
@@ -2156,6 +2175,7 @@ function App() {
                     </div>
                   </button>
                 ))}
+              </div>
               </div>
             </section>
 

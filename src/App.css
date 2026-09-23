@@ -257,10 +257,25 @@ button {
 }
 
 .closing-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  display: flex;
   gap: 15px;
 }
+
+.closing-carousel {
+  overflow-x: auto;
+  padding: 2px 1px 12px;
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: #9cac98 transparent;
+}
+
+.closing-carousel::-webkit-scrollbar { height: 7px; }
+.closing-carousel::-webkit-scrollbar-thumb { border-radius: 99px; background: #9cac98; }
+.closing-grid .closing-card { flex: 0 0 calc((100% - 30px) / 3); min-width: 0; scroll-snap-align: start; }
+.closing-carousel { scroll-snap-type: x proximity; }
+.closing-carousel-controls { display: flex; gap: 7px; }
+.closing-carousel-controls button { width: 34px; height: 34px; border: 1px solid #c5b9a6; border-radius: 50%; background: #f5efe5; color: #315b3d; font: inherit; font-size: 17px; font-weight: 800; }
+.closing-carousel-controls button:hover { background: #dce8dc; }
 
 .closing-card {
   text-align: left;
@@ -1194,6 +1209,7 @@ footer p {
 .theme-dark .home-step, .theme-dark .home-preview-card { background: #f5efe5; }
 .theme-dark .home-step h3, .theme-dark .home-preview-card h3, .theme-dark .home-preview-card p, .theme-dark .home-preview-card small, .theme-dark .home-preview-card span { color: #28352b !important; }
 .theme-dark .home-hero-panel, .theme-dark .home-premium-banner { background: linear-gradient(140deg, #233b2a, #15251b); }
+.theme-dark .closing-carousel-controls button { background: #f5efe5; color: #28352b; border-color: #d8cdbb; }
 .opportunity-search { flex: 1; max-width: 420px; display: flex; align-items: center; gap: 8px; padding: 0 12px; border: 1px solid #d0c4b0; border-radius: 10px; background: #fffaf2; color: #315b3d; }
 .opportunity-search input { width: 100%; border: 0; outline: 0; background: transparent; padding: 11px 0; color: #315b3d; }
 .theme-dark .opportunity-search { background: #2a302a; border-color: #657867; color: #e5d8c3; }
@@ -1207,6 +1223,8 @@ footer p {
 @keyframes catalogue-shimmer { 100% { transform: translateX(100%); } }
 
 @media (max-width: 560px) {
+  .closing-grid { display: flex; }
+  .closing-grid .closing-card { flex-basis: min(82vw, 320px); }
   .home-hero, .home-steps-section, .home-opportunities-section, .home-premium-banner { padding-right: 20px; padding-left: 20px; }
   .home-hero { grid-template-columns: 1fr; min-height: 0; padding-top: 58px; padding-bottom: 64px; }
   .home-hero-panel { max-width: 560px; }
