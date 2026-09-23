@@ -92,8 +92,18 @@ function cleanInterviewContext(value) {
   }
 }
 
+function plainInterviewText(value) {
+  return clean(value)
+    .replace(/\*\*/g, '')
+    .replace(/`/g, '')
+    .replace(/\$/g, '')
+    .replace(/\\\(|\\\)|\\\[|\\\]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 function cleanInterviewReply(reply, context) {
-  const normalised = clean(reply).replace(/\s+/g, ' ')
+  const normalised = plainInterviewText(reply)
   const isPlanningText = /\*\*|\bidea\s*\d|\bscaffolded\b|\bone realistic,? open academic question\b|\binterviews focus on\b/i.test(normalised)
   const question = normalised.match(/QUESTION:\s*(.*?)(?=\s+FEEDBACK:|$)/i)?.[1]?.trim()
   const feedback = normalised.match(/FEEDBACK:\s*(.*?)(?=\s+QUESTION:|$)/i)?.[1]?.trim()

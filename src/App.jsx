@@ -4883,11 +4883,12 @@ function InterviewPracticeWorkspace({ workspaceData, setWorkspaceData }) {
 
   const parseInterviewReply = (reply, hasAnswer) => {
     const isPlanningText = /\*\*|\bidea\s*\d|\bscaffolded\b|\bone realistic,? open academic question\b|\binterviews focus on\b/i.test(reply)
-    const questionMatch = reply.match(/(?:^|\n)QUESTION:\s*([\s\S]*)/i)
-    const feedbackMatch = reply.match(/(?:^|\n)FEEDBACK:\s*([\s\S]*?)(?=\nQUESTION:|$)/i)
+    const plainReply = reply.replace(/\*\*/g, '').replace(/`/g, '').replace(/\$/g, '').replace(/\\\(|\\\)|\\\[|\\\]/g, '')
+    const questionMatch = plainReply.match(/(?:^|\n)QUESTION:\s*([\s\S]*)/i)
+    const feedbackMatch = plainReply.match(/(?:^|\n)FEEDBACK:\s*([\s\S]*?)(?=\nQUESTION:|$)/i)
     return {
-      question: isPlanningText ? `What part of ${course || 'this subject'} interests you most, and what makes you want to explore it more deeply?` : (questionMatch?.[1] || (hasAnswer ? '' : reply)).trim(),
-      feedback: isPlanningText ? 'You have made a useful start. For a stronger interview answer, state your reasoning clearly and support it with one precise example or idea.' : (feedbackMatch?.[1] || (hasAnswer ? reply : '')).trim(),
+      question: isPlanningText ? `What part of ${course || 'this subject'} interests you most, and what makes you want to explore it more deeply?` : (questionMatch?.[1] || (hasAnswer ? '' : plainReply)).trim(),
+      feedback: isPlanningText ? 'You have made a useful start. For a stronger interview answer, state your reasoning clearly and support it with one precise example or idea.' : (feedbackMatch?.[1] || (hasAnswer ? plainReply : '')).trim(),
     }
   }
   const speak = (text, onDone = () => {}) => {
