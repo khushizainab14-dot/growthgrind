@@ -1250,6 +1250,9 @@ footer p {
 .video-interview-header > div:first-child span { color: #52755b; font-size: 10px; font-weight: 900; letter-spacing: 1.25px; }
 .video-interview-header > div:first-child strong { padding: 4px 8px; border-radius: 6px; background: #e0d4bf; color: #315b3d; font-size: 12px; }
 .video-interview-header > div:first-child small { color: #73736c; font-size: 11px; }
+.interview-header-actions { display: flex; align-items: center; gap: 10px; }
+.new-interview-button { border: 1px solid #bcae99; border-radius: 8px; background: #fffaf2; color: #315b3d; padding: 8px 10px; font: inherit; font-size: 11px; font-weight: 850; }
+.new-interview-button:hover { background: #edf4ea; }
 .thinking-timer { display: grid; grid-template-columns: auto auto; align-items: center; column-gap: 5px; min-width: 105px; padding: 6px 9px; border: 1px solid currentColor; border-radius: 8px; }
 .thinking-timer i { grid-row: span 2; font-style: normal; font-size: 17px; }
 .thinking-timer b { font-size: 17px; line-height: 1; }
@@ -1299,6 +1302,7 @@ footer p {
 .video-feedback p { margin: 7px 0 0; color: #36513b; font-size: 12px; line-height: 1.5; }
 .theme-dark .interview-launch, .theme-dark .video-interview-room, .theme-dark .video-interview-sidebar { background: #1b211c; border-color: #58715b; }
 .theme-dark .video-interview-header, .theme-dark .video-stage { background: #202820; border-color: #58715b; }
+.theme-dark .new-interview-button { border-color: #657867; background: #2a302a; color: #fffaf2; }
 .theme-dark .interview-launch h2, .theme-dark .interview-sidebar-title b, .theme-dark .current-question p { color: #fffaf2 !important; }
 .theme-dark .interview-launch p, .theme-dark .interview-disclaimer, .theme-dark .video-interview-header > div:first-child small, .theme-dark .thinking-guide p { color: #e5d8c3 !important; }
 .theme-dark .interview-welcome { background: #202820; border-color: #657867; }
@@ -1334,6 +1338,7 @@ footer p {
   .interview-launch, .video-stage, .video-interview-sidebar { padding: 16px; }
   .interview-fields { grid-template-columns: 1fr; }
   .video-interview-header { align-items: flex-start; flex-direction: column; }
+  .interview-header-actions { width: 100%; justify-content: space-between; }
   .video-frame, .video-frame > video { min-height: 350px; }
   .video-controls { left: 12px; right: 12px; justify-content: center; }
   .course-search-form { grid-template-columns: 1fr; }
