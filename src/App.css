@@ -45,7 +45,7 @@ button {
 .launch-screen::before { top: -19vw; right: -13vw; box-shadow: 0 0 0 42px rgba(229, 216, 195, .05), 0 0 0 86px rgba(229, 216, 195, .035); }
 .launch-screen::after { bottom: -22vw; left: -13vw; box-shadow: 0 0 0 46px rgba(184, 208, 161, .055); }
 .launch-card { position: relative; z-index: 1; width: min(100%, 760px); padding: clamp(38px, 7vw, 76px); border: 1px solid rgba(229, 216, 195, .72); border-radius: 28px; background: linear-gradient(145deg, rgba(255, 250, 242, .98), rgba(232, 220, 199, .97)); box-shadow: 0 32px 90px rgba(8, 26, 15, .42), inset 0 1px 0 rgba(255,255,255,.9); text-align: center; }
-.launch-mark { width: 52px; height: 52px; display: grid; place-items: center; margin: 0 auto 18px; border: 1px solid #d7c4a6; border-radius: 16px; background: #315b3d; color: #fffaf2; font-size: 15px; font-weight: 900; letter-spacing: -1px; box-shadow: 0 9px 20px rgba(49, 91, 61, .25); }
+.launch-mark { width: 58px; height: 58px; display: block; margin: 0 auto 18px; border-radius: 18px; box-shadow: 0 9px 20px rgba(49, 91, 61, .25); }
 .launch-card > span { color: #52755b; font-size: 10px; font-weight: 900; letter-spacing: 1.65px; }
 .launch-card h1 { margin: 16px 0; color: #254934; font-size: clamp(44px, 7vw, 78px); line-height: .94; letter-spacing: -4px; }
 .launch-card h1 em { color: #6f8f69; font-family: Georgia, serif; font-weight: 500; }
@@ -73,12 +73,8 @@ button {
 .brand-mark {
   width: 32px;
   height: 32px;
-  display: grid;
-  place-items: center;
+  display: block;
   border-radius: 10px;
-  background: #315b3d;
-  color: #fff;
-  font-weight: 800;
 }
 
 .nav-links {

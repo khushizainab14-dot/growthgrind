@@ -114,7 +114,7 @@ function LaunchScreen({ now }) {
     ['Minutes', Math.floor((remaining / 60000) % 60)],
     ['Seconds', Math.floor((remaining / 1000) % 60)],
   ]
-  return <main className="launch-screen"><section className="launch-card"><div className="launch-mark">GG</div><span>GROWTHGRIND</span><h1>Your next chapter<br /><em>starts soon.</em></h1><p>GrowthGrind is preparing a smarter way for students to discover opportunities, build evidence, and plan their university journey.</p><div className="launch-countdown" aria-label="Countdown to launch">{units.map(([label, value]) => <div key={label}><strong>{String(value).padStart(2, '0')}</strong><small>{label}</small></div>)}</div><p className="launch-date">Opening Friday 2 October · 5:00pm UK time</p><a href="mailto:hello@growthgrind.co.uk">Get in touch ↗</a></section></main>
+  return <main className="launch-screen"><section className="launch-card"><img className="launch-mark" src="/growthgrind-logo.jpeg" alt="GrowthGrind" /><span>GROWTHGRIND</span><h1>Your next chapter<br /><em>starts soon.</em></h1><p>GrowthGrind is preparing a smarter way for students to discover opportunities, build evidence, and plan their university journey.</p><div className="launch-countdown" aria-label="Countdown to launch">{units.map(([label, value]) => <div key={label}><strong>{String(value).padStart(2, '0')}</strong><small>{label}</small></div>)}</div><p className="launch-date">Opening Friday 2 October · 5:00pm UK time</p><a href="mailto:hello@growthgrind.co.uk">Get in touch ↗</a></section></main>
 }
 
 const normaliseMatchText = (value) => String(value || '').toLowerCase().replace(/[–—]/g, '-').replace(/\s+/g, ' ').trim()
@@ -4117,36 +4117,7 @@ function Navbar({
   return (
     <header className="navbar">
       <button className="brand brand-button" onClick={() => setPage('Home')} aria-label="GrowthGrind home">
-        <div
-          className="brand-mark"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '0px',
-            overflow: 'hidden',
-          }}
-        >
-          <span
-            style={{
-              display: 'inline-block',
-              transform: 'translateX(2px)',
-            }}
-          >
-            G
-          </span>
-
-          <span
-            style={{
-              display: 'inline-block',
-              transform:
-                'rotate(180deg) translateX(2px)',
-              marginLeft: '-7px',
-            }}
-          >
-            G
-          </span>
-        </div>
+        <img className="brand-mark" src="/growthgrind-logo.jpeg" alt="" />
 
         <span>GrowthGrind</span>
       </button>
