@@ -39,6 +39,24 @@ button {
   backdrop-filter: blur(12px);
 }
 
+/* PUBLIC LAUNCH SCREEN */
+.launch-screen { min-height: 100vh; display: grid; place-items: center; overflow: hidden; padding: 28px; background: radial-gradient(circle at 12% 16%, rgba(165, 193, 151, .45), transparent 28%), radial-gradient(circle at 86% 84%, rgba(207, 182, 137, .42), transparent 30%), #f5efe5; }
+.launch-card { width: min(100%, 760px); padding: clamp(38px, 7vw, 76px); border: 1px solid #bcae99; border-radius: 28px; background: rgba(255, 250, 242, .82); box-shadow: 0 28px 80px rgba(47, 70, 49, .14); text-align: center; }
+.launch-mark { width: 47px; height: 47px; display: grid; place-items: center; margin: 0 auto 18px; border-radius: 14px; background: #315b3d; color: #fffaf2; font-size: 14px; font-weight: 900; letter-spacing: -1px; }
+.launch-card > span { color: #52755b; font-size: 10px; font-weight: 900; letter-spacing: 1.65px; }
+.launch-card h1 { margin: 16px 0; color: #294b35; font-size: clamp(44px, 7vw, 78px); line-height: .94; letter-spacing: -4px; }
+.launch-card h1 em { color: #7d9977; font-family: Georgia, serif; font-weight: 500; }
+.launch-card > p { max-width: 540px; margin: 0 auto; color: #60675f; font-size: 15px; line-height: 1.65; }
+.launch-countdown { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; max-width: 500px; margin: 34px auto 19px; }
+.launch-countdown div { padding: 15px 7px; border: 1px solid #d4c7b3; border-radius: 12px; background: #f7f0e5; }
+.launch-countdown strong { display: block; color: #294b35; font-size: clamp(26px, 4vw, 38px); line-height: 1; letter-spacing: -1.5px; }
+.launch-countdown small { display: block; margin-top: 7px; color: #71736b; font-size: 9px; font-weight: 850; letter-spacing: .9px; text-transform: uppercase; }
+.launch-card .launch-date { color: #315b3d; font-size: 12px; font-weight: 800; }
+.launch-card a { display: inline-block; margin-top: 23px; color: #315b3d; font-size: 12px; font-weight: 850; text-decoration: none; }
+.launch-card a:hover { text-decoration: underline; }
+
+@media (max-width: 520px) { .launch-screen { padding: 16px; } .launch-card { padding: 35px 20px; border-radius: 20px; } .launch-card h1 { letter-spacing: -2.6px; } .launch-countdown { gap: 6px; } .launch-countdown div { padding: 13px 4px; } }
+
 .brand {
   display: flex;
   align-items: center;

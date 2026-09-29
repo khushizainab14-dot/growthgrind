@@ -103,6 +103,20 @@ const yearGroups = [
   '18+',
 ]
 
+// Friday 2 October 2026, 5:00pm in the UK (BST = 16:00 UTC).
+const publicLaunchAt = new Date('2026-10-02T16:00:00.000Z').getTime()
+
+function LaunchScreen({ now }) {
+  const remaining = Math.max(0, publicLaunchAt - now)
+  const units = [
+    ['Days', Math.floor(remaining / 86400000)],
+    ['Hours', Math.floor((remaining / 3600000) % 24)],
+    ['Minutes', Math.floor((remaining / 60000) % 60)],
+    ['Seconds', Math.floor((remaining / 1000) % 60)],
+  ]
+  return <main className="launch-screen"><section className="launch-card"><div className="launch-mark">GG</div><span>GROWTHGRIND</span><h1>Your next chapter<br /><em>starts soon.</em></h1><p>GrowthGrind is preparing a smarter way for students to discover opportunities, build evidence, and plan their university journey.</p><div className="launch-countdown" aria-label="Countdown to launch">{units.map(([label, value]) => <div key={label}><strong>{String(value).padStart(2, '0')}</strong><small>{label}</small></div>)}</div><p className="launch-date">Opening Friday 2 October · 5:00pm UK time</p><a href="mailto:hello@growthgrind.co.uk">Get in touch ↗</a></section></main>
+}
+
 const normaliseMatchText = (value) => String(value || '').toLowerCase().replace(/[–—]/g, '-').replace(/\s+/g, ' ').trim()
 const opportunityMatchText = (opportunity) => [
   opportunity.title,
@@ -225,12 +239,18 @@ const premiumFeatureGroups = [
 ]
 
 function App() {
+    const [launchNow, setLaunchNow] = useState(() => Date.now())
     const [theme, setTheme] = useState(() => localStorage.getItem('growthgrind_theme') || 'light')
     const [opportunities, setOpportunities] = useState([])
     const [opportunitiesLoading, setOpportunitiesLoading] = useState(true)
     const [opportunitiesError, setOpportunitiesError] = useState('')
     const [catalogueRefresh, setCatalogueRefresh] = useState(0)
     const courseSuggestionCache = useRef(new Map())
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setLaunchNow(Date.now()), 1000)
+    return () => window.clearInterval(timer)
+  }, [])
 
   useEffect(() => {
     const loadOpportunities = async () => {
@@ -1608,6 +1628,8 @@ function App() {
     setPage(destination)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
+
+  if (launchNow < publicLaunchAt) return <LaunchScreen now={launchNow} />
 
   return (
     <div className={`app theme-${theme}`}>
