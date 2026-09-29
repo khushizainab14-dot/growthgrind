@@ -4923,6 +4923,10 @@ function InterviewPracticeWorkspace({ workspaceData, setWorkspaceData }) {
     .replace(/\\(?:left|right)/g, '').replace(/\\(?:times|cdot)/g, '×').replace(/\\div/g, '÷')
     .replace(/\\(?:leq|le)/g, '≤').replace(/\\(?:geq|ge)/g, '≥').replace(/\\neq/g, '≠').replace(/\\pm/g, '±').replace(/\\infty/g, '∞')
     .replace(/\\pi/g, 'π').replace(/\\theta/g, 'θ').replace(/\\alpha/g, 'α').replace(/\\beta/g, 'β')
+    .replace(/<=/g, '≤').replace(/>=/g, '≥').replace(/!=/g, '≠').replace(/->/g, '→')
+    .replace(/\bsqrt\(([^()]+)\)/gi, '√($1)')
+    .replace(/([A-Za-z0-9πθαβ)])\s*\*\s*(?=[A-Za-z0-9πθαβ(])/g, '$1 × ')
+    .replace(/([A-Za-z0-9πθαβ)])\s*\/\s*(?=[A-Za-z0-9πθαβ(])/g, '$1 ÷ ')
     .replace(/[{}]/g, '').replace(/\\\(|\\\)|\\\[|\\\]/g, '')
   const fallbackInterviewQuestion = () => {
     const subject = course.toLowerCase()
@@ -4951,10 +4955,10 @@ function InterviewPracticeWorkspace({ workspaceData, setWorkspaceData }) {
     const normalisedText = normaliseMathText(text)
     const parts = []
     let cursor = 0
-    const pattern = /([A-Za-z0-9)])\^(\d+)/g
+    const pattern = /([A-Za-z0-9πθαβ)])\^(?:\(([^()]+)\)|([A-Za-z0-9πθαβ]+))/g
     let match
     while ((match = pattern.exec(normalisedText))) {
-      parts.push(normalisedText.slice(cursor, match.index), <span key={`${match.index}-power`}>{match[1]}<sup>{match[2]}</sup></span>)
+      parts.push(normalisedText.slice(cursor, match.index), <span key={`${match.index}-power`}>{match[1]}<sup>{match[2] || match[3]}</sup></span>)
       cursor = match.index + match[0].length
     }
     parts.push(normalisedText.slice(cursor))
@@ -4963,7 +4967,12 @@ function InterviewPracticeWorkspace({ workspaceData, setWorkspaceData }) {
   const speak = (text, onDone = () => {}) => {
     if (!window.speechSynthesis) { onDone(); return }
     window.speechSynthesis.cancel()
-    const spokenText = text.replace(/\^2\b/g, ' squared').replace(/\^3\b/g, ' cubed').replace(/\^(\d+)\b/g, ' to the power of $1')
+    const spokenText = normaliseMathText(text)
+      .replace(/\^2\b/g, ' squared')
+      .replace(/\^3\b/g, ' cubed')
+      .replace(/\^\(([^()]+)\)|\^([A-Za-z0-9πθαβ]+)/g, (_, bracketed, simple) => ` to the power of ${bracketed || simple}`)
+      .replace(/×/g, ' times ')
+      .replace(/÷/g, ' divided by ')
     const utterance = new SpeechSynthesisUtterance(spokenText.replace(/https?:\/\/\S+/g, ''))
     const voices = window.speechSynthesis.getVoices()
     const selected = voices.find((item) => item.name === voice)
