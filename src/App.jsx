@@ -4951,19 +4951,6 @@ function InterviewPracticeWorkspace({ workspaceData, setWorkspaceData }) {
       feedback: feedback || (hasAnswer ? 'You have made a useful start. For a stronger interview answer, state your reasoning clearly and support it with one precise example or idea.' : ''),
     }
   }
-  const displayMath = (text) => {
-    const normalisedText = normaliseMathText(text)
-    const parts = []
-    let cursor = 0
-    const pattern = /([A-Za-z0-9πθαβ)])\^(?:\(([^()]+)\)|([A-Za-z0-9πθαβ]+))/g
-    let match
-    while ((match = pattern.exec(normalisedText))) {
-      parts.push(normalisedText.slice(cursor, match.index), <span key={`${match.index}-power`}>{match[1]}<sup>{match[2] || match[3]}</sup></span>)
-      cursor = match.index + match[0].length
-    }
-    parts.push(normalisedText.slice(cursor))
-    return parts
-  }
   const speak = (text, onDone = () => {}) => {
     if (!window.speechSynthesis) { onDone(); return }
     window.speechSynthesis.cancel()
@@ -5067,7 +5054,7 @@ function InterviewPracticeWorkspace({ workspaceData, setWorkspaceData }) {
 
   if (!question) return <div className="interview-launch"><section><span className="days-left">LIVE VIDEO INTERVIEW</span><h2>Practise in an interview room.</h2><p>Set the course and university context, choose the interviewer tone, then record your response with your camera if you wish.</p><div className="interview-fields"><input value={course} onChange={(event) => setWorkspaceData({ ...workspaceData, course: event.target.value })} placeholder="Course, e.g. Medicine" /><input value={university} onChange={(event) => setWorkspaceData({ ...workspaceData, university: event.target.value })} placeholder="University, e.g. Bristol" /><label>Tone<select value={tone} onChange={(event) => setWorkspaceData({ ...workspaceData, tone: event.target.value })}><option>Friendly</option><option>Serious</option><option>Stern</option></select></label><label>AI voice<select value={voice} onChange={(event) => setWorkspaceData({ ...workspaceData, voice: event.target.value })}><option value="">Default device voice</option>{typeof window !== 'undefined' && window.speechSynthesis?.getVoices().filter((item) => item.lang.startsWith('en')).slice(0, 12).map((item) => <option value={item.name} key={item.name}>{item.name}</option>)}</select></label></div><button className="view-button" onClick={start} disabled={loading || countdown > 0}>{loading ? 'Preparing your question…' : 'Start mock interview →'}</button>{cameraError && <p className="contextual-error">{cameraError}</p>}<p className="interview-disclaimer">Camera recordings stay in this browser during your practice. GrowthGrind does not upload or analyse the video; use the voice transcript or typed answer for AI feedback.</p></section><aside><span>WHAT YOU’LL PRACTISE</span><ul><li>A question at a time</li><li>Thinking pace before you speak</li><li>Video, voice or typed responses</li><li>Specific written feedback</li></ul></aside>{showWelcome && <div className="interview-welcome-backdrop" role="dialog" aria-modal="true" aria-label="Mock interview introduction"><div className="interview-welcome"><span>MOCK INTERVIEW PRACTICE</span><h3>Ready when you are.</h3><p>Welcome to your mock interview practice. I will adopt a professional and serious tone for this session. Remember, this practice is designed to help you build confidence, but it is not a guarantee of university outcomes or an exact replication of a real admissions interview. Let us begin with your first question.</p><div><button className="more-button" onClick={() => setShowWelcome(false)}>Not yet</button><button className="view-button" onClick={beginInterview}>Start interview →</button></div></div></div>}{countdown > 0 && <div className="interview-countdown" role="status"><span>GET READY</span><b>{countdown}</b><p>Your first question is about to appear.</p></div>}</div>
 
-  return <div className="video-interview-room"><header className="video-interview-header"><div><span>AI INTERVIEW</span><strong>{questionNumber}/4</strong><small>{isRecording ? 'Recording response' : isThinking ? 'Thinking time' : 'Review your answer'}</small></div><div className="interview-header-actions"><button className="new-interview-button" onClick={startNewInterview}>＋ New interview</button><div className={`thinking-timer ${timerState}`}><i>◷</i><b>{String(thinkingSeconds).padStart(2, '0')}s</b><small>{isRecording ? 'Speaking' : 'Before you speak'}</small></div></div></header><div className="video-interview-layout"><section className="video-stage"><div className="video-frame">{cameraReady ? <video ref={videoRef} autoPlay muted playsInline /> : <div className="camera-placeholder"><span>◉</span><b>Camera preview</b><p>Allow camera access to record a practice response.</p></div>}<div className="video-stage-label">{isRecording ? <><i /> RECORDING</> : 'YOUR CAMERA'}</div><div className="video-controls">{isRecording ? <button className="finish-recording" onClick={stopRecording}>■ Finish recording</button> : <button onClick={startRecording}>{videoUrl ? '↻ Record again' : '● Start answer'}</button>}<button className="voice-control" onClick={startListening} disabled={listening}>{listening ? 'Listening…' : '🎙 Voice transcript'}</button></div></div>{videoUrl && <details className="video-preview"><summary>Review this response recording</summary><video controls src={videoUrl} /></details>}<label className="video-answer-input"><span>Answer transcript</span><textarea value={answer} onChange={(event) => setAnswer(event.target.value)} placeholder="Speak using the microphone or type your answer here…" /></label></section><aside className="video-interview-sidebar"><div className="interview-sidebar-title"><span>QUESTION {questionNumber}</span><b>{course} · {university}</b></div><div className="interview-progress"><div><span>Progress</span><strong>{savedFeedback.length}/4 answered</strong></div><i><b style={{ width: `${Math.min(savedFeedback.length * 25, 100)}%` }} /></i></div><article className="current-question"><small>AI INTERVIEWER</small><p>{displayMath(question)}</p></article><article className={`thinking-guide ${timerState}`}><span>Thinking pace</span><strong>{isRecording ? 'You’re answering now' : thinkingSeconds < 8 ? 'Good — take a moment' : thinkingSeconds < 15 ? 'Start shaping your answer' : 'Practise getting to your opening point'}</strong><p>Green 0–7s · orange 8–14s · red 15s+. This is practice feedback, not a university scoring rule.</p></article>{feedback && <article className="video-feedback"><small>INSTANT FEEDBACK</small><p>{feedback}</p></article>}<button className="view-button" onClick={submitAnswer} disabled={loading || !answer.trim() || isRecording}>{loading ? 'Reviewing your answer…' : 'Get feedback & next question →'}</button>{error && <p className="contextual-error">{error}</p>}</aside></div></div>
+  return <div className="video-interview-room"><header className="video-interview-header"><div><span>AI INTERVIEW</span><strong>{questionNumber}/4</strong><small>{isRecording ? 'Recording response' : isThinking ? 'Thinking time' : 'Review your answer'}</small></div><div className="interview-header-actions"><button className="new-interview-button" onClick={startNewInterview}>＋ New interview</button><div className={`thinking-timer ${timerState}`}><i>◷</i><b>{String(thinkingSeconds).padStart(2, '0')}s</b><small>{isRecording ? 'Speaking' : 'Before you speak'}</small></div></div></header><div className="video-interview-layout"><section className="video-stage"><div className="video-frame">{cameraReady ? <video ref={videoRef} autoPlay muted playsInline /> : <div className="camera-placeholder"><span>◉</span><b>Camera preview</b><p>Allow camera access to record a practice response.</p></div>}<div className="video-stage-label">{isRecording ? <><i /> RECORDING</> : 'YOUR CAMERA'}</div><div className="video-controls">{isRecording ? <button className="finish-recording" onClick={stopRecording}>■ Finish recording</button> : <button onClick={startRecording}>{videoUrl ? '↻ Record again' : '● Start answer'}</button>}<button className="voice-control" onClick={startListening} disabled={listening}>{listening ? 'Listening…' : '🎙 Voice transcript'}</button></div></div>{videoUrl && <details className="video-preview"><summary>Review this response recording</summary><video controls src={videoUrl} /></details>}<label className="video-answer-input"><span>Answer transcript</span><textarea value={answer} onChange={(event) => setAnswer(event.target.value)} placeholder="Speak using the microphone or type your answer here…" /></label></section><aside className="video-interview-sidebar"><div className="interview-sidebar-title"><span>QUESTION {questionNumber}</span><b>{course} · {university}</b></div><div className="interview-progress"><div><span>Progress</span><strong>{savedFeedback.length}/4 answered</strong></div><i><b style={{ width: `${Math.min(savedFeedback.length * 25, 100)}%` }} /></i></div><article className="current-question"><small>AI INTERVIEWER</small><p><MathText text={question} /></p></article><article className={`thinking-guide ${timerState}`}><span>Thinking pace</span><strong>{isRecording ? 'You’re answering now' : thinkingSeconds < 8 ? 'Good — take a moment' : thinkingSeconds < 15 ? 'Start shaping your answer' : 'Practise getting to your opening point'}</strong><p>Green 0–7s · orange 8–14s · red 15s+. This is practice feedback, not a university scoring rule.</p></article>{feedback && <article className="video-feedback"><small>INSTANT FEEDBACK</small><p>{feedback}</p></article>}<button className="view-button" onClick={submitAnswer} disabled={loading || !answer.trim() || isRecording}>{loading ? 'Reviewing your answer…' : 'Get feedback & next question →'}</button>{error && <p className="contextual-error">{error}</p>}</aside></div></div>
 }
 
 function PortfolioHubWorkspace({ workspaceData, setWorkspaceData }) {
@@ -5304,6 +5291,19 @@ function InSitePlanner({ feature, workspaceData, setWorkspaceData, onOpenAi }) {
 }
 
 function MathText({ text }) {
+  const renderPowers = (value, keyPrefix) => {
+    const pieces = []
+    const powerPattern = /([A-Za-z0-9πθαβ)])\^(?:\(([^()]+)\)|([A-Za-z0-9πθαβ]+))/g
+    let cursor = 0
+    let match
+    while ((match = powerPattern.exec(value))) {
+      if (match.index > cursor) pieces.push(value.slice(cursor, match.index))
+      pieces.push(<span key={`${keyPrefix}-power-${match.index}`}>{match[1]}<sup>{match[2] || match[3]}</sup></span>)
+      cursor = match.index + match[0].length
+    }
+    pieces.push(value.slice(cursor))
+    return pieces
+  }
   const formatLine = (line, lineIndex) => {
     const plainLine = String(line)
       .replace(/^\s{0,3}#{1,6}\s+/, '')
@@ -5311,18 +5311,20 @@ function MathText({ text }) {
       .replace(/\*\*([^*]+)\*\*/g, '$1')
       .replace(/__([^_]+)__/g, '$1')
       .replace(/`([^`]+)`/g, '$1')
-    const fractionPattern = /\\frac\{([^{}]+)\}\{([^{}]+)\}|\(([^()]+)\)\/\(([^()]+)\)/g
+    const fractionPattern = /\\frac\{([^{}]+)\}\{([^{}]+)\}|\(([^()]+)\)\/\(([^()]+)\)|([A-Za-z0-9πθαβ]+)⁄([A-Za-z0-9πθαβ]+(?:\^(?:\([^()]+\)|[A-Za-z0-9πθαβ]+))?)/g
     const parts = []
     let cursor = 0
     let match
     while ((match = fractionPattern.exec(plainLine))) {
       if (match.index > cursor) parts.push(plainLine.slice(cursor, match.index))
-      parts.push(<span className="math-fraction" key={`${lineIndex}-${match.index}`}><span>{match[1] || match[3]}</span><span>{match[2] || match[4]}</span></span>)
+      const numerator = match[1] || match[3] || match[5]
+      const denominator = match[2] || match[4] || match[6]
+      parts.push(<span className="math-fraction" key={`${lineIndex}-${match.index}`}><span>{renderPowers(numerator, `${lineIndex}-${match.index}-top`)}</span><span>{renderPowers(denominator, `${lineIndex}-${match.index}-bottom`)}</span></span>)
       cursor = match.index + match[0].length
     }
     parts.push(plainLine.slice(cursor))
     return parts.map((part, index) => typeof part === 'string'
-      ? part.replace(/\\sqrt\{([^{}]+)\}|sqrt\(([^()]+)\)/g, '√($1$2)').split(/(\^\{?[-+]?\d+\}?)/g).map((piece, pieceIndex) => piece.startsWith('^') ? <sup key={`${index}-${pieceIndex}`}>{piece.replace(/[^{\d+-]/g, '').replace('}', '')}</sup> : piece)
+      ? renderPowers(part.replace(/\\sqrt\{([^{}]+)\}|sqrt\(([^()]+)\)/g, '√($1$2)'), `${lineIndex}-${index}`)
       : part)
   }
   return <>{String(text || '').split('\n').map((line, index) => <span key={index}>{formatLine(line, index)}{index < String(text || '').split('\n').length - 1 && <br />}</span>)}</>
