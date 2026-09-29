@@ -2419,13 +2419,6 @@ function App() {
             )}
           </main>
 
-          <footer>
-            <div className="footer-brand">GrowthGrind</div>
-
-            <p>
-              Explore more. Experience more. Become more.
-            </p>
-          </footer>
         </>
       )}
 
@@ -3912,6 +3905,11 @@ function App() {
         </main>
       )}
 
+      {page === 'Privacy' && <LegalPage type="privacy" />}
+      {page === 'Terms' && <LegalPage type="terms" />}
+
+      <SiteFooter onNavigate={goTo} />
+
       {/* MORE MENU */}
       {showMore && (
         <div
@@ -4123,6 +4121,53 @@ function App() {
       )}
     </div>
   )
+}
+
+function SiteFooter({ onNavigate }) {
+  return <footer className="site-footer">
+    <div className="footer-brand">GrowthGrind</div>
+    <p>Explore more. Experience more. Become more.</p>
+    <div className="footer-links"><button onClick={() => onNavigate('Privacy')}>Privacy</button><button onClick={() => onNavigate('Terms')}>Terms</button><a href="mailto:growthgrinduk@gmail.com">Contact</a></div>
+  </footer>
+}
+
+function LegalPage({ type }) {
+  const privacy = type === 'privacy'
+  return <main>
+    <section className="hero-section legal-hero"><div className="hero-content"><span className="eyebrow">GROWTHGRIND LEGAL</span><h1>{privacy ? 'Privacy\nPolicy' : 'Terms of\nUse'}</h1><p>Last updated: 29 September 2026</p></div></section>
+    {privacy ? <section className="opportunities-section legal-page">
+      <h2>How we use information</h2>
+      <p>GrowthGrind is responsible for the personal information we collect through this website. For questions about this policy or your information, email <a href="mailto:growthgrinduk@gmail.com">growthgrinduk@gmail.com</a>.</p>
+      <h3>Information we collect</h3>
+      <p>We may collect account details such as your email address; profile and preference information you choose to add; saved opportunities, tracker entries and workspace notes; subscription status and Stripe checkout references; and email details when you subscribe to GrowthGrind Weekly.</p>
+      <p>Mock interview camera recordings remain in your browser during your practice and are not uploaded by GrowthGrind. If you submit text or a transcript for AI feedback, that text is sent to our AI service provider to generate the requested response.</p>
+      <h3>Why we use it</h3>
+      <p>We use information to provide your account and chosen features, personalise matching and workspaces, manage subscriptions, send the emails you request, keep the site secure and improve reliability. We do not sell personal information.</p>
+      <h3>Service providers</h3>
+      <p>We use trusted providers to run GrowthGrind, including Supabase for account and app data, Stripe for payments, Vercel for hosting, Google Gemini for requested AI responses and Resend for weekly emails. Each provider processes information only as needed to provide its service.</p>
+      <h3>Storage and retention</h3>
+      <p>We keep account and feature data while your account is active and for a reasonable period afterwards where needed for security, legal, accounting or support reasons. Payment card details are handled by Stripe, not stored by GrowthGrind. You can ask us to delete or correct account information by emailing us.</p>
+      <h3>Your rights</h3>
+      <p>Depending on the circumstances, you may have rights to access, correct, delete, restrict or object to use of your personal information, and to request a copy of it. Contact us first at the email above. You may also raise concerns with the UK Information Commissioner’s Office.</p>
+      <h3>Cookies and changes</h3>
+      <p>GrowthGrind uses essential browser storage to keep the site working, for example your theme choice and temporary launch access. If we introduce non-essential cookies, we will request consent where required. We may update this policy as the service develops and will publish the latest version here.</p>
+    </section> : <section className="opportunities-section legal-page">
+      <h2>Using GrowthGrind</h2>
+      <p>GrowthGrind helps students explore opportunities, organise evidence and practise decisions. By using the service, you agree to use it lawfully, respectfully and only for your own genuine educational planning.</p>
+      <h3>Information, not a guarantee</h3>
+      <p>Content, opportunity listings, matching, AI guidance and mock interview feedback are general educational support. They are not admissions, legal, medical, financial or professional advice, and they do not guarantee a place, grade, scholarship, job or any other outcome. Always check an opportunity’s own official website before applying or relying on a deadline or requirement.</p>
+      <h3>Your account and content</h3>
+      <p>Keep your sign-in details private and provide accurate information. You remain responsible for the notes, submissions and other content you add. Do not upload material that is unlawful, harmful, misleading, confidential without permission or infringes someone else’s rights.</p>
+      <h3>Subscriptions and payments</h3>
+      <p>Premium features and prices are shown before checkout. Payments are processed by Stripe. Subscription management, cancellation and billing information are available through the Stripe customer portal. We may change future pricing or features, but will make material changes clear before they affect a renewal where required.</p>
+      <h3>External links and availability</h3>
+      <p>GrowthGrind links to external providers and does not control their websites, availability, accuracy or privacy practices. We work to keep the platform reliable but cannot promise uninterrupted or error-free access. We may change, pause or remove a feature to maintain or improve the service.</p>
+      <h3>Our responsibility</h3>
+      <p>Nothing in these terms excludes liability that cannot legally be excluded. Subject to that, GrowthGrind is not responsible for indirect losses, missed opportunities or decisions made using general information on the platform.</p>
+      <h3>Contact and governing law</h3>
+      <p>For questions about GrowthGrind or these terms, email <a href="mailto:growthgrinduk@gmail.com">growthgrinduk@gmail.com</a>. These terms are governed by the laws of England and Wales.</p>
+    </section>}
+  </main>
 }
 
 function Navbar({

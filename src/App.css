@@ -716,6 +716,17 @@ footer p {
   font-size: 12px;
 }
 
+.site-footer { margin-top: 60px; padding: 38px 32px; border-top: 1px solid #d4c8b5; text-align: center; }
+.footer-links { display: flex; justify-content: center; gap: 16px; margin-top: 15px; }
+.footer-links button, .footer-links a { border: 0; border-bottom: 1px solid transparent; background: transparent; color: #315b3d; font: inherit; font-size: 12px; font-weight: 750; text-decoration: none; cursor: pointer; }
+.footer-links button:hover, .footer-links a:hover { border-color: currentColor; }
+.legal-hero { padding-bottom: 36px; }
+.legal-page { max-width: 850px; }
+.legal-page h2 { margin: 0 0 16px; color: #294b35; font-size: clamp(29px, 4vw, 42px); letter-spacing: -1.4px; }
+.legal-page h3 { margin: 30px 0 8px; color: #315b3d; font-size: 18px; }
+.legal-page p { max-width: 760px; color: #5f625b; font-size: 15px; line-height: 1.72; }
+.legal-page a { color: #315b3d; font-weight: 750; }
+
 /* MOBILE */
 
 @media (max-width: 850px) {
@@ -731,6 +742,7 @@ footer p {
   .mobile-menu-links { display: grid; gap: 2px; }
   .mobile-menu-links .nav-link, .more-menu .nav-link { width: 100%; text-align: left; }
   .mobile-menu-links hr { width: 100%; margin: 7px 0; border: 0; border-top: 1px solid #d5c9b5; }
+  .site-footer { padding: 32px 20px; }
 
   .hero-section {
     padding: 65px 20px 40px;
