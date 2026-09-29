@@ -105,8 +105,12 @@ const yearGroups = [
 
 // Friday 2 October 2026, 5:00pm in the UK (BST = 16:00 UTC).
 const publicLaunchAt = new Date('2026-10-02T16:00:00.000Z').getTime()
+const launchAccessStorageKey = 'growthgrind_launch_access'
+const temporaryLaunchPassword = 'GG-OCT-2026'
 
-function LaunchScreen({ now }) {
+function LaunchScreen({ now, onUnlock }) {
+  const [password, setPassword] = useState('')
+  const [passwordError, setPasswordError] = useState('')
   const remaining = Math.max(0, publicLaunchAt - now)
   const units = [
     ['Days', Math.floor(remaining / 86400000)],
@@ -114,7 +118,15 @@ function LaunchScreen({ now }) {
     ['Minutes', Math.floor((remaining / 60000) % 60)],
     ['Seconds', Math.floor((remaining / 1000) % 60)],
   ]
-  return <main className="launch-screen"><section className="launch-card"><img className="launch-mark" src="/growthgrind-logo.jpeg" alt="GrowthGrind" /><span>GROWTHGRIND</span><h1>Your next chapter<br /><em>starts soon.</em></h1><p>GrowthGrind is preparing a smarter way for students to discover opportunities, build evidence, and plan their university journey.</p><div className="launch-countdown" aria-label="Countdown to launch">{units.map(([label, value]) => <div key={label}><strong>{String(value).padStart(2, '0')}</strong><small>{label}</small></div>)}</div><p className="launch-date">Opening Friday 2 October · 5:00pm UK time</p><a href="mailto:hello@growthgrind.co.uk">Get in touch ↗</a></section></main>
+  const submitPassword = (event) => {
+    event.preventDefault()
+    if (password.trim() === temporaryLaunchPassword) {
+      onUnlock()
+      return
+    }
+    setPasswordError('That password is not recognised. Please try again.')
+  }
+  return <main className="launch-screen"><section className="launch-card"><img className="launch-mark" src="/growthgrind-logo.jpeg" alt="GrowthGrind" /><span>GROWTHGRIND</span><h1>Your next chapter<br /><em>starts soon.</em></h1><p>GrowthGrind is preparing a smarter way for students to discover opportunities, build evidence, and plan their university journey.</p><div className="launch-countdown" aria-label="Countdown to launch">{units.map(([label, value]) => <div key={label}><strong>{String(value).padStart(2, '0')}</strong><small>{label}</small></div>)}</div><p className="launch-date">Opening Friday 2 October · 5:00pm UK time</p><form className="launch-access" onSubmit={submitPassword}><label htmlFor="launch-password">Have an early-access password?</label><div><input id="launch-password" value={password} onChange={(event) => { setPassword(event.target.value); setPasswordError('') }} type="password" autoComplete="current-password" placeholder="Enter password" /><button type="submit">Enter site</button></div>{passwordError && <p role="alert">{passwordError}</p>}</form><a href="mailto:hello@growthgrind.co.uk">Get in touch ↗</a></section></main>
 }
 
 const normaliseMatchText = (value) => String(value || '').toLowerCase().replace(/[–—]/g, '-').replace(/\s+/g, ' ').trim()
@@ -240,6 +252,7 @@ const premiumFeatureGroups = [
 
 function App() {
     const [launchNow, setLaunchNow] = useState(() => Date.now())
+    const [hasEarlyAccess, setHasEarlyAccess] = useState(() => sessionStorage.getItem(launchAccessStorageKey) === 'granted')
     const [theme, setTheme] = useState(() => localStorage.getItem('growthgrind_theme') || 'light')
     const [opportunities, setOpportunities] = useState([])
     const [opportunitiesLoading, setOpportunitiesLoading] = useState(true)
@@ -1629,7 +1642,7 @@ function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  if (launchNow < publicLaunchAt) return <LaunchScreen now={launchNow} />
+  if (launchNow < publicLaunchAt && !hasEarlyAccess) return <LaunchScreen now={launchNow} onUnlock={() => { sessionStorage.setItem(launchAccessStorageKey, 'granted'); setHasEarlyAccess(true) }} />
 
   return (
     <div className={`app theme-${theme}`}>
