@@ -117,15 +117,31 @@ function plainInterviewText(value) {
     .trim()
 }
 
+function interviewFallbackQuestion(course) {
+  const subject = clean(course).toLowerCase()
+  if (/math|maths|mathematics/.test(subject)) return 'Can you explain, step by step, why the sum of any two odd integers is always even?'
+  if (/medicine|medical/.test(subject)) return 'How would you begin thinking through the possible causes of a patient developing a new symptom?'
+  if (/law/.test(subject)) return 'What do you think makes a legal rule fair, and how might two reasonable people disagree about it?'
+  if (/economics|econ/.test(subject)) return 'How would you explain why the price of a product can rise even when a business wants to sell more of it?'
+  return `What part of ${course || 'this subject'} interests you most, and what makes you want to explore it more deeply?`
+}
+
+function extractInterviewLine(reply, label) {
+  const lines = String(reply || '').split(/\r?\n/).map((line) => line.trim())
+  const prefix = new RegExp(`^${label}:\\s*(.+)$`, 'i')
+  const line = lines.find((item) => prefix.test(item))
+  const value = plainInterviewText(line?.match(prefix)?.[1] || '')
+  if (value.length < 12 || value.length > 500 || /\[.*\]|return exactly|one realistic|research notes|instructions|prompt/i.test(value)) return ''
+  return value
+}
+
 function cleanInterviewReply(reply, context) {
-  const normalised = plainInterviewText(reply)
-  const isPlanningText = /\*\*|\bidea\s*\d|\bscaffolded\b|\bone realistic,? open academic question\b|\binterviews focus on\b/i.test(normalised)
-  const question = normalised.match(/QUESTION:\s*(.*?)(?=\s+FEEDBACK:|$)/i)?.[1]?.trim()
-  const feedback = normalised.match(/FEEDBACK:\s*(.*?)(?=\s+QUESTION:|$)/i)?.[1]?.trim()
-  const fallbackQuestion = `What part of ${context.course || 'this subject'} interests you most, and what makes you want to explore it more deeply?`
-  if (!context.studentAnswer) return `QUESTION: ${!isPlanningText && question ? question : fallbackQuestion}`
+  const question = extractInterviewLine(reply, 'QUESTION')
+  const feedback = extractInterviewLine(reply, 'FEEDBACK')
+  const fallbackQuestion = interviewFallbackQuestion(context.course)
+  if (!context.studentAnswer) return `QUESTION: ${question.endsWith('?') ? question : fallbackQuestion}`
   const fallbackFeedback = 'You have made a useful start. For a stronger interview answer, state your reasoning clearly and support it with one precise example or idea.'
-  return `FEEDBACK: ${!isPlanningText && feedback ? feedback : fallbackFeedback}\nQUESTION: ${!isPlanningText && question ? question : fallbackQuestion}`
+  return `FEEDBACK: ${feedback || fallbackFeedback}\nQUESTION: ${question.endsWith('?') ? question : fallbackQuestion}`
 }
 
 export default async function handler(request, response) {

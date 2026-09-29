@@ -4924,14 +4924,27 @@ function InterviewPracticeWorkspace({ workspaceData, setWorkspaceData }) {
     .replace(/\\(?:leq|le)/g, '≤').replace(/\\(?:geq|ge)/g, '≥').replace(/\\neq/g, '≠').replace(/\\pm/g, '±').replace(/\\infty/g, '∞')
     .replace(/\\pi/g, 'π').replace(/\\theta/g, 'θ').replace(/\\alpha/g, 'α').replace(/\\beta/g, 'β')
     .replace(/[{}]/g, '').replace(/\\\(|\\\)|\\\[|\\\]/g, '')
+  const fallbackInterviewQuestion = () => {
+    const subject = course.toLowerCase()
+    if (/math|maths|mathematics/.test(subject)) return 'Can you explain, step by step, why the sum of any two odd integers is always even?'
+    if (/medicine|medical/.test(subject)) return 'How would you begin thinking through the possible causes of a patient developing a new symptom?'
+    if (/law/.test(subject)) return 'What do you think makes a legal rule fair, and how might two reasonable people disagree about it?'
+    if (/economics|econ/.test(subject)) return 'How would you explain why the price of a product can rise even when a business wants to sell more of it?'
+    return `What part of ${course || 'this subject'} interests you most, and what makes you want to explore it more deeply?`
+  }
+  const extractInterviewLine = (reply, label) => {
+    const prefix = new RegExp(`^${label}:\\s*(.+)$`, 'i')
+    const line = normaliseMathText(reply).split(/\r?\n/).map((item) => item.trim()).find((item) => prefix.test(item))
+    const value = line?.match(prefix)?.[1]?.trim() || ''
+    return value.length >= 12 && value.length <= 500 && !/\[.*\]|return exactly|one realistic|research notes|instructions|prompt/i.test(value) ? value : ''
+  }
   const parseInterviewReply = (reply, hasAnswer) => {
-    const isPlanningText = /\*\*|\bidea\s*\d|\bscaffolded\b|\bone realistic,? open academic question\b|\binterviews focus on\b/i.test(reply)
-    const plainReply = normaliseMathText(reply)
-    const questionMatch = plainReply.match(/(?:^|\n)QUESTION:\s*([\s\S]*)/i)
-    const feedbackMatch = plainReply.match(/(?:^|\n)FEEDBACK:\s*([\s\S]*?)(?=\nQUESTION:|$)/i)
+    const question = extractInterviewLine(reply, 'QUESTION')
+    const feedback = extractInterviewLine(reply, 'FEEDBACK')
+    const safeQuestion = question.endsWith('?') ? question : fallbackInterviewQuestion()
     return {
-      question: isPlanningText ? `What part of ${course || 'this subject'} interests you most, and what makes you want to explore it more deeply?` : (questionMatch?.[1] || (hasAnswer ? '' : plainReply)).trim(),
-      feedback: isPlanningText ? 'You have made a useful start. For a stronger interview answer, state your reasoning clearly and support it with one precise example or idea.' : (feedbackMatch?.[1] || (hasAnswer ? plainReply : '')).trim(),
+      question: safeQuestion,
+      feedback: feedback || (hasAnswer ? 'You have made a useful start. For a stronger interview answer, state your reasoning clearly and support it with one precise example or idea.' : ''),
     }
   }
   const displayMath = (text) => {
