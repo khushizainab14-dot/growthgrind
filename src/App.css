@@ -118,6 +118,10 @@ button {
   margin-left: 4px;
 }
 
+.mobile-menu-button { display: none; border: 1px solid #cfc2ad; border-radius: 9px; background: #f5efe5; color: #315b3d; align-items: center; gap: 7px; padding: 8px 10px; font: inherit; font-size: 12px; font-weight: 800; }
+.mobile-menu-button span { font-size: 16px; line-height: 1; }
+.mobile-menu-links { display: none; }
+
 .saved-count {
   margin-left: 6px;
   padding: 2px 6px;
@@ -716,12 +720,17 @@ footer p {
 
 @media (max-width: 850px) {
   .navbar {
-    padding: 0 18px;
+    height: 66px;
+    padding: 0 16px;
   }
 
-  .nav-links {
-    display: flex;
-  }
+  .nav-links, .navbar > .sign-out { display: none; }
+  .mobile-menu-button { display: inline-flex; }
+  .theme-toggle { margin-left: auto; margin-right: 8px; }
+  .more-menu { top: 76px !important; right: 16px !important; left: 16px; min-width: 0 !important; max-height: calc(100vh - 92px); overflow: auto; }
+  .mobile-menu-links { display: grid; gap: 2px; }
+  .mobile-menu-links .nav-link, .more-menu .nav-link { width: 100%; text-align: left; }
+  .mobile-menu-links hr { width: 100%; margin: 7px 0; border: 0; border-top: 1px solid #d5c9b5; }
 
   .hero-section {
     padding: 65px 20px 40px;

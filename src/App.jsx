@@ -3915,6 +3915,7 @@ function App() {
       {/* MORE MENU */}
       {showMore && (
         <div
+          className="more-menu"
           style={{
             position: 'fixed',
             top: '62px',
@@ -3931,6 +3932,17 @@ function App() {
             minWidth: '210px',
           }}
         >
+          <div className="mobile-menu-links">
+            <button className="nav-link" onClick={() => goTo('Discover')}>Discover opportunities</button>
+            <button className="nav-link" onClick={() => goTo('Match')}>Find my matches</button>
+            <button className="nav-link" onClick={() => goTo('Track')}>My tracker</button>
+            <button className="nav-link" onClick={() => goTo('Saved')}>Saved opportunities</button>
+            <button className="nav-link" onClick={() => goTo('Profile')}>My profile</button>
+            <button className="nav-link" onClick={() => goTo('Premium')}>Premium</button>
+            <button className="nav-link" onClick={() => goTo('Pricing')}>Pricing</button>
+            <button className="nav-link" onClick={user ? () => supabase.auth.signOut() : () => openAuth()}>{user ? 'Sign out' : 'Sign in'}</button>
+            <hr />
+          </div>
           <button
             className="nav-link"
             onClick={() => {
@@ -4240,6 +4252,7 @@ function Navbar({
         {user ? 'Sign out' : 'Sign in'}
       </button>
       <button className="theme-toggle" onClick={onToggleTheme} aria-label="Toggle dark mode"><span className={theme === 'dark' ? 'toggle-knob dark' : 'toggle-knob'}>{theme === 'dark' ? '☾' : '☀'}</span></button>
+      <button className="mobile-menu-button" onClick={() => setShowMore(!showMore)} aria-expanded={showMore} aria-label="Open navigation menu"><span>☰</span><b>Menu</b></button>
     </header>
   )
 }
