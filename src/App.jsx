@@ -3363,6 +3363,7 @@ function App() {
                   🔒 Unlock Premium →
                 </button>
               )}
+              {isPremium && <button className="view-button" onClick={() => goTo('Track')}>Open my application dashboard →</button>}
             </div>
           </section>
 
