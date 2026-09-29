@@ -103,6 +103,83 @@ const yearGroups = [
   '18+',
 ]
 
+const normaliseMatchText = (value) => String(value || '').toLowerCase().replace(/[–—]/g, '-').replace(/\s+/g, ' ').trim()
+const opportunityMatchText = (opportunity) => [
+  opportunity.title,
+  opportunity.category,
+  opportunity.activityType,
+  opportunity.description,
+  opportunity.interests?.join(' '),
+  opportunity.subjects?.join(' '),
+].filter(Boolean).join(' ').toLowerCase()
+
+const matchesActivityChoice = (opportunity, choice) => {
+  const text = [opportunity.activityType, opportunity.title, opportunity.category].filter(Boolean).join(' ').toLowerCase()
+  const rules = {
+    'Essay Competition': /essay\s*(competition|contest)?|writing\s*(competition|contest)/,
+    Competition: /competition|contest|challenge|olympiad/,
+    'Work Experience': /work experience|work-experience|work placement|placement/,
+    Internship: /intern(ship)?/,
+    Volunteering: /volunteer|volunteering/,
+    Research: /research|investigat(e|ion)/,
+    'Summer School': /summer school|summer programme|summer program/,
+    Scholarship: /scholarship|bursar(y)?|award/,
+    'Leadership Programme': /leadership|ambassador/,
+    Sport: /sport|athletic|football|rugby|cricket|netball/,
+    Creative: /creative|art|film|theatre|music|writing|design|photography/,
+    Debate: /debate|public speaking|model united nations|mun/,
+    Olympiad: /olympiad/,
+    'Course / Programme': /course|programme|program|outreach|workshop|masterclass|insight day|event/,
+  }
+  return rules[choice] ? rules[choice].test(text) : text.includes(choice.toLowerCase())
+}
+
+const matchesSubjectChoice = (opportunity, choice) => {
+  const text = opportunityMatchText(opportunity)
+  const rules = {
+    Economics: /economics|economy|econometric/,
+    Mathematics: /maths?|mathematics|quantitative|statistics|statistical/,
+    Science: /stem|science|physics|chemistry|biology|biochem|genetics|medicine|engineering/,
+    Biology: /biology|biological|biochem|genetics|biomedical/,
+    Medicine: /medicine|medical|healthcare|clinical|dentistry|pharmacy/,
+    Law: /law|legal|jurisprudence/,
+    Politics: /politics|political|government|policy|international relations/,
+    Business: /business|enterprise|entrepreneur|management|marketing|finance/,
+    'Computer Science': /computer science|computing|coding|programming|software|cyber|technology/,
+    Writing: /writing|writer|essay|journalism|literature|poetry/,
+    Sport: /sport|athletic|football|rugby|cricket|netball/,
+  }
+  return rules[choice] ? rules[choice].test(text) : text.includes(choice.toLowerCase())
+}
+
+const matchesYearGroup = (opportunity, choice) => {
+  const eligibility = normaliseMatchText([...(opportunity.yearGroups || []), opportunity.age].filter(Boolean).join(' '))
+  if (!eligibility) return false
+  if (choice === '18+') return /18\s*\+|18\s*(and|or)\s*(over|above)|adult/.test(eligibility)
+  const year = choice.match(/\d+/)?.[0]
+  if (year && new RegExp(`(?:year|yr|y)\\s*${year}(?!\\d)`).test(eligibility)) return true
+  const agesByYear = { '9': ['13', '14'], '10': ['14', '15'], '11': ['15', '16'], '12': ['16', '17'], '13': ['17', '18'] }
+  return (agesByYear[year] || []).some((age) => new RegExp(`(^|[^\\d])${age}(?!\\d)`).test(eligibility))
+}
+
+const matchesLocationChoice = (opportunity, choice) => {
+  const location = normaliseMatchText(opportunity.location)
+  const format = normaliseMatchText(opportunity.format)
+  const online = /online|remote|virtual|digital/.test(`${location} ${format}`)
+  if (choice === 'Online' || choice === 'Remote') return online
+  if (choice === 'UK') return /\buk\b|united kingdom|england|scotland|wales|northern ireland|london|oxford|cambridge|manchester|birmingham|leeds|bristol/.test(location) || online
+  if (choice === 'England') return /england|london|oxford|cambridge|manchester|birmingham|leeds|bristol/.test(location)
+  return location.includes(choice.toLowerCase())
+}
+
+const matchesFormatChoice = (opportunity, choice) => {
+  const format = normaliseMatchText(`${opportunity.format} ${opportunity.location}`)
+  if (choice === 'Online') return /online|remote|virtual|digital/.test(format)
+  if (choice === 'In-person') return /in-person|in person|school-based|on campus|face-to-face/.test(format)
+  if (choice === 'Hybrid') return /hybrid|blended/.test(format) || (/online|remote|virtual/.test(format) && /in-person|in person|on campus|face-to-face/.test(format))
+  return format.includes(choice.toLowerCase())
+}
+
 const aiSpecialists = [
   { id: 'general', name: 'GrowthGrind AI', description: 'Ask anything', starter: 'I’m not sure where to begin — can you help me work out my next step?' },
   { id: 'courses', name: 'Course Finder', description: 'Courses and universities', starter: 'I enjoy [subjects/interests]. What university course areas should I explore?' },
@@ -1221,18 +1298,9 @@ function App() {
   }
 
   const getMatchScore = useCallback((opportunity) => {
-    if (selectedInterests.length === 0) return 100
-
-    const matches = (opportunity.interests || []).filter((interest) =>
-      selectedInterests.includes(interest)
-    )
-
-    if (matches.length === 0) return 0
-
-    return Math.min(
-      99,
-      Math.round((matches.length / selectedInterests.length) * 100)
-    )
+    if (selectedInterests.length === 0) return 0
+    const matches = selectedInterests.filter((interest) => matchesSubjectChoice(opportunity, interest))
+    return Math.round((matches.length / selectedInterests.length) * 100)
   }, [selectedInterests])
 
   const toggleMatchChoice = (setChoices, choice, resetChoice = 'Any') => {
@@ -1261,6 +1329,15 @@ function App() {
     setMatchFormats([])
     setMatchCosts([])
   }
+
+  const activeMatchFilters = [
+    ...matchYearGroups.map((value) => `Year: ${value}`),
+    ...matchActivityTypes.map((value) => `Type: ${value}`),
+    ...matchSubjects.map((value) => `Subject: ${value}`),
+    ...matchLocations.map((value) => `Location: ${value}`),
+    ...matchFormats.map((value) => `Format: ${value}`),
+    ...matchCosts.map((value) => `Cost: ${value}`),
+  ]
 
   // Directory cards are useful fallbacks, but they should not crowd out a
   // named programme, placement or competition when students first open
@@ -1458,78 +1535,21 @@ function App() {
 
   const matchedOpportunities = useMemo(() => (page === 'Results' ? [...opportunities]
     .filter((opportunity) => {
-    if (matchActivityTypes.length) {
-      const activity = (opportunity.activityType || '').toLowerCase()
-      const matchesActivity = matchActivityTypes.some((choice) => {
-        const selectedActivity = choice.toLowerCase()
-        if (activity === selectedActivity) return true
-        if (choice === 'Sport') return activity.includes('sport')
-        if (choice === 'Creative') return /creative|art|film|theatre|music|writing|design/.test(activity)
-        if (choice === 'Work Experience') return activity.includes('work experience')
-        if (choice === 'Internship') return activity.includes('intern')
-        if (choice === 'Competition') return /competition|olympiad|essay/.test(activity)
-        if (choice === 'Course / Programme') return /course|programme|outreach|event|workshop/.test(activity)
-        return activity.includes(selectedActivity)
-      })
-      if (!matchesActivity) return false
-    }
-
-    if (matchSubjects.length) {
-      const opportunitySubjects = (opportunity.subjects || []).map((subject) => subject.toLowerCase())
-      const matchesSubject = matchSubjects.some((subject) => {
-        const selectedSubject = subject.toLowerCase()
-        if (opportunitySubjects.some((item) => item === selectedSubject || item.includes(selectedSubject))) return true
-        if (subject === 'Science') return opportunitySubjects.some((item) => /stem|physics|chemistry|biology|biochem|genetics|medicine|science/.test(item))
-        if (subject === 'Mathematics') return opportunitySubjects.some((item) => /math|quantitative|statistics/.test(item))
-        if (subject === 'Computer Science') return opportunitySubjects.some((item) => /computer|coding|technology|cyber/.test(item))
-        return false
-      })
-      if (!matchesSubject) return false
-    }
-
-    // A missing year group means the provider asks students to check eligibility;
-    // do not hide a potentially suitable opportunity solely because a source did
-    // not publish a standard school-year label.
-    if (matchYearGroups.length && opportunity.yearGroups?.length && !matchYearGroups.some((year) => (opportunity.yearGroups || []).includes(year))) return false
-
-      if (matchLocations.length) {
-        const location = (opportunity.location || '').toLowerCase()
-        const isUk = ['uk', 'united kingdom', 'england', 'london', 'oxford', 'cambridge']
-          .some((place) => location.includes(place))
-        const matchesLocation = matchLocations.some((locationChoice) =>
-          locationChoice === 'UK'
-            ? isUk
-            : locationChoice === 'Online' || locationChoice === 'Remote'
-              ? opportunity.format === 'Online' || location.includes('remote')
-              : location.includes(locationChoice.toLowerCase())
-        )
-
-        if (!matchesLocation) return false
-      }
-
-    if (matchFormats.length) {
-      const format = (opportunity.format || '').toLowerCase()
-      const matchesFormat = matchFormats.some((choice) => {
-        if (choice === 'Online') return format.includes('online') || format.includes('remote')
-        if (choice === 'In-person') return /in-person|in person|school-based|on campus/.test(format)
-        if (choice === 'Hybrid') return format.includes('hybrid') || (format.includes('online') && /in-person|in person/.test(format))
-        return format.includes(choice.toLowerCase())
-      })
-      if (!matchesFormat) return false
-    }
-
-    if (matchCosts.length && !matchCosts.some((cost) => {
-      if (cost === 'Free') return (opportunity.cost || '').toLowerCase().includes('free')
-      if (cost === 'Financial support') {
-        return Boolean(opportunity.support) || /scholarship|bursar|grant|funding|financial support/.test(
-          [opportunity.title, opportunity.description, opportunity.cost].filter(Boolean).join(' ').toLowerCase()
-        )
-      }
-      return true
-    })) {
-      return false
-    }
-
+      // Every active filter is a strict eligibility requirement. Multiple
+      // choices inside a row mean "any of these", while different rows combine
+      // as "and". Records without an age/year label are not presented as a
+      // match for a selected school year.
+      if (matchActivityTypes.length && !matchActivityTypes.some((choice) => matchesActivityChoice(opportunity, choice))) return false
+      if (matchSubjects.length && !matchSubjects.some((choice) => matchesSubjectChoice(opportunity, choice))) return false
+      if (matchYearGroups.length && !matchYearGroups.some((choice) => matchesYearGroup(opportunity, choice))) return false
+      if (matchLocations.length && !matchLocations.some((choice) => matchesLocationChoice(opportunity, choice))) return false
+      if (matchFormats.length && !matchFormats.some((choice) => matchesFormatChoice(opportunity, choice))) return false
+      if (matchCosts.length && !matchCosts.some((cost) => {
+        const costText = normaliseMatchText(opportunity.cost)
+        if (cost === 'Free') return /free|£\s*0|no cost|fully funded/.test(costText)
+        if (cost === 'Financial support') return hasFinancialSupport(opportunity)
+        return true
+      })) return false
       return true
     })
     .map((opportunity) => ({
@@ -2038,7 +2058,7 @@ function App() {
 
               <p>
                 We've found {matchedOpportunities.length}{' '}
-                opportunities that match your interests and filters.
+                opportunities that match every filter you selected.
               </p>
 
               <div
@@ -2054,7 +2074,16 @@ function App() {
                     {interest}
                   </span>
                 ))}
+                {activeMatchFilters.map((filter) => (
+                  <span key={filter} className="category-tag">
+                    {filter}
+                  </span>
+                ))}
               </div>
+
+              <p style={{ marginTop: '14px', maxWidth: '610px', fontSize: '12px' }}>
+                Results use published eligibility details. If an opportunity has no published year or age information, it is left out when you choose a year group.
+              </p>
 
               <button
                 className="view-button"
