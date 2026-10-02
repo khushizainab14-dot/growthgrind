@@ -121,6 +121,10 @@ button {
 .mobile-menu-button { display: none; border: 1px solid #cfc2ad; border-radius: 9px; background: #f5efe5; color: #315b3d; align-items: center; gap: 7px; padding: 8px 10px; font: inherit; font-size: 12px; font-weight: 800; }
 .mobile-menu-button span { font-size: 16px; line-height: 1; }
 .mobile-menu-links { display: none; }
+.surprise-button { border: 1px solid #315b3d; border-radius: 9px; background: #315b3d; color: #fffaf2; padding: 9px 12px; font: inherit; font-size: 12px; font-weight: 850; }
+.surprise-backdrop { position: fixed; inset: 0; z-index: 300; display: grid; place-items: center; padding: 20px; background: rgba(21,45,32,.62); }
+.surprise-card { position: relative; width: min(100%, 520px); padding: 30px; overflow: hidden; border-radius: 20px; background: #fffaf2; box-shadow: 0 30px 70px rgba(0,0,0,.3); text-align: center; }
+.surprise-card > span { color: #52755b; font-size: 10px; font-weight: 900; letter-spacing: 1.2px; }.surprise-card article { position: relative; z-index: 1; margin: 18px 0; padding: 24px; border: 1px solid #d9cebc; border-radius: 15px; background: #f7f0e5; }.surprise-card article.spinning { animation: surprise-pulse .18s linear infinite alternate; }.surprise-card h2 { margin: 8px 0; color: #294b35; }.surprise-card p { color: #5f625b; line-height: 1.55; }.surprise-card b { color: #315b3d; font-size: 12px; }.surprise-card .filter-button { margin-left: 8px; }.surprise-close { position: absolute; top: 12px; right: 15px; z-index: 3; border: 0; background: transparent; color: #315b3d; font-size: 26px; }.surprise-status { font-weight: 750; }.surprise-confetti i { position: absolute; top: -15px; width: 8px; height: 14px; border-radius: 2px; background: #d6a343; animation: surprise-fall 2s linear infinite; }.surprise-confetti i:nth-child(3n) { background: #315b3d; }.surprise-confetti i:nth-child(4n) { background: #d86d5b; }@keyframes surprise-fall { to { transform: translateY(390px) rotate(520deg); } }@keyframes surprise-pulse { to { transform: scale(.985); opacity: .72; } }
 
 .saved-count {
   margin-left: 6px;

@@ -2252,6 +2252,7 @@ function App() {
                 </div>
 
                 <div className="toolbar-right">
+                  <RandomOpportunityGenerator opportunities={opportunities} onView={setSelectedOpportunity} />
                   <button
                     className="filter-button"
                     onClick={() => setShowFilters(!showFilters)}
@@ -4121,6 +4122,54 @@ function App() {
         />
       )}
     </div>
+  )
+}
+
+function RandomOpportunityGenerator({ opportunities, onView }) {
+  const [open, setOpen] = useState(false)
+  const [rolling, setRolling] = useState(false)
+  const [choice, setChoice] = useState(null)
+  const lastChoice = useRef(null)
+  const pick = () => {
+    const pool = opportunities.filter((item) => item.id !== lastChoice.current)
+    return (pool.length ? pool : opportunities)[Math.floor(Math.random() * (pool.length || 1))]
+  }
+  const spin = () => {
+    if (!opportunities.length || rolling) return
+    setOpen(true); setRolling(true)
+    let delay = 65
+    const next = () => {
+      const item = pick()
+      setChoice(item)
+      if (delay > 480) { lastChoice.current = item?.id; setRolling(false); return }
+      delay *= 1.32
+      window.setTimeout(next, delay)
+    }
+    next()
+  }
+  return (
+    <>
+      <button className="surprise-button" onClick={spin} disabled={!opportunities.length || rolling}>
+        ✦ {rolling ? 'Choosing…' : 'Surprise me'}
+      </button>
+      {open && choice && (
+        <div className="surprise-backdrop" role="dialog" aria-modal="true" aria-label="Random opportunity">
+          <section className="surprise-card">
+            <button className="surprise-close" onClick={() => setOpen(false)} aria-label="Close">×</button>
+            {!rolling && <div className="surprise-confetti" aria-hidden="true">{Array.from({ length: 28 }, (_, i) => <i key={i} style={{ left: `${(i * 29) % 100}%`, animationDelay: `${(i % 8) * .09}s` }} />)}</div>}
+            <span>{rolling ? 'FINDING YOUR NEXT OPPORTUNITY' : 'YOUR RANDOM PICK'}</span>
+            <article className={rolling ? 'spinning' : ''}>
+              <small>{choice.category || 'OPPORTUNITY'}</small>
+              <h2>{choice.title}</h2><p>{choice.organisation}</p><p>{choice.description}</p>
+              <b>{choice.deadline ? `Deadline: ${choice.deadline}` : 'Explore the details'}</b>
+            </article>
+            {rolling ? <p className="surprise-status">Shuffling the catalogue…</p> : (
+              <div><button className="view-button" onClick={() => { setOpen(false); onView(choice) }}>View opportunity →</button><button className="filter-button" onClick={spin}>Pick again</button></div>
+            )}
+          </section>
+        </div>
+      )}
+    </>
   )
 }
 
