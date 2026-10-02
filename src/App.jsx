@@ -1287,29 +1287,7 @@ function App() {
   }
 
   const startCheckout = async (plan) => {
-    if (!user) {
-      openAuth()
-      return
-    }
-    setCheckoutError('')
-    setCheckoutLoading(plan)
-    try {
-      const response = await fetch('/api/create-checkout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session?.access_token || ''}`,
-        },
-        body: JSON.stringify({ plan }),
-      })
-      const result = await readApiJson(response)
-      if (!response.ok) throw new Error(result.error || 'Checkout could not be opened.')
-      window.location.assign(result.url)
-    } catch (error) {
-      setCheckoutError(error.message || 'Checkout could not be opened.')
-    } finally {
-      setCheckoutLoading('')
-    }
+    setPremiumModal('comingSoon')
   }
 
   const openBillingPortal = async () => {
@@ -3240,10 +3218,10 @@ function App() {
                     <button
                       key={plan}
                       className="filter-button"
-                      disabled={Boolean(checkoutLoading) || isPremium}
-                      onClick={() => startCheckout(plan)}
+                      disabled={isPremium}
+                      onClick={() => setPremiumModal('comingSoon')}
                     >
-                      {checkoutLoading === plan ? 'Opening secure checkout…' : label}
+                      {isPremium ? 'Premium active ✓' : `🔒 ${label}`}
                     </button>
                   ))}
                 </div>
@@ -3260,52 +3238,8 @@ function App() {
                     setPremiumModal('subscription')
                   }
                 >
-                  {isPremium
-                    ? 'Premium active ✓'
-                    : 'Choose a plan →'}
+                  {isPremium ? 'Premium active ✓' : 'Premium launches soon →'}
                 </button>
-
-                <div
-                  style={{
-                    marginTop: '15px',
-                    paddingTop: '15px',
-                    borderTop: '1px solid #ded3c1',
-                  }}
-                >
-                  <div
-                    style={{
-                      color: '#777065',
-                      fontSize: '10px',
-                      fontWeight: '800',
-                      letterSpacing: '0.7px',
-                    }}
-                  >
-                    DEVELOPMENT PREVIEW
-                  </div>
-
-                  <p
-                    style={{
-                      margin: '6px 0 10px',
-                      fontSize: '11px',
-                    }}
-                  >
-                    This lets you test the Premium experience
-                    without a payment while Stripe is being finalised.
-                  </p>
-
-                  <button
-                    className="filter-button"
-                    onClick={
-                      isPremium
-                        ? deactivateDemoPremium
-                        : activateDemoPremium
-                    }
-                  >
-                    {isPremium
-                      ? 'Switch back to Free'
-                      : 'Preview as Premium'}
-                  </button>
-                </div>
               </div>
 
               <div>
@@ -5990,9 +5924,14 @@ function PremiumModal({
         'Premium gives you detailed recommendations and guidance tailored to your interests, academic goals and future plans.',
     },
     subscription: {
-      title: 'Premium is coming next.',
+      title: 'Premium launches soon.',
       description:
-        'The £8.99/month Premium membership will be connected to secure payments when Stripe is added. The first 30 students will be eligible for the launch free-month offer.',
+        'We are putting the finishing touches on GrowthGrind Premium. Payments are temporarily locked while we prepare the full Premium launch next week.',
+    },
+    comingSoon: {
+      title: 'Premium launches next week.',
+      description:
+        'Premium payments are not open yet. You can continue exploring GrowthGrind for free, and check back next week when the Premium tools and secure checkout launch.',
     },
     AdmissionsAdvisor: {
       title: 'Your personal AI admissions advisor.',
@@ -6059,17 +5998,10 @@ function PremiumModal({
           className="modal-details"
           style={{ marginTop: '20px' }}
         >
-          <span>£8.99 / month</span>
+          <span>Coming soon</span>
           <span>UK-focused</span>
-          <span>Personalised</span>
+          <span>Premium tools</span>
         </div>
-
-        <button
-          className="primary-button"
-          onClick={onUpgrade}
-        >
-          Explore Premium →
-        </button>
 
         <button
           className="filter-button"
