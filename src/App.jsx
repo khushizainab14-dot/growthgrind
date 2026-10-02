@@ -3954,55 +3954,14 @@ function App() {
               FREE FOR EVERYONE
             </span>
 
-            <h2>
-              Never miss an opportunity.
-            </h2>
-
-            <h4>
-              Get GrowthGrind Weekly.
-            </h4>
+            <h2>GrowthGrind Weekly is coming soon.</h2>
 
             <p>
-              Once a week, we'll send you a simple roundup of new
-              opportunities and opportunities that are closing soon.
+              We are preparing a weekly roundup of new opportunities and opportunities closing soon.
+              Sign-ups will open once the first edition is ready.
             </p>
 
-            <p>
-              <strong>
-                No Premium subscription required.
-              </strong>
-            </p>
-
-            <input
-              type="email"
-              placeholder="Your email address"
-              value={weeklyEmail}
-              onChange={(event) =>
-                setWeeklyEmail(event.target.value)
-              }
-              style={{
-                width: '100%',
-                padding: '12px',
-                borderRadius: '9px',
-                border: '1px solid #d0c4b0',
-                background: '#f5efe5',
-                color: '#315b3d',
-                font: 'inherit',
-                marginTop: '10px',
-              }}
-            />
-
-            <button
-              className="primary-button"
-              onClick={subscribeWeekly}
-              disabled={!weeklyEmail.trim() || weeklySignupLoading}
-              style={{
-                opacity: weeklyEmail.trim() && !weeklySignupLoading ? 1 : 0.5,
-              }}
-            >
-              {weeklySignupLoading ? 'Saving your sign-up…' : 'Get GrowthGrind Weekly →'}
-            </button>
-            {weeklySignupError && <p style={{ color: '#9d3c2e', fontWeight: '700', marginTop: '12px' }}>{weeklySignupError}</p>}
+            <p><strong>No action needed today — check back soon.</strong></p>
 
             <button
               className="filter-button"
@@ -4012,7 +3971,7 @@ function App() {
                 marginTop: '10px',
               }}
             >
-              Maybe later
+              Got it
             </button>
           </div>
         </div>
