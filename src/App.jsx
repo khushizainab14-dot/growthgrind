@@ -4036,6 +4036,27 @@ function RandomOpportunityGenerator({ opportunities, onView }) {
   const [choice, setChoice] = useState(null)
   const [showFullDescription, setShowFullDescription] = useState(false)
   const lastChoice = useRef(null)
+  const shuffleAudio = useRef(null)
+  const playShuffleTick = () => {
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext
+      if (!AudioContext) return
+      const context = shuffleAudio.current || new AudioContext()
+      shuffleAudio.current = context
+      if (context.state === 'suspended') context.resume()
+      const oscillator = context.createOscillator()
+      const gain = context.createGain()
+      oscillator.type = 'sine'
+      oscillator.frequency.setValueAtTime(620, context.currentTime)
+      gain.gain.setValueAtTime(0.045, context.currentTime)
+      gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.045)
+      oscillator.connect(gain).connect(context.destination)
+      oscillator.start()
+      oscillator.stop(context.currentTime + 0.05)
+    } catch {
+      // Sound is optional; the picker works normally in browsers that block it.
+    }
+  }
   const pick = () => {
     const pool = opportunities.filter((item) => item.id !== lastChoice.current)
     return (pool.length ? pool : opportunities)[Math.floor(Math.random() * (pool.length || 1))]
@@ -4047,6 +4068,7 @@ function RandomOpportunityGenerator({ opportunities, onView }) {
     const next = () => {
       const item = pick()
       setChoice(item)
+      playShuffleTick()
       if (delay > 480) { lastChoice.current = item?.id; setRolling(false); return }
       delay *= 1.32
       window.setTimeout(next, delay)
