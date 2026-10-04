@@ -14,6 +14,16 @@ async function readApiJson(response, fallback = 'The service returned an unexpec
   }
 }
 
+function isCurrentOpportunity(opportunity) {
+  const deadline = opportunity?.deadlineRaw || opportunity?.deadline
+  if (!deadline) return true
+  const deadlineDate = String(deadline).slice(0, 10)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(deadlineDate)) return true
+  const today = new Date()
+  const todayDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+  return deadlineDate >= todayDate
+}
+
 const courseSearchAliases = {
   maths: ['mathematics', 'mathematical'],
   math: ['mathematics', 'mathematical'],
@@ -274,7 +284,7 @@ function App() {
       try {
         const cached = JSON.parse(sessionStorage.getItem(catalogueCacheKey) || 'null')
         if (catalogueRefresh === 0 && cached?.savedAt && Array.isArray(cached.rows) && Date.now() - cached.savedAt < cacheMaxAge) {
-          setOpportunities(cached.rows)
+          setOpportunities(cached.rows.filter(isCurrentOpportunity))
           setOpportunitiesLoading(false)
           return
         }
@@ -299,6 +309,8 @@ function App() {
           // Source collectors retire listings when their official deadline
           // passes. Never show a retired listing in Discover or Match.
           .eq('is_active', true)
+          // Hide past-deadline records even if a source has not yet retired one.
+          .or(`deadline.is.null,deadline.gte.${new Date().toISOString().slice(0, 10)}`)
           .order('id', { ascending: true })
           .range(from, from + pageSize - 1)
 
@@ -367,7 +379,7 @@ function App() {
         link: item.link,
       }))
 
-      setOpportunities(formattedOpportunities)
+      setOpportunities(formattedOpportunities.filter(isCurrentOpportunity))
       setOpportunitiesLoading(false)
       try {
         sessionStorage.setItem(catalogueCacheKey, JSON.stringify({ savedAt: Date.now(), rows: formattedOpportunities }))
