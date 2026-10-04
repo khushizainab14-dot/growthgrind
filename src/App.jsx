@@ -4034,6 +4034,7 @@ function RandomOpportunityGenerator({ opportunities, onView }) {
   const [open, setOpen] = useState(false)
   const [rolling, setRolling] = useState(false)
   const [choice, setChoice] = useState(null)
+  const [showFullDescription, setShowFullDescription] = useState(false)
   const lastChoice = useRef(null)
   const pick = () => {
     const pool = opportunities.filter((item) => item.id !== lastChoice.current)
@@ -4041,7 +4042,7 @@ function RandomOpportunityGenerator({ opportunities, onView }) {
   }
   const spin = () => {
     if (!opportunities.length || rolling) return
-    setOpen(true); setRolling(true)
+    setOpen(true); setRolling(true); setShowFullDescription(false)
     let delay = 65
     const next = () => {
       const item = pick()
@@ -4052,6 +4053,8 @@ function RandomOpportunityGenerator({ opportunities, onView }) {
     }
     next()
   }
+  const description = choice?.description || ''
+  const hasLongDescription = description.length > 220
   return (
     <>
       <button className="surprise-button" onClick={spin} disabled={!opportunities.length || rolling}>
@@ -4065,7 +4068,9 @@ function RandomOpportunityGenerator({ opportunities, onView }) {
             <span>{rolling ? 'FINDING YOUR NEXT OPPORTUNITY' : 'YOUR RANDOM PICK'}</span>
             <article className={rolling ? 'spinning' : ''}>
               <small>{choice.category || 'OPPORTUNITY'}</small>
-              <h2>{choice.title}</h2><p>{choice.organisation}</p><p>{choice.description}</p>
+              <h2>{choice.title}</h2><p>{choice.organisation}</p>
+              <p>{showFullDescription || !hasLongDescription ? description : `${description.slice(0, 220).trim()}…`}</p>
+              {hasLongDescription && <button className="surprise-more" onClick={() => setShowFullDescription((current) => !current)}>{showFullDescription ? 'Show less' : 'View more'}</button>}
               <b>{choice.deadline ? `Deadline: ${choice.deadline}` : 'Explore the details'}</b>
             </article>
             {rolling ? <p className="surprise-status">Shuffling the catalogue…</p> : (
