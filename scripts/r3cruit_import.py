@@ -10,7 +10,7 @@ import os
 import re
 from datetime import date, datetime
 from html.parser import HTMLParser
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 from urllib.request import Request, urlopen
 
 SOURCE_URL = 'https://ther3cruit.co.uk/16-18-opportunities/'
@@ -71,6 +71,21 @@ class VisibleTextParser(HTMLParser):
     def handle_data(self, data):
         if not self.skip: self.parts.append(data)
 
+class DetailParser(VisibleTextParser):
+    def __init__(self):
+        super().__init__(); self.links = []; self.href = None; self.label = []
+    def handle_starttag(self, tag, attrs):
+        super().handle_starttag(tag, attrs)
+        if tag == 'a' and not self.skip:
+            self.href, self.label = dict(attrs).get('href'), []
+    def handle_data(self, data):
+        super().handle_data(data)
+        if self.href is not None and not self.skip: self.label.append(data)
+    def handle_endtag(self, tag):
+        if tag == 'a' and self.href:
+            self.links.append((clean(' '.join(self.label)), self.href)); self.href, self.label = None, []
+        super().handle_endtag(tag)
+
 def between(text, label, next_labels):
     position = text.upper().find(label)
     if position < 0: return ''
@@ -97,12 +112,23 @@ def years(value):
     found = sorted({int(item) for item in re.findall(r'YEAR\s*(\d{1,2})', value.upper())})
     return ', '.join(f'Year {item}' for item in found) or None
 
-def detail_text(url):
+def detail_page(url):
     request = Request(url, headers={'User-Agent': 'GrowthGrindOpportunityBot/1.0 (+https://growthgrind.co.uk)'})
     with urlopen(request, timeout=20) as response:
         html = response.read().decode(response.headers.get_content_charset() or 'utf-8', errors='replace')
-    parser = VisibleTextParser(); parser.feed(html)
-    return clean(' '.join(parser.parts))
+    parser = DetailParser(); parser.feed(html)
+    return clean(' '.join(parser.parts)), parser.links
+
+def provider_link(detail_url, links):
+    social_hosts = ('twitter.com', 'facebook.com', 'instagram.com', 'linkedin.com', 'youtube.com')
+    for label, href in links:
+        full = urljoin(detail_url, href)
+        host = (urlparse(full).hostname or '').lower().removeprefix('www.')
+        if not host or host.endswith('ther3cruit.co.uk') or any(host.endswith(social) for social in social_hosts):
+            continue
+        if re.search(r'apply|register|application|sign up|how to apply|more details', label, re.I):
+            return full
+    return detail_url
 
 def expiration_dates(text):
     match = re.search(r'expiration\s+date\s*:\s*(.{0,80})', text, re.I)
@@ -118,7 +144,7 @@ def parse_entries(html):
         direct = next(((label, href) for label, href in links if re.search(r'apply|register|details|learn more', label, re.I)), None)
         if not direct: continue
         try:
-            details = detail_text(direct[1])
+            details, detail_links = detail_page(direct[1])
         except Exception:
             # Do not create a listing we cannot verify at the individual page.
             continue
@@ -139,7 +165,8 @@ def parse_entries(html):
         summary = clean(re.sub(r'(TYPE|DEADLINE|DURATION|OPEN TO)\s*:', '', summary))
         if len(summary) > 350: summary = summary[:347].rsplit(' ', 1)[0] + '…'
         live_dates = exact_expiry or deadline_dates
-        output.append({'title': f"{entry['title'].title()} — {type_text.title() if type_text else 'Opportunity'}", 'provider': entry['title'].title(), 'category': 'Careers', 'activity_type': activity_type(type_text), 'location': 'UK', 'format': 'Online and in-person / check provider', 'age_range': open_to or 'Check provider eligibility', 'year_groups': years(open_to), 'deadline': max(live_dates).isoformat() if live_dates else None, 'cost': 'Check provider', 'interests': None, 'subjects': subjects(f'{entry["title"]} {type_text} {summary}'), 'link': direct[1], 'description': summary or 'Individual opportunity listed by The R3cruit. Check the provider page for current details and eligibility.', 'is_active': True})
+        destination = provider_link(direct[1], detail_links)
+        output.append({'title': f"{entry['title'].title()} — {type_text.title() if type_text else 'Opportunity'}", 'provider': entry['title'].title(), 'category': 'Careers', 'activity_type': activity_type(type_text), 'location': 'UK', 'format': 'Online and in-person / check provider', 'age_range': open_to or 'Check provider eligibility', 'year_groups': years(open_to), 'deadline': max(live_dates).isoformat() if live_dates else None, 'cost': 'Check provider', 'interests': None, 'subjects': subjects(f'{entry["title"]} {type_text} {summary}'), 'link': destination, 'description': summary or 'Individual opportunity listed by The R3cruit. Check the provider page for current details and eligibility.', 'is_active': True})
     return list({row['link']: row for row in output}.values())
 
 def fetch_page():
@@ -152,7 +179,9 @@ def upload(rows):
     url, key = os.environ.get('SUPABASE_URL'), os.environ.get('SUPABASE_KEY')
     if not url or not key: raise SystemExit('Set SUPABASE_URL and SUPABASE_KEY before importing.')
     client = create_client(url, key)
-    client.table('opportunities').update({'is_active': False}).eq('link', SOURCE_URL).execute()
+    # Retire the generic card and older detail-page cards from previous runs.
+    # The refreshed records below use the actual provider/application URL.
+    client.table('opportunities').update({'is_active': False}).like('link', 'https://ther3cruit.co.uk/%').execute()
     for row in rows:
         existing = client.table('opportunities').select('id').eq('link', row['link']).limit(1).execute()
         if existing.data: client.table('opportunities').update(row).eq('id', existing.data[0]['id']).execute()
