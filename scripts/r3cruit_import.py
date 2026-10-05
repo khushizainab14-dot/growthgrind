@@ -133,13 +133,6 @@ def parse_entries(html):
         if not deadline_dates and all_dates and max(all_dates) < today: continue
         type_text = between(text, 'TYPE', ('DEADLINE', 'DURATION', 'OPEN TO'))
         open_to = between(text, 'OPEN TO', ('TYPE', 'DEADLINE', 'DURATION'))
-        # The source retains old detail pages. If it supplies no current date,
-        # do not import a page that itself only refers to this year or earlier.
-        # Evergreen pages without a dated cycle still remain eligible.
-        if not exact_expiry and not deadline_dates:
-            referenced_years = [int(year) for year in re.findall(r'\b(20\d{2})\b', f'{entry["title"]} {text} {details}')]
-            if referenced_years and max(referenced_years) <= today.year:
-                continue
         summary = text
         for field in (type_text, deadline_text, open_to):
             if field: summary = summary.replace(field, '')
